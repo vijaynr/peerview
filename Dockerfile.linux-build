@@ -1,0 +1,19 @@
+FROM oven/bun:1 AS builder
+
+WORKDIR /build
+
+COPY package.json bun.lock tsconfig.json ./
+COPY src ./src
+COPY resources ./resources
+COPY USAGE.txt install.sh install.cmd ./
+
+RUN bun install --frozen-lockfile
+RUN bun run typecheck
+RUN bun build --compile src/cli.ts --outfile /out/cr
+
+RUN cp USAGE.txt install.sh install.cmd /out/ \
+    && tar -czf /out/cr-cli-linux.tar.gz -C /out cr USAGE.txt install.sh install.cmd
+
+FROM scratch AS artifact
+
+COPY --from=builder /out/ /

@@ -1,0 +1,59 @@
+# Python-generated files
+__pycache__/
+**/__pycache__/
+*.py[oc]
+**/*.py[oc]
+build/
+**/build/
+dist/
+**/dist/
+wheels/
+**/wheels/
+*.egg-info
+**/*.egg-info
+
+# Your environment variables file
+# This file should not be committed to version control
+.env
+**/.env
+
+# Virtual environments
+.venv
+**/.venv
+
+# Database files
+chroma_db/*
+**/chroma_db/*
+
+# Streamlit specific files
+.streamlit/
+**/.streamlit/
+
+# Ruff configuration
+.ruff_cache/
+**/.ruff_cache/
+
+# Local configuration files
+*.local
+**/*.local
+
+.aider*
+**/.aider*
+
+# Ignore build archives
+*.tar.gz
+**/*.tar.gz
+
+# Ignore packaged CLI binary artifact
+docker-dist/cr
+cr
+cr.exe
+
+# Ignore chromadb
+*.chromadb
+
+# Bun / TypeScript migration artifacts
+node_modules/
+bun.lock
+dist-ts/
+*.tsbuildinfo

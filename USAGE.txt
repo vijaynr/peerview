@@ -1,0 +1,72 @@
+USAGE: CR CLI EXECUTABLE
+======================================
+
+0. INSTALLATION
+------------------------------------------------------------
+
+Windows:
+  install.cmd
+
+Unix/macOS/Linux:
+  ./install.sh
+
+This installs `cr` (or `cr.exe`) to your user PATH location.
+
+1. FIRST-TIME SETUP
+------------------------------------------------------------
+
+  cr init
+
+You will be prompted for:
+- API URL
+- API key
+- model
+- GitLab URL
+- GitLab token (`api` scope)
+
+Config path: `~/.cr.conf`
+
+2. REVIEW WORKFLOWS
+------------------------------------------------------------
+
+Default MR review:
+  cr review --path <repo-path>
+
+Summarize MR:
+  cr review --workflow summarize --path <repo-path>
+
+Chat about MR:
+  cr review --workflow chat --path <repo-path>
+
+Local diff review:
+  git diff | cr review --local
+
+Local diff summarize:
+  git diff | cr review --workflow summarize --local
+
+Options:
+- `--path, -p`
+- `--url, -u`
+- `--workflow, -w` (`default|summarize|chat|create`)
+- `--mode, -m` (`interactive|ci`)
+- `--inline-comments`
+- `--local`
+- `--state, -s` (`opened|closed|merged|all`)
+- `--target-branch, -t` (used with `--workflow create`)
+
+3. CREATE MERGE REQUEST
+------------------------------------------------------------
+
+  cr review --workflow create --path <repo-path> [--target-branch <branch>] [--mode <interactive|ci>]
+
+4. HELP
+------------------------------------------------------------
+
+  cr help
+
+5. NOTES
+------------------------------------------------------------
+
+- Chat mode does not support `--local`.
+- Prompt overrides are loaded from `~/.cr/prompts`.
+- Resources are bundled from `resources/`.
