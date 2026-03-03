@@ -2,7 +2,7 @@ import path from "node:path";
 import { printCommandHelp } from "../ui/console.js";
 import { createWorkflowStatusController, runLiveTask, runLiveCreateMrTask } from "../ui/main.js";
 import { repoRootFromModule } from "../utils/paths.js";
-import { getFlag, hasFlag } from "../utils/reviewCommandHelper.js";
+import { getFlag } from "../utils/reviewCommandHelper.js";
 import { runCreateMrWorkflow } from "../workflows/createMrWorkflow.js";
 import type { WorkflowMode } from "../types/workflows.js";
 
