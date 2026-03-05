@@ -64,6 +64,7 @@ export type ReviewWorkflowResult = {
   mrIid?: number;
   projectPath?: string;
   gitlabUrl?: string;
+  guidelines?: string;
 };
 
 export type ReviewChatHistoryEntry = {

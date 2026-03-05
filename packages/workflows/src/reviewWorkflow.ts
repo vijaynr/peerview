@@ -43,6 +43,7 @@ type RemoteMrContext = {
   mr: Awaited<ReturnType<GitLabClient["getMergeRequest"]>>;
   changes: Awaited<ReturnType<GitLabClient["getMergeRequestChanges"]>>;
   commits: Awaited<ReturnType<GitLabClient["getMergeRequestCommits"]>>;
+  guidelines?: string;
 };
 
 type ReviewGraphState = {
@@ -108,9 +109,23 @@ async function resolveRemoteMrContext(
     gitlab.getMergeRequestChanges(projectPath, mrIid),
     gitlab.getMergeRequestCommits(projectPath, mrIid),
   ]);
+
+  let guidelines: string | undefined;
+  try {
+    const ref = mr.diff_refs?.head_sha || "HEAD";
+    const content =
+      (await gitlab.getFileRaw(projectPath, "GUIDELINES.md", ref)) ||
+      (await gitlab.getFileRaw(projectPath, "Guidelines.md", ref));
+    if (content) {
+      guidelines = content;
+    }
+  } catch {
+    // Ignore errors fetching guidelines
+  }
+
   phaseReporter.completed("load_mr_context", "Loaded merge request context.");
 
-  return { projectPath, mrIid, mr, changes, commits };
+  return { projectPath, mrIid, mr, changes, commits, guidelines };
 }
 
 async function buildInlineRemoteReview(
@@ -123,7 +138,8 @@ async function buildInlineRemoteReview(
   mr: unknown,
   changes: Array<{ old_path?: string; new_path?: string; diff?: string }>,
   commits: unknown,
-  userFeedback?: string
+  userFeedback?: string,
+  guidelines?: string
 ): Promise<ReviewWorkflowResult> {
   const existingInlineComments = await gitlab.getMergeRequestInlineComments(projectPath, mrIid);
   const existingByFile = new Map<string, GitLabInlineComment[]>();
@@ -153,6 +169,7 @@ async function buildInlineRemoteReview(
       mrCommits,
       existingInlineComments: existingByFile.get(filePath) ?? [],
       userFeedback: userFeedback ?? input.userFeedback,
+      guidelines,
     });
     const reviewText = await runLlmPrompt(prompt, llm);
     const parsed = extractJsonObject(reviewText);
@@ -259,7 +276,7 @@ async function generateRemoteReviewResult(
 ): Promise<ReviewWorkflowResult> {
   const phaseReporter = createWorkflowPhaseReporter(WORKFLOW_NAME, input.events);
 
-  const { projectPath, mrIid, mr, changes, commits } =
+  const { projectPath, mrIid, mr, changes, commits, guidelines } =
     remoteContext ?? (await resolveRemoteMrContext(input, gitlab));
 
   const template = await loadPrompt("review.txt", input.repoRoot);
@@ -276,16 +293,18 @@ async function generateRemoteReviewResult(
       mr,
       changes,
       commits,
-      userFeedback
+      userFeedback,
+      guidelines
     );
     phaseReporter.completed("generate_review", "Review generated.");
-    return inlineResult;
+    return { ...inlineResult, guidelines };
   }
 
   let prompt = injectMergeRequestContextIntoTemplate(template, {
     mrContent: JSON.stringify(mr, null, 2),
     mrChanges: JSON.stringify(changes, null, 2),
     mrCommits: JSON.stringify(commits, null, 2),
+    guidelines,
   });
   const effectiveFeedback = userFeedback ?? input.userFeedback;
   if (effectiveFeedback?.trim()) {
@@ -317,11 +336,34 @@ async function buildLocalPrompt(
     throw new Error("No diff provided for local review. Use: git diff | cr review --local");
   }
 
+  let guidelines: string | undefined;
+  try {
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const gPath1 = path.join(input.repoPath, "GUIDELINES.md");
+    const gPath2 = path.join(input.repoPath, "Guidelines.md");
+
+    const exists = async (p: string) =>
+      fs
+        .access(p)
+        .then(() => true)
+        .catch(() => false);
+
+    if (await exists(gPath1)) {
+      guidelines = await fs.readFile(gPath1, "utf-8");
+    } else if (await exists(gPath2)) {
+      guidelines = await fs.readFile(gPath2, "utf-8");
+    }
+  } catch {
+    // ignore
+  }
+
   const template = await loadPrompt("review.txt", input.repoRoot);
   let prompt = injectMergeRequestContextIntoTemplate(template, {
     mrContent: "(Local review)",
     mrChanges: diff,
     mrCommits: "(N/A)",
+    guidelines,
   });
   const effectiveFeedback = userFeedback ?? input.userFeedback;
   if (effectiveFeedback?.trim()) {

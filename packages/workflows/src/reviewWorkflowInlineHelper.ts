@@ -120,13 +120,14 @@ export function buildInlineReviewPrompt(args: {
   mrCommits: string;
   existingInlineComments: GitLabInlineComment[];
   userFeedback?: string;
+  guidelines?: string;
 }): string {
   const existing = args.existingInlineComments.map((c) => ({
     line: c.line,
     position_type: c.positionType,
     body: c.body,
   }));
-  const body = [
+  const sections = [
     "You are reviewing one file from a merge request.",
     "Return ONLY valid JSON in this format:",
     '{"findings":[{"should_comment": true|false, "severity":"Critical|High|Medium|Low", "summary": "string", "suggested_fix": "string|null", "line": number|null, "position_type":"new|old|null", "evidence_snippet":"string|null"}]}',
@@ -143,17 +144,26 @@ export function buildInlineReviewPrompt(args: {
     "- evidence_snippet should be a short exact code phrase from the relevant changed line.",
     "- Do not repeat feedback that already exists in inline discussions.",
     "",
-    "MR details:",
-    args.mrContent,
-    "",
-    "Commits:",
-    args.mrCommits,
-    "",
-    `File path: ${args.filePath}`,
-    `Existing inline comments for this file:\n${JSON.stringify(existing)}`,
-    "",
-    `Diff:\n${args.diffText}`,
-  ].join("\n");
+  ];
+
+  if (args.guidelines) {
+    sections.push("Repository specific guidelines (PRIORITIZE THESE):");
+    sections.push(args.guidelines);
+    sections.push("");
+  }
+
+  sections.push("MR details:");
+  sections.push(args.mrContent);
+  sections.push("");
+  sections.push("Commits:");
+  sections.push(args.mrCommits);
+  sections.push("");
+  sections.push(`File path: ${args.filePath}`);
+  sections.push(`Existing inline comments for this file:\n${JSON.stringify(existing)}`);
+  sections.push("");
+  sections.push(`Diff:\n${args.diffText}`);
+
+  const body = sections.join("\n");
 
   if (args.userFeedback?.trim()) {
     return `Human feedback for this re-run:\n${args.userFeedback.trim()}\n\n${body}`;

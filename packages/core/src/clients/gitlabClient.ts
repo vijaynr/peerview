@@ -12,6 +12,7 @@ import {
   listMergeRequests,
   remoteToProjectPath,
   updateMergeRequest,
+  getFileRaw,
 } from "../utils/gitlab.js";
 import {
   addInlineMergeRequestComment,
@@ -56,6 +57,7 @@ export interface GitLabClient {
     projectPath: string,
     mrIid: number
   ): Promise<Array<{ id: string; title: string; message: string }>>;
+  getFileRaw(projectPath: string, filePath: string, ref: string): Promise<string | null>;
   getMergeRequestInlineComments(projectPath: string, mrIid: number): Promise<GitLabInlineComment[]>;
   addInlineMergeRequestComment(
     projectPath: string,
@@ -101,6 +103,7 @@ export function createGitLabClient(baseUrl: string, token: string): GitLabClient
       getMergeRequestChanges(baseUrl, token, projectPath, mrIid),
     getMergeRequestCommits: (projectPath, mrIid) =>
       getMergeRequestCommits(baseUrl, token, projectPath, mrIid),
+    getFileRaw: (projectPath, filePath, ref) => getFileRaw(baseUrl, token, projectPath, filePath, ref),
     getMergeRequestInlineComments: (projectPath, mrIid) =>
       getMergeRequestInlineComments(baseUrl, token, projectPath, mrIid),
     addInlineMergeRequestComment: (projectPath, mrIid, body, filePath, line, positionType) =>

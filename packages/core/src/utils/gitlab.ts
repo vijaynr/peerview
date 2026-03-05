@@ -92,6 +92,39 @@ export async function gitlabRequest<T>(
  * @param token GitLab API access token
  * @param projectPath Project path (e.g., "owner/repo")
  */
+export async function getFileRaw(
+  baseUrl: string,
+  token: string,
+  projectPath: string,
+  filePath: string,
+  ref: string
+): Promise<string | null> {
+  const encodedProject = encodeURIComponent(projectPath);
+  const encodedPath = encodeURIComponent(filePath);
+  const endpoint = `/api/v4/projects/${encodedProject}/repository/files/${encodedPath}/raw?ref=${encodeURIComponent(ref)}`;
+  const url = `${normalizeBaseUrl(baseUrl)}${endpoint}`;
+
+  logger.debug("gitlab", `getFileRaw: ${filePath} (ref: ${ref})`);
+
+  const response = await fetch(url, {
+    headers: {
+      "PRIVATE-TOKEN": token,
+    },
+  });
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    const body = await response.text();
+    logger.error("gitlab", `getFileRaw failed: ${response.status}`, { body });
+    throw new Error(`GitLab API ${response.status}: ${body}`);
+  }
+
+  return response.text();
+}
+
 export async function listBranches(
   baseUrl: string,
   token: string,

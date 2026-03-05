@@ -50,21 +50,24 @@ export function injectMergeRequestContextIntoTemplate(
     mrContent: string;
     mrChanges: string;
     mrCommits: string;
+    guidelines?: string;
   }
 ): string {
   const hasPlaceholders =
     template.includes("{mr_content}") ||
     template.includes("{mr_changes}") ||
-    template.includes("{mr_commits}");
+    template.includes("{mr_commits}") ||
+    template.includes("{repo_guidelines}");
 
   if (hasPlaceholders) {
     return template
       .replaceAll("{mr_content}", context.mrContent)
       .replaceAll("{mr_changes}", context.mrChanges)
-      .replaceAll("{mr_commits}", context.mrCommits);
+      .replaceAll("{mr_commits}", context.mrCommits)
+      .replaceAll("{repo_guidelines}", context.guidelines ?? "(None provided)");
   }
 
-  return [
+  const sections = [
     template.trim(),
     "",
     "Merge request details:",
@@ -75,7 +78,15 @@ export function injectMergeRequestContextIntoTemplate(
     "",
     "Merge request commits:",
     context.mrCommits,
-  ].join("\n");
+  ];
+
+  if (context.guidelines) {
+    sections.push("");
+    sections.push("Repository specific guidelines (PRIORITIZE THESE):");
+    sections.push(context.guidelines);
+  }
+
+  return sections.join("\n");
 }
 
 // Backward-compatible alias; prefer injectMergeRequestContextIntoTemplate.
