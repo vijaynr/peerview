@@ -4,7 +4,6 @@ import {
   printCommandHelp,
   printReviewComment,
   printReviewSummary,
-  printDivider,
 } from "@cr/ui";
 import { askForOptionalFeedback, promptWithFrame } from "@cr/ui";
 import {
@@ -165,7 +164,6 @@ async function runReviewWorkflowTask(args: {
       }
 
       if (effect.type === "select_review_target") {
-        printDivider();
         const selection = await promptWithFrame(
           {
             type: "autocomplete",
