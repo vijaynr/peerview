@@ -4,10 +4,7 @@ import {
   printCommandHelp,
   printReviewComment,
   printReviewSummary,
-  createSpinner,
   printDivider,
-  COLORS,
-  DOT,
 } from "@cr/ui";
 import { askForOptionalFeedback, promptWithFrame } from "@cr/ui";
 import {
@@ -15,18 +12,8 @@ import {
   runLiveTask,
   runLiveChatLoop,
   type LiveController,
-  type WorkflowStatusController,
 } from "@cr/ui";
-import {
-  envOrConfig,
-  loadCRConfig,
-  listReviewRequests as rbListRequests,
-  getCurrentUser as rbGetCurrentUser,
-  rbRequest,
-  type ReviewBoardRequest,
-} from "@cr/core";
-import { getOriginRemoteUrl } from "@cr/core";
-import { listMergeRequests, remoteToProjectPath } from "@cr/core";
+import { envOrConfig, loadCRConfig } from "@cr/core";
 import { repoRootFromModule } from "@cr/core";
 import {
   getFlag,
@@ -40,231 +27,20 @@ import {
   maybePostReviewComment,
   maybePostReviewBoardComment,
   runReviewWorkflow,
-  runReviewBoardWorkflow,
+  runInteractiveReviewSession,
   type ReviewWorkflowInput,
 } from "@cr/workflows";
-import { answerReviewChatQuestion, runReviewChatWorkflow } from "@cr/workflows";
-import type { WorkflowMode, MergeRequestState } from "@cr/core";
-import { runReviewSummarizeWorkflow } from "@cr/workflows";
+import { answerReviewChatQuestion } from "@cr/workflows";
+import type {
+  ReviewSessionEffect,
+  ReviewSessionResponse,
+  ReviewSessionResult,
+  WorkflowMode,
+} from "@cr/core";
 
 async function askForFeedbackIteration(): Promise<string | null> {
   return askForOptionalFeedback({
     confirmMessage: "Do you want to provide feedback to improve the review comment?",
-  });
-}
-
-async function resolveInteractiveRemoteSelection(input: ReviewWorkflowInput): Promise<boolean> {
-  const config = await loadCRConfig();
-
-  if (input.provider === "reviewboard") {
-    const rbUrl = envOrConfig("RB_URL", config.rbUrl, "");
-    const rbToken = envOrConfig("RB_TOKEN", config.rbToken, "");
-    if (!rbUrl || !rbToken) {
-      throw new Error(
-        "Missing Review Board configuration. Run `cr init --rb` or set RB_URL/RB_TOKEN."
-      );
-    }
-
-    const rbStatusMap: Record<MergeRequestState, "pending" | "submitted" | "all"> = {
-      opened: "pending",
-      closed: "all", // RB doesn't have a direct 'closed' state that is common, 'discarded' is another
-      merged: "submitted",
-      all: "all",
-    };
-
-    const fromUser = getFlag(process.argv, "from", "", "-f") || undefined;
-    printDivider();
-    const spinner = createSpinner("Loading review requests...").start();
-    let rrs: ReviewBoardRequest[] = [];
-
-    try {
-      rrs = await rbListRequests(rbUrl, rbToken, rbStatusMap[input.state] || "pending", fromUser);
-
-      if (rrs.length === 0 && !fromUser && input.state === "opened") {
-        // If no global pending requests found, fetch specifically for the current user
-        const user = await rbGetCurrentUser(rbUrl, rbToken);
-
-        // 1. Outgoing (from the user)
-        const outgoing = await rbListRequests(rbUrl, rbToken, "pending", user.username);
-
-        // 2. Incoming (directly to the user)
-        const incomingDirectUrl = `/api/review-requests/?status=pending&to-users-directly=${encodeURIComponent(user.username)}&expand=submitter`;
-        const incomingDirectResp = await rbRequest<{ review_requests: ReviewBoardRequest[] }>(
-          rbUrl,
-          rbToken,
-          incomingDirectUrl
-        );
-        const incomingDirect = incomingDirectResp.review_requests ?? [];
-
-        // 3. Incoming (via groups)
-        const incomingGroupsUrl = `/api/review-requests/?status=pending&to-users=${encodeURIComponent(user.username)}&expand=submitter`;
-        const incomingGroupsResp = await rbRequest<{ review_requests: ReviewBoardRequest[] }>(
-          rbUrl,
-          rbToken,
-          incomingGroupsUrl
-        );
-        const incomingGroups = incomingGroupsResp.review_requests ?? [];
-
-        // Combine and deduplicate by ID
-        const allRrs = [...outgoing, ...incomingDirect, ...incomingGroups];
-        const seenIds = new Set<number>();
-        rrs = allRrs.filter((rr) => {
-          if (seenIds.has(rr.id)) return false;
-          seenIds.add(rr.id);
-          return true;
-        });
-      }
-    } finally {
-      spinner.stopAndPersist({
-        symbol: COLORS.green + DOT + COLORS.reset,
-        text: "Review requests loaded.",
-      });
-    }
-
-    if (rrs.length === 0) {
-      throw new Error(`No ${rbStatusMap[input.state] || "pending"} review requests found.`);
-    }
-    const choices = rrs.map((rr) => ({
-      title: `#${rr.id} [by ${rr.submitter?.username || "unknown"}] ${rr.summary}`,
-      value: rr.id,
-    }));
-    const selection = await promptWithFrame(
-      {
-        type: "autocomplete",
-        name: "requestId",
-        message: "Select review request (type to search)",
-        choices,
-        suggest: (input: string, choices: Array<{ title: string; value?: number }>) => {
-          const searchTerm = input.toLowerCase();
-          return Promise.resolve(
-            choices.filter((choice) => choice.title.toLowerCase().includes(searchTerm))
-          );
-        },
-      },
-      { onCancel: () => true }
-    );
-    if (!selection.requestId) return false;
-    input.mrIid = Number(selection.requestId);
-    return true;
-  }
-
-  const gitlabUrl = envOrConfig("GITLAB_URL", config.gitlabUrl, "");
-  const gitlabKey = envOrConfig("GITLAB_KEY", config.gitlabKey, "");
-  if (!gitlabUrl || !gitlabKey) {
-    throw new Error("Missing GitLab configuration. Run `cr init` or set GITLAB_URL/GITLAB_KEY.");
-  }
-
-  const repoUrl = input.url ?? (await getOriginRemoteUrl(input.repoPath));
-  const projectPath = remoteToProjectPath(repoUrl);
-  const mrs = await listMergeRequests(gitlabUrl, gitlabKey, projectPath, input.state);
-  if (mrs.length === 0) {
-    throw new Error("No merge requests found.");
-  }
-  if (mrs.length === 1) {
-    input.mrIid = mrs[0].iid;
-    return true;
-  }
-
-  // Use autocomplete for searchable MR selection
-  const choices = mrs.map((mr) => ({
-    title: `!${mr.iid} [${mr.state}] ${mr.title}`,
-    value: mr.iid,
-  }));
-
-  const selection = await promptWithFrame(
-    {
-      type: "autocomplete",
-      name: "mrIid",
-      message: "Select merge request (type to search)",
-      choices,
-      suggest: (input: string, choices: Array<{ title: string; value?: number }>) => {
-        const searchTerm = input.toLowerCase();
-        return Promise.resolve(
-          choices.filter((choice) => choice.title.toLowerCase().includes(searchTerm))
-        );
-      },
-    },
-    { onCancel: () => true }
-  );
-  if (!selection.mrIid) {
-    return false;
-  }
-  input.mrIid = Number(selection.mrIid);
-  return true;
-}
-
-async function confirmInteractiveStartIfNeeded(args: {
-  workflow: ReviewWorkflowKind;
-  ui: LiveController;
-  workflowResultTitle: string;
-}): Promise<boolean> {
-  if (args.workflow === "summarize") {
-    return true;
-  }
-
-  if (args.workflow === "review") {
-    const itemType = args.workflowResultTitle.includes("Review Request")
-      ? "review request"
-      : "merge request";
-    const confirm = await promptWithFrame(
-      {
-        type: "confirm",
-        name: "runReview",
-        message: `Do you want to run the code review for this ${itemType}?`,
-        initial: false,
-      },
-      { onCancel: () => true }
-    );
-    if (!confirm.runReview) {
-      args.ui.warning("Code review cancelled by user. No actions were taken.");
-      args.ui.setResult(args.workflowResultTitle, "Status: Cancelled.");
-      return false;
-    }
-    return true;
-  }
-
-  const confirm = await promptWithFrame(
-    {
-      type: "confirm",
-      name: "startChat",
-      message: "Do you want to ask questions about this merge request?",
-      initial: false,
-    },
-    { onCancel: () => true }
-  );
-  if (!confirm.startChat) {
-    args.ui.warning("Interactive chat cancelled by user. No actions were taken.");
-    args.ui.setResult(args.workflowResultTitle, "Status: Cancelled.");
-    return false;
-  }
-  return true;
-}
-
-async function runChatFlow(args: {
-  input: ReviewWorkflowInput;
-  repoRoot: string;
-  workflowResultTitle: string;
-  ui: LiveController;
-  status: WorkflowStatusController;
-}): Promise<void> {
-  const { input, repoRoot, workflowResultTitle, ui, status } = args;
-  const chatContext = await runReviewChatWorkflow({
-    ...input,
-    status: status.status,
-    events: status.events,
-  });
-  await runLiveChatLoop({
-    chatContext,
-    workflowResultTitle,
-    ui,
-    answerQuestion: (question, history) =>
-      answerReviewChatQuestion({
-        repoRoot,
-        context: chatContext,
-        question,
-        history,
-        events: status.events,
-      }),
   });
 }
 
@@ -344,75 +120,6 @@ async function maybePostReviewNotes(args: {
   return { postedSummaryNoteId, postedInlineCount };
 }
 
-async function runSummaryFlow(args: {
-  input: ReviewWorkflowInput;
-  workflowResultTitle: string;
-  ui: LiveController;
-  status: WorkflowStatusController;
-}): Promise<void> {
-  const { input, workflowResultTitle, ui, status } = args;
-  const result = await runReviewSummarizeWorkflow({
-    ...input,
-    status: status.status,
-    events: status.events,
-  });
-  status.stop();
-  printReviewSummary(result);
-  ui.setResult(workflowResultTitle, `Context: ${result.contextLabel}`);
-}
-
-async function runReviewFlow(args: {
-  input: ReviewWorkflowInput;
-  workflowResultTitle: string;
-  ui: LiveController;
-  status: WorkflowStatusController;
-}): Promise<void> {
-  const { input, workflowResultTitle, ui, status } = args;
-  const runOnce = async (userFeedback?: string) => {
-    if (input.provider === "reviewboard") {
-      return runReviewBoardWorkflow({
-        ...input,
-        userFeedback,
-        status: status.status,
-        events: status.events,
-      });
-    }
-    return runReviewWorkflow({
-      ...input,
-      userFeedback,
-      status: status.status,
-      events: status.events,
-    });
-  };
-  let result = await runOnce();
-  while (true) {
-    status.stop();
-    printReviewComment(result);
-
-    if (input.mode !== "interactive") {
-      break;
-    }
-    const nextFeedback = await askForFeedbackIteration();
-    if (!nextFeedback) {
-      break;
-    }
-    ui.info("Regenerating review with your feedback...");
-    result = await runOnce(nextFeedback);
-  }
-
-  const posted = await maybePostReviewNotes({ input, result, ui });
-  const postSummary =
-    posted.postedInlineCount > 0 || posted.postedSummaryNoteId
-      ? `\n\nPosted: ${
-          posted.postedInlineCount > 0 ? `${posted.postedInlineCount} inline comment(s)` : ""
-        }${
-          posted.postedInlineCount > 0 && posted.postedSummaryNoteId ? " + " : ""
-        }${posted.postedSummaryNoteId ? `summary note ${posted.postedSummaryNoteId}` : ""}`
-      : "";
-  const outputBody = `Context: ${result.contextLabel}${postSummary}`;
-  ui.setResult(workflowResultTitle, outputBody);
-}
-
 async function runReviewWorkflowTask(args: {
   input: ReviewWorkflowInput;
   repoRoot: string;
@@ -421,63 +128,123 @@ async function runReviewWorkflowTask(args: {
 }): Promise<void> {
   const { input, repoRoot, workflowResultTitle, ui } = args;
 
-  if (!input.local && input.mode === "interactive") {
-    const didSelectMergeRequest = await resolveInteractiveRemoteSelection(input);
-    if (!didSelectMergeRequest) {
-      const itemType = input.provider === "reviewboard" ? "Review request" : "Merge request";
-      ui.warning(`${itemType} selection cancelled by user. No actions were taken.`);
-      ui.setResult(workflowResultTitle, "Status: Cancelled.");
-      return;
-    }
-
-    const shouldContinue = await confirmInteractiveStartIfNeeded({
-      workflow: input.workflow,
-      ui,
-      workflowResultTitle,
-    });
-    if (!shouldContinue) {
-      return;
-    }
-  }
   let status = createWorkflowStatusController({
     ui,
-    workflow: "review",
+    workflow:
+      input.workflow === "chat"
+        ? "reviewChat"
+        : input.workflow === "summarize"
+          ? "reviewSummarize"
+          : "review",
   });
   try {
-    if (input.workflow === "chat") {
-      status = createWorkflowStatusController({
-        ui,
-        workflow: "reviewChat",
+    const session = runInteractiveReviewSession({
+      ...input,
+      status: status.status,
+      events: status.events,
+    });
+
+    let step = await session.next();
+    while (!step.done) {
+      const effect: ReviewSessionEffect = step.value;
+
+      if (effect.type === "review_ready") {
+        status.stop();
+        printReviewComment(effect.result);
+        step = await session.next();
+        continue;
+      }
+
+      if (effect.type === "request_review_feedback") {
+        const response: ReviewSessionResponse = {
+          type: "review_feedback",
+          feedback: await askForFeedbackIteration(),
+        };
+        step = await session.next(response);
+        continue;
+      }
+
+      if (effect.type === "select_review_target") {
+        printDivider();
+        const selection = await promptWithFrame(
+          {
+            type: "autocomplete",
+            name: "mrIid",
+            message: effect.message,
+            choices: effect.options,
+            suggest: (
+              search: string,
+              choices: Array<{ title: string; value?: number }>
+            ) => {
+              const searchTerm = search.toLowerCase();
+              return Promise.resolve(
+                choices.filter((choice) => choice.title.toLowerCase().includes(searchTerm))
+              );
+            },
+          },
+          { onCancel: () => true }
+        );
+        step = await session.next({
+          type: "review_target_selected",
+          mrIid: selection.mrIid ? Number(selection.mrIid) : null,
+        });
+        continue;
+      }
+
+      const confirmation = await promptWithFrame(
+        {
+          type: "confirm",
+          name: "confirmed",
+          message: effect.message,
+          initial: false,
+        },
+        { onCancel: () => true }
+      );
+      step = await session.next({
+        type: "review_action_confirmed",
+        confirmed: Boolean(confirmation.confirmed),
       });
-      await runChatFlow({
-        input,
-        repoRoot,
+    }
+
+    const result: ReviewSessionResult = step.value;
+    if (result.action === "cancelled") {
+      ui.setResult(workflowResultTitle, result.message);
+      return;
+    }
+
+    if (result.action === "chat") {
+      await runLiveChatLoop({
+        chatContext: result.context,
         workflowResultTitle,
         ui,
-        status,
+        answerQuestion: (question, history) =>
+          answerReviewChatQuestion({
+            repoRoot,
+            context: result.context,
+            question,
+            history,
+            events: status.events,
+          }),
       });
       return;
     }
 
-    if (input.workflow === "summarize") {
-      status = createWorkflowStatusController({
-        ui,
-        workflow: "reviewSummarize",
-      });
-      await runSummaryFlow({
-        input,
-        workflowResultTitle,
-        ui,
-        status,
-      });
-    } else {
-      await runReviewFlow({
-        input,
-        workflowResultTitle,
-        ui,
-        status,
-      });
+    if (result.action === "summary") {
+      status.stop();
+      printReviewSummary(result.result);
+      return;
     }
+
+    const posted = await maybePostReviewNotes({ input, result: result.result, ui });
+    const postSummary =
+      posted.postedInlineCount > 0 || posted.postedSummaryNoteId
+        ? `\n\nPosted: ${
+            posted.postedInlineCount > 0 ? `${posted.postedInlineCount} inline comment(s)` : ""
+          }${
+            posted.postedInlineCount > 0 && posted.postedSummaryNoteId ? " + " : ""
+          }${posted.postedSummaryNoteId ? `summary note ${posted.postedSummaryNoteId}` : ""}`
+        : "";
+    ui.setResult(workflowResultTitle, `Context: ${result.result.contextLabel}${postSummary}`);
   } finally {
     status.close();
   }
@@ -544,6 +311,7 @@ export async function runReviewCommand(args: string[]): Promise<void> {
   const local = hasFlag(args, "local");
   const inlineComments = hasFlag(args, "inline-comments");
   const rb = hasFlag(args, "rb");
+  const fromUser = getFlag(args, "from", "", "-f") || undefined;
   const repoRoot = repoRootFromModule(import.meta.url);
   const stdinDiff = await readStdinDiff();
 
@@ -571,6 +339,7 @@ export async function runReviewCommand(args: string[]): Promise<void> {
     local,
     inlineComments,
     url,
+    fromUser,
     state,
     stdinDiff,
     provider: rb ? "reviewboard" : "gitlab",

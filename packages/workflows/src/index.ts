@@ -3,6 +3,7 @@ export * from "./reviewBoardWorkflow.js";
 export * from "./reviewChatWorkflow.js";
 export * from "./reviewSummarizeWorkflow.js";
 export * from "./createMrWorkflow.js";
+export * from "./reviewSession.js";
 export * from "./workflowEvents.js";
 export * from "./reviewWorkflowHelper.js";
 export * from "./reviewWorkflowComments.js";

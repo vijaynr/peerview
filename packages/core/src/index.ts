@@ -10,9 +10,17 @@ export type {
   WorkflowUiEvent,
   WorkflowKind,
   WorkflowPhaseMap,
+  ReviewWorkflowEffect,
+  ReviewSessionEffect,
+  ReviewSessionResponse,
+  ReviewSessionResult,
+  ReviewSelectionOption,
   CreateMrWorkflowInput,
+  ReviewWorkflowResponse,
   CreateMrWorkflowResult,
   CreateMrDraft,
+  CreateMrWorkflowEffect,
+  CreateMrWorkflowResponse,
 } from "./types/workflows.js";
 // utils
 export * from "./utils/index.js";

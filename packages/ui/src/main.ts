@@ -7,8 +7,9 @@ import type {
   ReviewChatContext,
   ReviewChatHistoryEntry,
   CreateMrWorkflowInput,
+  CreateMrWorkflowEffect,
+  CreateMrWorkflowResponse,
   CreateMrWorkflowResult,
-  CreateMrDraft,
 } from "@cr/core";
 import { COLORS, DOT } from "./constants.js";
 import { printChatAnswer, printDivider, printReviewSummary, printWarning } from "./console.js";
@@ -20,14 +21,7 @@ function buildCreateMrResultBody(result: {
   title: string;
   mergeRequestUrl?: string;
 }): string {
-  const status =
-    result.action === "updated"
-      ? "Merge Request Updated"
-      : result.action === "created"
-        ? "Merge Request Created"
-        : "Merge Request Cancelled";
   const lines = [
-    `Status: ${status}`,
     `Source: ${result.sourceBranch}`,
     `Target: ${result.targetBranch}`,
     `Title: ${result.title}`,
@@ -372,57 +366,85 @@ export async function runLiveCreateMrTask(args: {
   mode: WorkflowMode;
   ui: LiveController;
   status: WorkflowStatusController;
-  runWorkflow: (input: CreateMrWorkflowInput) => Promise<CreateMrWorkflowResult>;
+  runWorkflow: (
+    input: CreateMrWorkflowInput
+  ) => AsyncGenerator<CreateMrWorkflowEffect, CreateMrWorkflowResult, CreateMrWorkflowResponse | undefined>;
 }): Promise<void> {
   const { repoPath, targetBranch, repoRoot, mode, ui, status, runWorkflow } = args;
 
-  const result = await runWorkflow({
+  const workflow = runWorkflow({
     repoPath,
     targetBranch,
     mode,
     repoRoot,
-    onDraft: (draft: CreateMrDraft) => {
-      status.stop();
-      printReviewSummary({
-        output: draft.description,
-        contextLabel: `MR Draft v${draft.iteration} (${draft.sourceBranch} -> ${draft.targetBranch})`,
-      });
-    },
-    resolveTargetBranch: async ({ defaultBranch }) => {
-      const response = await promptWithFrame(
-        {
-          type: "text",
-          name: "target",
-          message: `Enter target branch (default: ${defaultBranch})`,
-          initial: defaultBranch,
-        },
-        { onCancel: () => true }
-      );
-      return String(response.target ?? "").trim() || defaultBranch;
-    },
-    requestDraftFeedback: async () =>
-      askForOptionalFeedback({
-        confirmMessage: "Do you want to provide feedback to improve the merge request description?",
-      }),
-    confirmUpsert: async ({ existingMrIid }) => {
+    status: status.status,
+    events: status.events,
+  });
+
+  let step = await workflow.next();
+  try {
+    while (!step.done) {
+      const effect = step.value;
+
+      if (effect.type === "draft_ready") {
+        status.stop();
+        printReviewSummary({
+          output: effect.draft.description,
+          contextLabel: `MR Draft v${effect.draft.iteration} (${effect.draft.sourceBranch} -> ${effect.draft.targetBranch})`,
+        });
+        step = await workflow.next();
+        continue;
+      }
+
+      if (effect.type === "resolve_target_branch") {
+        const response = await promptWithFrame(
+          {
+            type: "text",
+            name: "target",
+            message: `Enter target branch (default: ${effect.defaultBranch})`,
+            initial: effect.defaultBranch,
+          },
+          { onCancel: () => true }
+        );
+        step = await workflow.next({
+          type: "target_branch_resolved",
+          targetBranch: String(response.target ?? "").trim() || effect.defaultBranch,
+        });
+        continue;
+      }
+
+      if (effect.type === "request_draft_feedback") {
+        const feedback = await askForOptionalFeedback({
+          confirmMessage: "Do you want to provide feedback to improve the merge request description?",
+        });
+        step = await workflow.next({
+          type: "draft_feedback",
+          feedback,
+        });
+        continue;
+      }
+
       const response = await promptWithFrame(
         {
           type: "confirm",
           name: "shouldProceed",
-          message: existingMrIid
-            ? `Update existing MR !${existingMrIid}?`
+          message: effect.existingMrIid
+            ? `Update existing MR !${effect.existingMrIid}?`
             : "Create merge request?",
           initial: true,
         },
         { onCancel: () => true }
       );
-      return Boolean(response.shouldProceed);
-    },
-    status: status.status,
-    events: status.events,
-  }).finally(() => {
+      step = await workflow.next({
+        type: "upsert_confirmed",
+        shouldProceed: Boolean(response.shouldProceed),
+      });
+    }
+  } finally {
     status.close();
-  });
+  }
+
+  const result = step.value;
 
   const statusText =
     result.action === "updated"
@@ -430,10 +452,5 @@ export async function runLiveCreateMrTask(args: {
       : result.action === "created"
         ? "Merge Request Created"
         : "Merge Request Cancelled";
-  ui.setResult("Workflow: Merge Request", buildCreateMrResultBody(result));
-  if (result.action === "cancelled") {
-    ui.warning(statusText);
-  } else {
-    ui.success(statusText);
-  }
+  ui.setResult(statusText, buildCreateMrResultBody(result));
 }

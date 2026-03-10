@@ -86,9 +86,8 @@ async function bootstrap(_args: string[] = []): Promise<void> {
       text: "Application ready.",
     });
   } catch (error) {
-    spinner.fail("Failed to initialize application.");
     const message = error instanceof Error ? error.message : String(error);
-    printError(message);
+    spinner.fail(message);
     process.exitCode = 1;
     return;
   }

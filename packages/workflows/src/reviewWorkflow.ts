@@ -18,12 +18,19 @@ import {
   type WorkflowRuntime,
 } from "@cr/core";
 import { assert } from "@cr/core";
-import type { ReviewWorkflowInput, ReviewWorkflowResult } from "@cr/core";
+import type {
+  ReviewWorkflowEffect,
+  ReviewWorkflowInput,
+  ReviewWorkflowResponse,
+  ReviewWorkflowResult,
+} from "@cr/core";
 import { runWorkflow } from "@cr/core";
 export type {
   ReviewChatContext,
   ReviewChatHistoryEntry,
+  ReviewWorkflowEffect,
   ReviewWorkflowInput,
+  ReviewWorkflowResponse,
   ReviewWorkflowResult,
 } from "@cr/core";
 
@@ -48,9 +55,24 @@ type ReviewGraphState = {
 };
 
 const WORKFLOW_NAME = "review";
+type ReviewWorkflowResponseInput = ReviewWorkflowResponse | undefined;
 
 async function runLlmPrompt(prompt: string, llm: LlmClient): Promise<string> {
   return llm.generate(prompt);
+}
+
+function reportFeedbackRegeneration(input: Pick<ReviewWorkflowInput, "status">): void {
+  input.status?.info("Regenerating review with your feedback...");
+}
+
+function assertResponseType(
+  response: ReviewWorkflowResponseInput
+): ReviewWorkflowResponse {
+  if (!response || response.type !== "review_feedback") {
+    const actual = response?.type ?? "none";
+    throw new Error(`Expected review workflow response "review_feedback", received "${actual}".`);
+  }
+  return response;
 }
 
 function assertRuntime(runtime: WorkflowRuntime | null): WorkflowRuntime {
@@ -499,6 +521,46 @@ export async function runReviewWorkflow(input: ReviewWorkflowInput): Promise<Rev
     );
   }
   return runReviewStateGraph(input);
+}
+
+export async function* runInteractiveReviewWorkflow(
+  input: ReviewWorkflowInput
+): AsyncGenerator<ReviewWorkflowEffect, ReviewWorkflowResult, ReviewWorkflowResponseInput> {
+  if (input.workflow !== WORKFLOW_NAME) {
+    throw new Error(
+      "Use reviewChatWorkflow.ts or reviewSummarizeWorkflow.ts for non-review workflows."
+    );
+  }
+
+  let feedback = input.userFeedback?.trim() ?? "";
+
+  for (;;) {
+    const result = await runReviewStateGraph({
+      ...input,
+      userFeedback: feedback,
+    });
+
+    yield {
+      type: "review_ready",
+      result,
+    };
+
+    if (input.mode !== "interactive") {
+      return result;
+    }
+
+    const response = assertResponseType(yield {
+      type: "request_review_feedback",
+      result,
+    });
+    const nextFeedback = response.feedback?.trim() ?? "";
+    if (!nextFeedback) {
+      return result;
+    }
+
+    reportFeedbackRegeneration(input);
+    feedback = nextFeedback;
+  }
 }
 
 export const __test__ = {

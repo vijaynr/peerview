@@ -6,8 +6,10 @@ import {
   runWorkflow,
   loadPrompt,
   type LlmClient,
+  type ReviewWorkflowEffect,
   type ReviewBoardClient,
   type ReviewWorkflowInput,
+  type ReviewWorkflowResponse,
   type ReviewWorkflowResult,
   type WorkflowRuntime,
 } from "@cr/core";
@@ -33,6 +35,22 @@ type ReviewBoardGraphState = {
   pendingFeedback: string;
   feedbackUsed: boolean;
 };
+
+type ReviewWorkflowResponseInput = ReviewWorkflowResponse | undefined;
+
+function reportFeedbackRegeneration(input: Pick<ReviewWorkflowInput, "status">): void {
+  input.status?.info("Regenerating review with your feedback...");
+}
+
+function assertResponseType(
+  response: ReviewWorkflowResponseInput
+): ReviewWorkflowResponse {
+  if (!response || response.type !== "review_feedback") {
+    const actual = response?.type ?? "none";
+    throw new Error(`Expected review workflow response "review_feedback", received "${actual}".`);
+  }
+  return response;
+}
 
 export async function runReviewBoardWorkflow(
   input: ReviewWorkflowInput & { userFeedback?: string }
@@ -121,6 +139,40 @@ export async function runReviewBoardWorkflow(
   });
 
   return finalState.result!;
+}
+
+export async function* runInteractiveReviewBoardWorkflow(
+  input: ReviewWorkflowInput & { userFeedback?: string }
+): AsyncGenerator<ReviewWorkflowEffect, ReviewWorkflowResult, ReviewWorkflowResponseInput> {
+  let feedback = input.userFeedback?.trim() ?? "";
+
+  for (;;) {
+    const result = await runReviewBoardWorkflow({
+      ...input,
+      userFeedback: feedback,
+    });
+
+    yield {
+      type: "review_ready",
+      result,
+    };
+
+    if (input.mode !== "interactive") {
+      return result;
+    }
+
+    const response = assertResponseType(yield {
+      type: "request_review_feedback",
+      result,
+    });
+    const nextFeedback = response.feedback?.trim() ?? "";
+    if (!nextFeedback) {
+      return result;
+    }
+
+    reportFeedbackRegeneration(input);
+    feedback = nextFeedback;
+  }
 }
 
 export async function maybePostReviewBoardComment(

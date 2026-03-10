@@ -1,4 +1,4 @@
-import { printCommandHelp, printError, printInfo } from "@cr/ui";
+import { printCommandHelp, printError } from "@cr/ui";
 import { getFlag, hasFlag } from "../cliHelpers.js";
 import { startWebhookServer } from "@cr/webhook";
 
@@ -57,8 +57,6 @@ export async function runServeCommand(args: string[]): Promise<void> {
     process.exitCode = 1;
     return;
   }
-
-  printInfo(`Starting ${mode} webhook server on port ${port}...`);
 
   try {
     await startWebhookServer(port, {

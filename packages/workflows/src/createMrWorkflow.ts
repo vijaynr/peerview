@@ -10,29 +10,16 @@ import {
   loadWorkflowRuntime,
   type WorkflowRuntime,
 } from "@cr/core";
-import type { CreateMrWorkflowInput, CreateMrWorkflowResult, StatusLevel } from "@cr/core";
-import { runWorkflow } from "@cr/core";
+import type {
+  CreateMrDraft,
+  CreateMrWorkflowEffect,
+  CreateMrWorkflowInput,
+  CreateMrWorkflowResponse,
+  CreateMrWorkflowResult,
+  StatusLevel,
+} from "@cr/core";
 
-type CreateMrGraphState = {
-  input: CreateMrWorkflowInput;
-  runtime: WorkflowRuntime | null;
-  gitlab: GitLabClient | null;
-  llm: LlmClient | null;
-  sourceBranch: string;
-  targetBranch: string;
-  projectPath: string;
-  branches: string[];
-  defaultBranch: string;
-  branchDiff: string;
-  title: string;
-  description: string;
-  iteration: number;
-  feedback: string;
-  shouldRegenerate: boolean;
-  existingMr: { iid: number; web_url: string } | null;
-  shouldProceed: boolean;
-  result: CreateMrWorkflowResult | null;
-};
+type CreateMrWorkflowResponseInput = CreateMrWorkflowResponse | undefined;
 
 const WORKFLOW_NAME = "createMr";
 
@@ -89,44 +76,41 @@ function fallbackTitle(source: string, target: string): string {
   return `Merge ${source} into ${target}`.slice(0, 100);
 }
 
-async function resolveTargetBranch(
-  inputTargetBranch: string | undefined,
-  branches: string[],
-  defaultBranch: string,
-  mode: "interactive" | "ci",
-  resolveFromCommand?: (args: { branches: string[]; defaultBranch: string }) => Promise<string>
-): Promise<string> {
-  if (inputTargetBranch) {
-    return inputTargetBranch; // existence checked by validateBranchesNode and resolveTargetBranchNode
-  }
-
-  if (mode === "ci") {
-    throw new Error("CI mode requires --target-branch.");
-  }
-
-  if (!defaultBranch) {
-    throw new Error("No remote branches found.");
-  }
-
-  if (!resolveFromCommand) {
-    throw new Error("Interactive mode requires target branch selection from the command layer.");
-  }
-  const target = (await resolveFromCommand({ branches, defaultBranch })).trim() || defaultBranch;
-  if (!branches.includes(target)) {
-    throw new Error(`Branch '${target}' does not exist in remote repository.`);
-  }
-  return target;
+function buildDraft(args: {
+  sourceBranch: string;
+  targetBranch: string;
+  title: string;
+  description: string;
+  iteration: number;
+}): CreateMrDraft {
+  return {
+    sourceBranch: args.sourceBranch,
+    targetBranch: args.targetBranch,
+    title: args.title,
+    description: args.description,
+    iteration: args.iteration,
+  };
 }
 
-async function loadRuntimeNode(): Promise<{ runtime: WorkflowRuntime }> {
-  return { runtime: await loadWorkflowRuntime() };
+function assertResponseType<T extends CreateMrWorkflowResponse["type"]>(
+  response: CreateMrWorkflowResponseInput,
+  expected: T
+): Extract<CreateMrWorkflowResponse, { type: T }> {
+  if (!response || response.type !== expected) {
+    const actual = response?.type ?? "none";
+    throw new Error(`Expected create-MR workflow response "${expected}", received "${actual}".`);
+  }
+  return response as Extract<CreateMrWorkflowResponse, { type: T }>;
 }
 
-async function initializeClientsNode(state: CreateMrGraphState): Promise<{
+async function initializeRuntime(): Promise<WorkflowRuntime> {
+  return loadWorkflowRuntime();
+}
+
+async function initializeClients(runtime: WorkflowRuntime): Promise<{
   gitlab: GitLabClient;
   llm: LlmClient;
 }> {
-  const runtime = assertRuntime(state.runtime);
   if (!runtime.gitlabUrl || !runtime.gitlabKey) {
     throw new Error("Missing GitLab configuration. Run `cr init` or set GITLAB_URL/GITLAB_KEY.");
   }
@@ -136,52 +120,54 @@ async function initializeClientsNode(state: CreateMrGraphState): Promise<{
   };
 }
 
-async function resolveRepositoryContextNode(state: CreateMrGraphState): Promise<{
+async function resolveRepositoryContext(input: CreateMrWorkflowInput): Promise<{
   sourceBranch: string;
   projectPath: string;
 }> {
-  const sourceBranch = await getCurrentBranch(state.input.repoPath);
-  const remoteUrl = await getOriginRemoteUrl(state.input.repoPath);
+  const sourceBranch = await getCurrentBranch(input.repoPath);
+  const remoteUrl = await getOriginRemoteUrl(input.repoPath);
   const projectPath = remoteToProjectPath(remoteUrl);
-  logger.debug("create-mr", `repo context resolved`, { sourceBranch, remoteUrl, projectPath });
+  logger.debug("create-mr", "repo context resolved", { sourceBranch, remoteUrl, projectPath });
   return { sourceBranch, projectPath };
 }
 
-async function validateBranchesNode(state: CreateMrGraphState): Promise<Record<string, never>> {
-  const gitlab = assertGitLab(state.gitlab);
+async function validateBranches(args: {
+  gitlab: GitLabClient;
+  projectPath: string;
+  sourceBranch: string;
+  inputTargetBranch?: string;
+}): Promise<void> {
   const [sourceExists, targetExists] = await Promise.all([
-    gitlab.branchExists(state.projectPath, state.sourceBranch),
-    state.input.targetBranch
-      ? gitlab.branchExists(state.projectPath, state.input.targetBranch)
-      : Promise.resolve(true), // target not yet resolved; checked after resolveTargetBranch
+    args.gitlab.branchExists(args.projectPath, args.sourceBranch),
+    args.inputTargetBranch
+      ? args.gitlab.branchExists(args.projectPath, args.inputTargetBranch)
+      : Promise.resolve(true),
   ]);
   if (!sourceExists) {
     throw new Error(
-      `Source branch '${state.sourceBranch}' does not exist in remote repository. Push the branch before creating a merge request.`
+      `Source branch '${args.sourceBranch}' does not exist in remote repository. Push the branch before creating a merge request.`
     );
   }
-  if (state.input.targetBranch && !targetExists) {
+  if (args.inputTargetBranch && !targetExists) {
     throw new Error(
-      `Target branch '${state.input.targetBranch}' does not exist in remote repository.`
+      `Target branch '${args.inputTargetBranch}' does not exist in remote repository.`
     );
   }
-  return {};
 }
 
-async function loadRemoteBranchesNode(
-  state: CreateMrGraphState
-): Promise<{ branches: string[]; defaultBranch: string }> {
-  const phaseReporter = createWorkflowPhaseReporter(WORKFLOW_NAME, state.input.events);
+async function loadRemoteBranches(args: {
+  input: CreateMrWorkflowInput;
+  gitlab: GitLabClient;
+  projectPath: string;
+}): Promise<{ branches: string[]; defaultBranch: string }> {
+  const phaseReporter = createWorkflowPhaseReporter(WORKFLOW_NAME, args.input.events);
   phaseReporter.started("load_remote_branches", "Loading remote branches...");
-  const gitlab = assertGitLab(state.gitlab);
   const [branches, rawDefaultBranch] = await Promise.all([
-    gitlab.listBranches(state.projectPath),
-    gitlab.getDefaultBranch(state.projectPath),
+    args.gitlab.listBranches(args.projectPath),
+    args.gitlab.getDefaultBranch(args.projectPath),
   ]);
-  const defaultBranch = branches.includes(rawDefaultBranch)
-    ? rawDefaultBranch
-    : (branches[0] ?? "");
-  logger.debug("create-mr", `branches loaded`, {
+  const defaultBranch = branches.includes(rawDefaultBranch) ? rawDefaultBranch : (branches[0] ?? "");
+  logger.debug("create-mr", "branches loaded", {
     count: branches.length,
     rawDefaultBranch,
     effectiveDefaultBranch: defaultBranch,
@@ -190,85 +176,110 @@ async function loadRemoteBranchesNode(
   return { branches, defaultBranch };
 }
 
-async function resolveTargetBranchNode(
-  state: CreateMrGraphState
-): Promise<{ targetBranch: string }> {
-  logger.debug("create-mr", `resolving target branch`, {
-    inputTargetBranch: state.input.targetBranch,
-    defaultBranch: state.defaultBranch,
-    mode: state.input.mode,
-    sourceBranch: state.sourceBranch,
+async function resolveTargetBranch(args: {
+  input: CreateMrWorkflowInput;
+  gitlab: GitLabClient;
+  projectPath: string;
+  sourceBranch: string;
+  branches: string[];
+  defaultBranch: string;
+  response: CreateMrWorkflowResponseInput;
+}): Promise<string> {
+  logger.debug("create-mr", "resolving target branch", {
+    inputTargetBranch: args.input.targetBranch,
+    defaultBranch: args.defaultBranch,
+    mode: args.input.mode,
+    sourceBranch: args.sourceBranch,
   });
-  const targetBranch = await resolveTargetBranch(
-    state.input.targetBranch,
-    state.branches,
-    state.defaultBranch,
-    state.input.mode,
-    state.input.resolveTargetBranch
-  );
-  if (targetBranch === state.sourceBranch) {
+
+  let targetBranch = args.input.targetBranch;
+  if (!targetBranch) {
+    if (args.input.mode === "ci") {
+      throw new Error("CI mode requires --target-branch.");
+    }
+    if (!args.defaultBranch) {
+      throw new Error("No remote branches found.");
+    }
+    const resolved = assertResponseType(args.response, "target_branch_resolved");
+    targetBranch = resolved.targetBranch.trim() || args.defaultBranch;
+  }
+
+  if (!args.branches.includes(targetBranch)) {
+    throw new Error(`Branch '${targetBranch}' does not exist in remote repository.`);
+  }
+  if (targetBranch === args.sourceBranch) {
     throw new Error("Source and target branch cannot be the same.");
   }
-  // Validate the interactively-resolved target (user may type a branch not in the list)
-  if (!state.input.targetBranch) {
-    const exists = await assertGitLab(state.gitlab).branchExists(state.projectPath, targetBranch);
+
+  if (!args.input.targetBranch) {
+    const exists = await args.gitlab.branchExists(args.projectPath, targetBranch);
     if (!exists) {
       throw new Error(`Target branch '${targetBranch}' does not exist in remote repository.`);
     }
   }
+
   logger.debug("create-mr", `target branch resolved: ${targetBranch}`);
-  return { targetBranch };
+  return targetBranch;
 }
 
-async function getBranchDiffNode(state: CreateMrGraphState): Promise<{ branchDiff: string }> {
-  const phaseReporter = createWorkflowPhaseReporter(WORKFLOW_NAME, state.input.events);
+async function getBranchDiff(args: {
+  input: CreateMrWorkflowInput;
+  gitlab: GitLabClient;
+  projectPath: string;
+  sourceBranch: string;
+  targetBranch: string;
+}): Promise<string> {
+  const phaseReporter = createWorkflowPhaseReporter(WORKFLOW_NAME, args.input.events);
   phaseReporter.started(
     "get_branch_diff",
-    `Getting branch diff (${state.sourceBranch} -> ${state.targetBranch})...`
+    `Getting branch diff (${args.sourceBranch} -> ${args.targetBranch})...`
   );
-  logger.debug("create-mr", `fetching branch diff`, {
-    projectPath: state.projectPath,
-    sourceBranch: state.sourceBranch,
-    targetBranch: state.targetBranch,
+  logger.debug("create-mr", "fetching branch diff", {
+    projectPath: args.projectPath,
+    sourceBranch: args.sourceBranch,
+    targetBranch: args.targetBranch,
   });
-  const branchDiff = await assertGitLab(state.gitlab).compareBranches(
-    state.projectPath,
-    state.sourceBranch,
-    state.targetBranch
+  const branchDiff = await args.gitlab.compareBranches(
+    args.projectPath,
+    args.sourceBranch,
+    args.targetBranch
   );
   phaseReporter.completed("get_branch_diff", "Branch diff retrieved.");
   if (!branchDiff.trim()) {
     throw new Error(
-      `No differences found between '${state.sourceBranch}' and '${state.targetBranch}'. Ensure the source branch has commits not present on the target.`
+      `No differences found between '${args.sourceBranch}' and '${args.targetBranch}'. Ensure the source branch has commits not present on the target.`
     );
   }
   logger.debug("create-mr", `branch diff fetched, len=${branchDiff.length}`);
-  return { branchDiff };
+  return branchDiff;
 }
 
-async function generateMrDraftNode(state: CreateMrGraphState): Promise<{
-  title: string;
-  description: string;
-}> {
-  let description = fallbackDescription(state.branchDiff);
-  let title = fallbackTitle(state.sourceBranch, state.targetBranch);
-  const runtime = assertRuntime(state.runtime);
-  const llm = assertLlm(state.llm);
-  const phaseReporter = createWorkflowPhaseReporter(WORKFLOW_NAME, state.input.events);
+async function generateMrDraft(args: {
+  input: CreateMrWorkflowInput;
+  runtime: WorkflowRuntime;
+  llm: LlmClient;
+  branchDiff: string;
+  sourceBranch: string;
+  targetBranch: string;
+  feedback: string;
+}): Promise<{ title: string; description: string }> {
+  let description = fallbackDescription(args.branchDiff);
+  let title = fallbackTitle(args.sourceBranch, args.targetBranch);
+  const phaseReporter = createWorkflowPhaseReporter(WORKFLOW_NAME, args.input.events);
 
-  if (!runtime.openaiApiUrl || !runtime.openaiApiKey) {
-    reportStatus(state.input, "warning", "LLM config missing; using fallback title/description.");
+  if (!args.runtime.openaiApiUrl || !args.runtime.openaiApiKey) {
+    reportStatus(args.input, "warning", "LLM config missing; using fallback title/description.");
     return { title, description };
   }
 
   try {
-    const promptTemplate = await loadPrompt("mr.txt", state.input.repoRoot);
-    let prompt = promptTemplate.replace("{mr_changes}", state.branchDiff);
-    if (state.feedback?.trim()) {
-      prompt = `Human feedback for this re-run:\n${state.feedback.trim()}\n\n${prompt}`;
+    const promptTemplate = await loadPrompt("mr.txt", args.input.repoRoot);
+    let prompt = promptTemplate.replace("{mr_changes}", args.branchDiff);
+    if (args.feedback.trim()) {
+      prompt = `Human feedback for this re-run:\n${args.feedback}\n\n${prompt}`;
     }
     phaseReporter.started("generate_mr_draft", "Generating merge request description...");
-    description = await llm.generate(prompt);
+    description = await args.llm.generate(prompt);
     phaseReporter.completed("generate_mr_draft", "Merge request description generated.");
 
     const titlePrompt = [
@@ -277,10 +288,10 @@ async function generateMrDraftNode(state: CreateMrGraphState): Promise<{
       "",
       description,
     ].join("\n");
-    title = (await llm.generate(titlePrompt)).replaceAll("\n", " ").trim().slice(0, 100);
+    title = (await args.llm.generate(titlePrompt)).replaceAll("\n", " ").trim().slice(0, 100);
   } catch {
     reportStatus(
-      state.input,
+      args.input,
       "warning",
       "LLM generation failed; using fallback title/description."
     );
@@ -289,199 +300,223 @@ async function generateMrDraftNode(state: CreateMrGraphState): Promise<{
   return { title, description };
 }
 
-async function publishDraftNode(
-  state: CreateMrGraphState
-): Promise<{ iteration: number; feedback: string }> {
-  const nextIteration = state.iteration + 1;
-  await state.input.onDraft?.({
-    sourceBranch: state.sourceBranch,
-    targetBranch: state.targetBranch,
-    title: state.title,
-    description: state.description,
-    iteration: nextIteration,
-  });
-  return { iteration: nextIteration, feedback: "" };
-}
-
-async function promptForFeedbackNode(state: CreateMrGraphState): Promise<{
-  shouldRegenerate: boolean;
-  feedback: string;
-}> {
-  if (state.input.mode !== "interactive") {
-    return { shouldRegenerate: false, feedback: "" };
-  }
-  if (!state.input.requestDraftFeedback) {
-    return { shouldRegenerate: false, feedback: "" };
-  }
-  const feedback = await state.input.requestDraftFeedback();
-  if (!feedback) {
-    return { shouldRegenerate: false, feedback: "" };
-  }
-
-  reportStatus(state.input, "info", "Regenerating merge request draft with your feedback...");
-  return { shouldRegenerate: true, feedback };
-}
-
-async function findExistingMergeRequestNode(state: CreateMrGraphState): Promise<{
-  existingMr: { iid: number; web_url: string } | null;
-}> {
-  const existingMr = await assertGitLab(state.gitlab).findExistingMergeRequest(
-    state.projectPath,
-    state.sourceBranch,
-    state.targetBranch
+async function findExistingMergeRequest(args: {
+  gitlab: GitLabClient;
+  projectPath: string;
+  sourceBranch: string;
+  targetBranch: string;
+}): Promise<{ iid: number; web_url: string } | null> {
+  return args.gitlab.findExistingMergeRequest(
+    args.projectPath,
+    args.sourceBranch,
+    args.targetBranch
   );
-  return { existingMr };
 }
 
-async function confirmMergeRequestUpsertNode(
-  state: CreateMrGraphState
-): Promise<{ shouldProceed: boolean }> {
-  if (typeof state.input.shouldProceed === "boolean") {
-    return { shouldProceed: state.input.shouldProceed };
+async function confirmMergeRequestUpsert(args: {
+  input: CreateMrWorkflowInput;
+  response: CreateMrWorkflowResponseInput;
+}): Promise<boolean> {
+  if (typeof args.input.shouldProceed === "boolean") {
+    return args.input.shouldProceed;
   }
-  if (state.input.mode !== "interactive") {
-    return { shouldProceed: true };
+  if (args.input.mode !== "interactive") {
+    return true;
   }
-  if (!state.input.confirmUpsert) {
-    throw new Error("Interactive mode requires upsert confirmation from the command layer.");
-  }
-  const shouldProceed = await state.input.confirmUpsert({
-    existingMrIid: state.existingMr?.iid,
-  });
-  return { shouldProceed };
+  return assertResponseType(args.response, "upsert_confirmed").shouldProceed;
 }
 
-async function buildCancelledResultNode(
-  state: CreateMrGraphState
-): Promise<{ result: CreateMrWorkflowResult }> {
-  reportStatus(state.input, "warning", "Merge request operation cancelled by user.");
-  return {
-    result: {
-      sourceBranch: state.sourceBranch,
-      targetBranch: state.targetBranch,
-      title: state.title,
-      description: state.description,
-      mergeRequestUrl: state.existingMr?.web_url,
-      action: "cancelled",
-    },
-  };
-}
+async function upsertMergeRequest(args: {
+  input: CreateMrWorkflowInput;
+  gitlab: GitLabClient;
+  projectPath: string;
+  sourceBranch: string;
+  targetBranch: string;
+  title: string;
+  description: string;
+  existingMr: { iid: number; web_url: string } | null;
+}): Promise<CreateMrWorkflowResult> {
+  const phaseReporter = createWorkflowPhaseReporter(WORKFLOW_NAME, args.input.events);
 
-async function upsertMergeRequestNode(
-  state: CreateMrGraphState
-): Promise<{ result: CreateMrWorkflowResult }> {
-  const gitlab = assertGitLab(state.gitlab);
-  const phaseReporter = createWorkflowPhaseReporter(WORKFLOW_NAME, state.input.events);
-
-  if (state.existingMr) {
-    phaseReporter.started(
-      "upsert_merge_request",
-      `Updating existing MR !${state.existingMr.iid}...`
-    );
-    const url = await gitlab.updateMergeRequest(
-      state.projectPath,
-      state.existingMr.iid,
-      state.title,
-      state.description
+  if (args.existingMr) {
+    phaseReporter.started("upsert_merge_request", `Updating existing MR !${args.existingMr.iid}...`);
+    const url = await args.gitlab.updateMergeRequest(
+      args.projectPath,
+      args.existingMr.iid,
+      args.title,
+      args.description
     );
     phaseReporter.completed("upsert_merge_request", "Merge request updated.");
     return {
-      result: {
-        sourceBranch: state.sourceBranch,
-        targetBranch: state.targetBranch,
-        title: state.title,
-        description: state.description,
-        mergeRequestUrl: url,
-        action: "updated",
-      },
+      sourceBranch: args.sourceBranch,
+      targetBranch: args.targetBranch,
+      title: args.title,
+      description: args.description,
+      mergeRequestUrl: url,
+      action: "updated",
     };
   }
 
   phaseReporter.started("upsert_merge_request", "Creating merge request...");
-  const url = await gitlab.createMergeRequest(
-    state.projectPath,
-    state.sourceBranch,
-    state.targetBranch,
-    state.title,
-    state.description
+  const url = await args.gitlab.createMergeRequest(
+    args.projectPath,
+    args.sourceBranch,
+    args.targetBranch,
+    args.title,
+    args.description
   );
   phaseReporter.completed("upsert_merge_request", "Merge request created.");
   return {
-    result: {
-      sourceBranch: state.sourceBranch,
-      targetBranch: state.targetBranch,
-      title: state.title,
-      description: state.description,
-      mergeRequestUrl: url,
-      action: "created",
-    },
+    sourceBranch: args.sourceBranch,
+    targetBranch: args.targetBranch,
+    title: args.title,
+    description: args.description,
+    mergeRequestUrl: url,
+    action: "created",
   };
 }
 
-export async function runCreateMrWorkflow(
+export async function* runCreateMrWorkflow(
   input: CreateMrWorkflowInput
-): Promise<CreateMrWorkflowResult> {
-  const finalState = await runWorkflow<CreateMrGraphState>({
-    initialState: {
-      input,
-      runtime: null,
-      gitlab: null,
-      llm: null,
-      sourceBranch: "",
-      targetBranch: "",
-      projectPath: "",
-      branches: [],
-      defaultBranch: "",
-      branchDiff: "",
-      title: "",
-      description: "",
-      iteration: 0,
-      feedback: input.userFeedback ?? "",
-      shouldRegenerate: false,
-      existingMr: null,
-      shouldProceed: true,
-      result: null,
-    },
-    steps: {
-      loadRuntime: loadRuntimeNode,
-      initializeClients: initializeClientsNode,
-      resolveRepositoryContext: resolveRepositoryContextNode,
-      validateBranches: validateBranchesNode,
-      loadRemoteBranches: loadRemoteBranchesNode,
-      resolveTargetBranch: resolveTargetBranchNode,
-      getBranchDiff: getBranchDiffNode,
-      generateMrDraft: generateMrDraftNode,
-      publishDraft: publishDraftNode,
-      promptForFeedback: promptForFeedbackNode,
-      findExistingMergeRequest: findExistingMergeRequestNode,
-      confirmMergeRequestUpsert: confirmMergeRequestUpsertNode,
-      buildCancelledResult: buildCancelledResultNode,
-      upsertMergeRequest: upsertMergeRequestNode,
-    },
-    routes: {
-      loadRuntime: "initializeClients",
-      initializeClients: "resolveRepositoryContext",
-      resolveRepositoryContext: "validateBranches",
-      validateBranches: "loadRemoteBranches",
-      loadRemoteBranches: "resolveTargetBranch",
-      resolveTargetBranch: "getBranchDiff",
-      getBranchDiff: "generateMrDraft",
-      generateMrDraft: "publishDraft",
-      publishDraft: "promptForFeedback",
-      promptForFeedback: (state) =>
-        state.shouldRegenerate ? "generateMrDraft" : "findExistingMergeRequest",
-      findExistingMergeRequest: "confirmMergeRequestUpsert",
-      confirmMergeRequestUpsert: (state) =>
-        state.shouldProceed ? "upsertMergeRequest" : "buildCancelledResult",
-      buildCancelledResult: "end",
-      upsertMergeRequest: "end",
-    },
-    start: "loadRuntime",
-    end: "end",
+): AsyncGenerator<CreateMrWorkflowEffect, CreateMrWorkflowResult, CreateMrWorkflowResponseInput> {
+  const runtime = assertRuntime(await initializeRuntime());
+  const { gitlab, llm } = await initializeClients(runtime);
+  const { sourceBranch, projectPath } = await resolveRepositoryContext(input);
+  await validateBranches({
+    gitlab,
+    projectPath,
+    sourceBranch,
+    inputTargetBranch: input.targetBranch,
   });
 
-  if (!finalState.result) {
-    throw new Error("Create MR workflow did not produce a result.");
+  const { branches, defaultBranch } = await loadRemoteBranches({
+    input,
+    gitlab: assertGitLab(gitlab),
+    projectPath,
+  });
+
+  const targetBranchResponse =
+    input.targetBranch || input.mode === "ci"
+      ? undefined
+      : yield {
+          type: "resolve_target_branch",
+          branches,
+          defaultBranch,
+        };
+
+  const targetBranch = await resolveTargetBranch({
+      input,
+      gitlab: assertGitLab(gitlab),
+      projectPath,
+      sourceBranch,
+      branches,
+      defaultBranch,
+      response: targetBranchResponse,
+    });
+
+  const branchDiff = await getBranchDiff({
+    input,
+    gitlab: assertGitLab(gitlab),
+    projectPath,
+    sourceBranch,
+    targetBranch,
+  });
+
+  let iteration = 0;
+  let feedback = input.userFeedback?.trim() ?? "";
+  let title = "";
+  let description = "";
+
+  for (;;) {
+    ({ title, description } = await generateMrDraft({
+      input,
+      runtime,
+      llm: assertLlm(llm),
+      branchDiff,
+      sourceBranch,
+      targetBranch,
+      feedback,
+    }));
+
+    iteration += 1;
+    const draft = buildDraft({
+      sourceBranch,
+      targetBranch,
+      title,
+      description,
+      iteration,
+    });
+
+    yield {
+      type: "draft_ready",
+      draft,
+    };
+
+    if (input.mode !== "interactive") {
+      break;
+    }
+
+    const feedbackResponse = yield {
+      type: "request_draft_feedback",
+      draft,
+    };
+    const nextFeedback =
+      assertResponseType(feedbackResponse, "draft_feedback").feedback?.trim() ?? "";
+    if (!nextFeedback) {
+      break;
+    }
+
+    reportStatus(input, "info", "Regenerating merge request draft with your feedback...");
+    feedback = nextFeedback;
   }
-  return finalState.result;
+
+  const finalDraft = buildDraft({
+    sourceBranch,
+    targetBranch,
+    title,
+    description,
+    iteration,
+  });
+
+  const existingMr = await findExistingMergeRequest({
+    gitlab: assertGitLab(gitlab),
+    projectPath,
+    sourceBranch,
+    targetBranch,
+  });
+
+  const shouldProceed =
+    input.mode !== "interactive" || typeof input.shouldProceed === "boolean"
+      ? await confirmMergeRequestUpsert({ input, response: undefined })
+      : await confirmMergeRequestUpsert({
+          input,
+          response:
+            yield {
+              type: "confirm_upsert",
+              draft: finalDraft,
+              existingMrIid: existingMr?.iid,
+            },
+        });
+
+  if (!shouldProceed) {
+    return {
+      sourceBranch,
+      targetBranch,
+      title,
+      description,
+      mergeRequestUrl: existingMr?.web_url,
+      action: "cancelled",
+    };
+  }
+
+  return upsertMergeRequest({
+    input,
+    gitlab: assertGitLab(gitlab),
+    projectPath,
+    sourceBranch,
+    targetBranch,
+    title,
+    description,
+    existingMr,
+  });
 }
