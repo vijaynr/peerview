@@ -3,9 +3,11 @@
  */
 
 export type ReviewBoardRepository = {
+  id?: number;
   title: string;
   name: string;
   path?: string;
+  mirror_path?: string;
 };
 
 export type ReviewBoardRequest = {
@@ -80,3 +82,4 @@ export type ReviewBoardReview = {
     diff_comments: { href: string };
   };
 };
+

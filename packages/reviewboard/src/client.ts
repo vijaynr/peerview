@@ -10,19 +10,27 @@ import type {
 function isFailureResponse(data: unknown): data is { stat: "fail" } {
   return Boolean(
     data &&
-    typeof data === "object" &&
-    "stat" in data &&
-    (data as { stat?: unknown }).stat === "fail"
+      typeof data === "object" &&
+      "stat" in data &&
+      (data as { stat?: unknown }).stat === "fail"
   );
 }
 
 export interface ReviewBoardClient {
+  listRepositories(): Promise<ReviewBoardRepository[]>;
   listReviewRequests(
     status: "pending" | "submitted" | "all",
     fromUser?: string
   ): Promise<ReviewBoardRequest[]>;
   getReviewRequest(requestId: number): Promise<ReviewBoardRequest>;
   getRepository(repositoryHref: string): Promise<ReviewBoardRepository>;
+  createReviewRequest(repositoryId: number): Promise<ReviewBoardRequest>;
+  updateReviewRequestDraft(
+    requestId: number,
+    fields: { summary?: string; description?: string }
+  ): Promise<ReviewBoardRequest>;
+  uploadReviewRequestDiff(requestId: number, diff: string, basedir?: string): Promise<ReviewBoardDiffSet>;
+  publishReviewRequest(requestId: number): Promise<ReviewBoardRequest>;
   getLatestDiffSet(requestId: number): Promise<ReviewBoardDiffSet | null>;
   getFileDiffs(requestId: number, diffSetId: number): Promise<ReviewBoardFileDiff[]>;
   getFileDiffData(
@@ -42,10 +50,6 @@ export interface ReviewBoardClient {
   ): Promise<void>;
   publishReview(requestId: number, reviewId: number): Promise<void>;
   getCurrentUser(): Promise<{ id: number; username: string; fullname: string }>;
-
-  /**
-   * Orchestrates a full review: creates it, adds comments, and publishes it.
-   */
   postReview(
     requestId: number,
     summary: string,
@@ -58,6 +62,14 @@ export interface ReviewBoardClient {
   ): Promise<ReviewBoardReview>;
 }
 
+function buildAuthHeader(token: string, username?: string): string {
+  return username
+    ? `Basic ${Buffer.from(`${username}:${token}`).toString("base64")}`
+    : token.toLowerCase().startsWith("token ")
+      ? token
+      : `token ${token}`;
+}
+
 export async function rbRequest<T>(
   baseUrl: string,
   token: string,
@@ -66,18 +78,12 @@ export async function rbRequest<T>(
   username?: string
 ): Promise<T> {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
-  const authHeader = username
-    ? `Basic ${Buffer.from(`${username}:${token}`).toString("base64")}`
-    : token.toLowerCase().startsWith("token ")
-      ? token
-      : `token ${token}`;
-
   const url = endpoint.startsWith("http") ? endpoint : `${normalizedBaseUrl}${endpoint}`;
 
   const response = await fetch(url, {
     ...init,
     headers: {
-      Authorization: authHeader,
+      Authorization: buildAuthHeader(token, username),
       Accept: "application/json",
       ...(init?.headers ?? {}),
     },
@@ -140,6 +146,17 @@ export function createReviewBoardClient(
   username?: string
 ): ReviewBoardClient {
   const client: ReviewBoardClient = {
+    async listRepositories() {
+      const response = await rbRequest<{ repositories: ReviewBoardRepository[] }>(
+        baseUrl,
+        token,
+        "/api/repositories/?max-results=200",
+        {},
+        username
+      );
+      return response.repositories || [];
+    },
+
     async listReviewRequests(status, fromUser) {
       let endpoint = `/api/review-requests/?status=${status}&counts-only=0&max-results=200&expand=submitter`;
       if (fromUser) {
@@ -166,12 +183,7 @@ export function createReviewBoardClient(
 
       const request = response.review_request;
       if (!request.repository?.path && request.links.repository?.href) {
-        request.repository = await getRepository(
-          baseUrl,
-          token,
-          request.links.repository.href,
-          username
-        );
+        request.repository = await getRepository(baseUrl, token, request.links.repository.href, username);
       }
 
       return request;
@@ -179,6 +191,80 @@ export function createReviewBoardClient(
 
     async getRepository(repositoryHref) {
       return getRepository(baseUrl, token, repositoryHref, username);
+    },
+
+    async createReviewRequest(repositoryId) {
+      const response = await rbRequest<{ review_request: ReviewBoardRequest }>(
+        baseUrl,
+        token,
+        "/api/review-requests/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ repository: repositoryId.toString() }),
+        },
+        username
+      );
+      return response.review_request;
+    },
+
+    async updateReviewRequestDraft(requestId, fields) {
+      const body = new URLSearchParams();
+      if (fields.summary !== undefined) {
+        body.set("summary", fields.summary);
+      }
+      if (fields.description !== undefined) {
+        body.set("description", fields.description);
+        body.set("description_text_type", "markdown");
+      }
+
+      const response = await rbRequest<{ review_request: ReviewBoardRequest }>(
+        baseUrl,
+        token,
+        `/api/review-requests/${requestId}/draft/`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body,
+        },
+        username
+      );
+      return response.review_request;
+    },
+
+    async uploadReviewRequestDiff(requestId, diff, basedir) {
+      const form = new FormData();
+      form.set("path", new Blob([diff], { type: "text/x-patch" }), "review.diff");
+      if (basedir) {
+        form.set("basedir", basedir);
+      }
+
+      const response = await rbRequest<{ diff: ReviewBoardDiffSet }>(
+        baseUrl,
+        token,
+        `/api/review-requests/${requestId}/draft/diffs/`,
+        {
+          method: "POST",
+          body: form,
+        },
+        username
+      );
+      return response.diff;
+    },
+
+    async publishReviewRequest(requestId) {
+      const response = await rbRequest<{ review_request: ReviewBoardRequest }>(
+        baseUrl,
+        token,
+        `/api/review-requests/${requestId}/draft/`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ public: "1" }),
+        },
+        username
+      );
+      return response.review_request;
     },
 
     async getLatestDiffSet(requestId) {
@@ -217,16 +303,10 @@ export function createReviewBoardClient(
 
     async getRawDiff(requestId, revision) {
       const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
-      const authHeader = username
-        ? `Basic ${Buffer.from(`${username}:${token}`).toString("base64")}`
-        : token.toLowerCase().startsWith("token ")
-          ? token
-          : `token ${token}`;
-
       const url = `${normalizedBaseUrl}/api/review-requests/${requestId}/diffs/${revision}/`;
       const response = await fetch(url, {
         headers: {
-          Authorization: authHeader,
+          Authorization: buildAuthHeader(token, username),
           Accept: "text/x-patch",
         },
       });
@@ -264,7 +344,7 @@ export function createReviewBoardClient(
             filediff_id: fileDiffId.toString(),
             first_line: firstLine.toString(),
             num_lines: numLines.toString(),
-            text: text,
+            text,
           }),
         },
         username

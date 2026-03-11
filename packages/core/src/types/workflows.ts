@@ -10,18 +10,22 @@ export type ReviewPhase =
   | "local_summary"
   | "chat_context_summary"
   | "answering_question";
-export type CreateMrPhase =
+export type CreateReviewPhase =
   | "load_remote_branches"
   | "get_branch_diff"
   | "generate_mr_draft"
+  | "resolve_reviewboard_repository"
+  | "create_review_request"
+  | "upload_review_diff"
+  | "publish_review_request"
   | "upsert_merge_request";
 export type WorkflowEventType = "phase_started" | "phase_completed";
-export type WorkflowName = "review" | "reviewSummarize" | "reviewChat" | "createMr";
+export type WorkflowName = "review" | "reviewSummarize" | "reviewChat" | "createReview";
 export type WorkflowPhaseMap = {
   review: ReviewPhase;
   reviewSummarize: ReviewPhase;
   reviewChat: ReviewPhase;
-  createMr: CreateMrPhase;
+  createReview: CreateReviewPhase;
 };
 
 export type StatusReporter = Record<StatusLevel, (message: string) => void>;
@@ -145,17 +149,21 @@ export type ReviewChatContext = {
   summary: string;
 };
 
-export type CreateMrDraft = {
-  sourceBranch: string;
-  targetBranch: string;
+export type CreateReviewProvider = "gitlab" | "reviewboard";
+
+export type CreateReviewDraft = {
+  provider: CreateReviewProvider;
+  sourceLabel: string;
+  targetLabel?: string;
   title: string;
   description: string;
   iteration: number;
 };
 
-export type CreateMrWorkflowInput = {
+export type CreateReviewWorkflowInput = {
   repoPath: string;
   targetBranch?: string;
+  provider?: CreateReviewProvider;
   mode: WorkflowMode;
   repoRoot: string;
   userFeedback?: string;
@@ -164,10 +172,10 @@ export type CreateMrWorkflowInput = {
   events?: WorkflowEventReporter;
 };
 
-export type CreateMrWorkflowEffect =
+export type CreateReviewWorkflowEffect =
   | {
       type: "draft_ready";
-      draft: CreateMrDraft;
+      draft: CreateReviewDraft;
     }
   | {
       type: "resolve_target_branch";
@@ -176,15 +184,16 @@ export type CreateMrWorkflowEffect =
     }
   | {
       type: "request_draft_feedback";
-      draft: CreateMrDraft;
+      draft: CreateReviewDraft;
     }
   | {
       type: "confirm_upsert";
-      draft: CreateMrDraft;
-      existingMrIid?: number;
+      draft: CreateReviewDraft;
+      entityType: "merge_request" | "review_request";
+      existingEntityId?: number;
     };
 
-export type CreateMrWorkflowResponse =
+export type CreateReviewWorkflowResponse =
   | {
       type: "target_branch_resolved";
       targetBranch: string;
@@ -198,11 +207,20 @@ export type CreateMrWorkflowResponse =
       shouldProceed: boolean;
     };
 
-export type CreateMrWorkflowResult = {
-  sourceBranch: string;
-  targetBranch: string;
+export type CreateReviewWorkflowResult = {
+  provider: CreateReviewProvider;
+  entityType: "merge_request" | "review_request";
+  entityId?: number;
+  sourceLabel: string;
+  targetLabel?: string;
   title: string;
   description: string;
-  mergeRequestUrl?: string;
+  url?: string;
   action: "created" | "updated" | "cancelled";
 };
+
+export type CreateMrDraft = CreateReviewDraft;
+export type CreateMrWorkflowInput = CreateReviewWorkflowInput;
+export type CreateMrWorkflowEffect = CreateReviewWorkflowEffect;
+export type CreateMrWorkflowResponse = CreateReviewWorkflowResponse;
+export type CreateMrWorkflowResult = CreateReviewWorkflowResult;

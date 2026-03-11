@@ -338,7 +338,7 @@ export function printHelpView(): void {
     },
     { cmd: "cr config", desc: "View or edit complete configuration." },
     { cmd: "cr review", desc: "Run review, summarize, or chat workflows." },
-    { cmd: "cr create-mr", desc: "Generate or update a merge request draft." },
+    { cmd: "cr create-review", desc: "Generate or update a merge request or review request draft." },
     { cmd: "cr serve", desc: "Start a webhook server for GitLab or Review Board events." },
     { cmd: "cr help", desc: "Show this help screen." },
   ]);
@@ -352,7 +352,7 @@ export function printHelpView(): void {
   const exampleRows = [
     "cr review --path .",
     "cr review --workflow summarize --path .",
-    "cr create-mr --target-branch main",
+    "cr create-review --target-branch main",
     "git diff | cr review --local",
   ];
 
@@ -413,4 +413,5 @@ export const __test__ = {
   wrapTextByWidth,
   centerLine,
 };
+
 

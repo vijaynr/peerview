@@ -7,6 +7,7 @@ import {
 } from "@cr/reviewboard";
 import type {
   ReviewBoardRequest,
+  ReviewBoardRepository,
   ReviewBoardDiffSet,
   ReviewBoardFileDiff,
   ReviewBoardDiffData,
@@ -14,6 +15,13 @@ import type {
 } from "@cr/reviewboard";
 
 export { normalizeBaseUrl, reviewBoardToRequestId, rbRequest, getCurrentUser };
+
+export async function listRepositories(
+  baseUrl: string,
+  token: string
+): Promise<ReviewBoardRepository[]> {
+  return createReviewBoardClient(baseUrl, token).listRepositories();
+}
 
 export async function listReviewRequests(
   baseUrl: string,
@@ -57,6 +65,41 @@ export async function getFileDiffData(
   fileDiffId: number
 ): Promise<ReviewBoardDiffData> {
   return createReviewBoardClient(baseUrl, token).getFileDiffData(requestId, diffSetId, fileDiffId);
+}
+
+export async function createReviewRequest(
+  baseUrl: string,
+  token: string,
+  repositoryId: number
+): Promise<ReviewBoardRequest> {
+  return createReviewBoardClient(baseUrl, token).createReviewRequest(repositoryId);
+}
+
+export async function updateReviewRequestDraft(
+  baseUrl: string,
+  token: string,
+  requestId: number,
+  fields: { summary?: string; description?: string }
+): Promise<ReviewBoardRequest> {
+  return createReviewBoardClient(baseUrl, token).updateReviewRequestDraft(requestId, fields);
+}
+
+export async function uploadReviewRequestDiff(
+  baseUrl: string,
+  token: string,
+  requestId: number,
+  diff: string,
+  basedir?: string
+): Promise<ReviewBoardDiffSet> {
+  return createReviewBoardClient(baseUrl, token).uploadReviewRequestDiff(requestId, diff, basedir);
+}
+
+export async function publishReviewRequest(
+  baseUrl: string,
+  token: string,
+  requestId: number
+): Promise<ReviewBoardRequest> {
+  return createReviewBoardClient(baseUrl, token).publishReviewRequest(requestId);
 }
 
 export async function createReview(

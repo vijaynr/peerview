@@ -12,6 +12,7 @@
     "help": "bun run packages/cli/src/cli.ts help",
     "init": "bun run packages/cli/src/cli.ts init",
     "review": "bun run packages/cli/src/cli.ts review",
+    "create-review": "bun run packages/cli/src/cli.ts create-review",
     "create-mr": "bun run packages/cli/src/cli.ts create-mr",
     "test": "bun test tests",
     "typecheck": "tsc --noEmit",

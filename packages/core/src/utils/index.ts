@@ -43,6 +43,13 @@ export {
   loadSvnRepositoryGuidelines,
 } from "./repositoryGuidelines.js";
 export { svnGetFile, resolveSvnFileUrl } from "./svn.js";
+export {
+  isSvnWorkingCopy,
+  getSvnDiff,
+  getSvnRepoRootUrl,
+  getSvnWorkingCopyUrl,
+  getSvnWorkingCopyRoot,
+} from "./svnWorkingCopy.js";
 
 // Bootstrap exports
 export { initializeCRHome } from "./bootstrap.js";

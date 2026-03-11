@@ -37,6 +37,12 @@ export async function runCommand(args: string[]): Promise<void> {
         await runReviewCommand(filteredRest);
       }
       return;
+    case "create-review":
+      {
+        const { runCreateReviewCommand } = await import("./createReviewCommand.js");
+        await runCreateReviewCommand(filteredRest);
+      }
+      return;
     case "create-mr":
       {
         const { runCreateMergeRequestCommand } = await import("./createMrCommand.js");

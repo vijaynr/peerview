@@ -6,30 +6,32 @@ import type {
   WorkflowMode,
   ReviewChatContext,
   ReviewChatHistoryEntry,
-  CreateMrWorkflowInput,
-  CreateMrWorkflowEffect,
-  CreateMrWorkflowResponse,
-  CreateMrWorkflowResult,
+  CreateReviewWorkflowInput,
+  CreateReviewWorkflowEffect,
+  CreateReviewWorkflowResponse,
+  CreateReviewWorkflowResult,
 } from "@cr/core";
 import { COLORS, DOT } from "./constants.js";
 import { printChatAnswer, printDivider, printReviewSummary, printWarning } from "./console.js";
 import { askForOptionalFeedback, promptWithFrame } from "./prompt.js";
-function buildCreateMrResultBody(result: {
-  action: "updated" | "created" | "cancelled";
-  sourceBranch: string;
-  targetBranch: string;
+function buildCreateReviewResultBody(result: {
+  sourceLabel: string;
+  targetLabel?: string;
   title: string;
-  mergeRequestUrl?: string;
+  url?: string;
 }): string {
-  const lines = [
-    `Source: ${result.sourceBranch}`,
-    `Target: ${result.targetBranch}`,
-    `Title: ${result.title}`,
-  ];
-  if (result.mergeRequestUrl) {
-    lines.push(`URL: ${result.mergeRequestUrl}`);
+  const lines = [`Source: ${result.sourceLabel}`, `Title: ${result.title}`];
+  if (result.targetLabel) {
+    lines.splice(1, 0, `Target: ${result.targetLabel}`);
+  }
+  if (result.url) {
+    lines.push(`URL: ${result.url}`);
   }
   return lines.join("\n");
+}
+
+function getReviewEntityLabel(entityType: "merge_request" | "review_request"): string {
+  return entityType === "review_request" ? "Review Request" : "Merge Request";
 }
 import { createSpinner, type OraSpinner } from "./spinner.js";
 
@@ -359,7 +361,7 @@ export async function runLiveChatLoop(args: {
   ui.setResult(workflowResultTitle, `Context: ${chatContext.contextLabel}\nTurns: ${turns}`);
 }
 
-export async function runLiveCreateMrTask(args: {
+export async function runLiveCreateReviewTask(args: {
   repoPath: string;
   targetBranch?: string;
   repoRoot: string;
@@ -367,8 +369,8 @@ export async function runLiveCreateMrTask(args: {
   ui: LiveController;
   status: WorkflowStatusController;
   runWorkflow: (
-    input: CreateMrWorkflowInput
-  ) => AsyncGenerator<CreateMrWorkflowEffect, CreateMrWorkflowResult, CreateMrWorkflowResponse | undefined>;
+    input: CreateReviewWorkflowInput
+  ) => AsyncGenerator<CreateReviewWorkflowEffect, CreateReviewWorkflowResult, CreateReviewWorkflowResponse | undefined>;
 }): Promise<void> {
   const { repoPath, targetBranch, repoRoot, mode, ui, status, runWorkflow } = args;
 
@@ -390,7 +392,7 @@ export async function runLiveCreateMrTask(args: {
         status.stop();
         printReviewSummary({
           output: effect.draft.description,
-          contextLabel: `MR Draft v${effect.draft.iteration} (${effect.draft.sourceBranch} -> ${effect.draft.targetBranch})`,
+          contextLabel: `${getReviewEntityLabel(effect.draft.provider === "reviewboard" ? "review_request" : "merge_request")} Draft v${effect.draft.iteration} (${effect.draft.sourceLabel}${effect.draft.targetLabel ? ` -> ${effect.draft.targetLabel}` : ""})`,
         });
         step = await workflow.next();
         continue;
@@ -415,7 +417,10 @@ export async function runLiveCreateMrTask(args: {
 
       if (effect.type === "request_draft_feedback") {
         const feedback = await askForOptionalFeedback({
-          confirmMessage: "Do you want to provide feedback to improve the merge request description?",
+          confirmMessage:
+            effect.draft.provider === "reviewboard"
+              ? "Do you want to provide feedback to improve the review request description?"
+              : "Do you want to provide feedback to improve the merge request description?",
         });
         step = await workflow.next({
           type: "draft_feedback",
@@ -428,9 +433,9 @@ export async function runLiveCreateMrTask(args: {
         {
           type: "confirm",
           name: "shouldProceed",
-          message: effect.existingMrIid
-            ? `Update existing MR !${effect.existingMrIid}?`
-            : "Create merge request?",
+          message: effect.existingEntityId
+            ? `Update existing ${getReviewEntityLabel(effect.entityType)} #${effect.existingEntityId}?`
+            : `Create ${getReviewEntityLabel(effect.entityType).toLowerCase()}?`,
           initial: true,
         },
         { onCancel: () => true }
@@ -446,11 +451,16 @@ export async function runLiveCreateMrTask(args: {
 
   const result = step.value;
 
+  const entityLabel = getReviewEntityLabel(result.entityType);
   const statusText =
     result.action === "updated"
-      ? "Merge Request Updated"
+      ? `${entityLabel} Updated`
       : result.action === "created"
-        ? "Merge Request Created"
-        : "Merge Request Cancelled";
-  ui.setResult(statusText, buildCreateMrResultBody(result));
+        ? `${entityLabel} Created`
+        : `${entityLabel} Cancelled`;
+  ui.setResult(statusText, buildCreateReviewResultBody(result));
 }
+
+
+export const runLiveCreateMrTask = runLiveCreateReviewTask;
+
