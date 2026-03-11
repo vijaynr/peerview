@@ -197,6 +197,14 @@ export async function loadCRConfig(): Promise<Partial<CRConfig>> {
   return configSchema.partial().parse(parsed);
 }
 
+export async function readCRConfigContents(): Promise<string | null> {
+  if (!existsSync(CR_CONF_PATH)) {
+    return null;
+  }
+
+  return fs.readFile(CR_CONF_PATH, "utf-8");
+}
+
 export async function saveCRConfig(config: CRConfig): Promise<void> {
   const parsed = configSchema.parse(config);
   const encryptedSecrets = {

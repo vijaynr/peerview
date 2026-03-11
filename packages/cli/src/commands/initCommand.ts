@@ -44,8 +44,12 @@ type GitLabSetupAnswers = {
 type ReviewBoardSetupAnswers = {
   openaiApiUrl?: string;
   openaiApiKey?: string;
+  useCustomStreaming?: boolean;
   rbUrl?: string;
   rbToken?: string;
+  svnRepositoryUrl?: string;
+  svnUsername?: string;
+  svnPassword?: string;
 };
 
 type SubversionSetupAnswers = {
@@ -479,6 +483,7 @@ async function runGitLabSetup(_args: string[] = []): Promise<void> {
 
   printDivider();
   printSuccess(`Configuration saved to ${CR_CONF_PATH}`);
+  printDivider();
 }
 
 async function runRbSetup(_args: string[] = []): Promise<void> {
@@ -506,6 +511,14 @@ async function runRbSetup(_args: string[] = []): Promise<void> {
         initial: existing.openaiApiKey ?? "",
       },
       {
+        type: "toggle",
+        name: "useCustomStreaming",
+        message: "Use custom streaming (SSE format)",
+        initial: existing.useCustomStreaming ?? false,
+        active: "yes",
+        inactive: "no",
+      },
+      {
         type: "text",
         name: "rbUrl",
         message: "Review Board URL",
@@ -516,6 +529,24 @@ async function runRbSetup(_args: string[] = []): Promise<void> {
         name: "rbToken",
         message: "Review Board API Token",
         initial: existing.rbToken ?? "",
+      },
+      {
+        type: "text",
+        name: "svnRepositoryUrl",
+        message: "SVN Repository URL",
+        initial: existing.svnRepositoryUrl ?? "",
+      },
+      {
+        type: "text",
+        name: "svnUsername",
+        message: "SVN Username (optional)",
+        initial: existing.svnUsername ?? "",
+      },
+      {
+        type: "password",
+        name: "svnPassword",
+        message: "SVN Password (optional)",
+        initial: existing.svnPassword ?? "",
       },
     ],
     { onCancel: () => true }
@@ -529,13 +560,16 @@ async function runRbSetup(_args: string[] = []): Promise<void> {
   const nextConfig: CRConfig = {
     ...existing,
     openaiModel: existing.openaiModel ?? defaultConfig.openaiModel,
-    useCustomStreaming: existing.useCustomStreaming ?? false,
+    useCustomStreaming: answers.useCustomStreaming ?? false,
     gitlabUrl: existing.gitlabUrl ?? defaultConfig.gitlabUrl,
     gitlabKey: existing.gitlabKey ?? "",
     rbUrl: answers.rbUrl,
     rbToken: answers.rbToken ?? "",
     openaiApiUrl: answers.openaiApiUrl,
     openaiApiKey: answers.openaiApiKey ?? "",
+    svnRepositoryUrl: answers.svnRepositoryUrl,
+    svnUsername: answers.svnUsername,
+    svnPassword: answers.svnPassword,
   };
 
   await saveCRConfig(nextConfig);
@@ -544,5 +578,3 @@ async function runRbSetup(_args: string[] = []): Promise<void> {
   printSuccess(`Review Board configuration updated in ${CR_CONF_PATH}`);
   printDivider();
 }
-
-

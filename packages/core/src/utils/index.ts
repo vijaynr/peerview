@@ -5,7 +5,7 @@ export { parseCRSseStream } from "./streamParser.js";
 export { logger, type LogLevel } from "./logger.js";
 
 // Configuration exports
-export { loadCRConfig, saveCRConfig, envOrConfig } from "./config.js";
+export { loadCRConfig, saveCRConfig, readCRConfigContents, envOrConfig } from "./config.js";
 export { repoRootFromModule, CR_CONF_PATH } from "./paths.js";
 
 // Git exports

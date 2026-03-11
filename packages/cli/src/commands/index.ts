@@ -28,7 +28,7 @@ export async function runCommand(args: string[]): Promise<void> {
     case "config":
       {
         const { runConfigCommand } = await import("./configCommand.js");
-        await runConfigCommand();
+        await runConfigCommand(filteredRest);
       }
       return;
     case "review":

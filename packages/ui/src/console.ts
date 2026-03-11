@@ -162,6 +162,10 @@ export function printWorkflowOutput(props: {
   console.log(rendered);
 }
 
+export function printRawOutput(output: string): void {
+  process.stdout.write(output.endsWith("\n") ? output : `${output}\n`);
+}
+
 function printSection(
   title: string,
   lines: string[],
