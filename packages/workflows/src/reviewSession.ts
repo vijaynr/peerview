@@ -24,6 +24,7 @@ import { runInteractiveReviewWorkflow } from "./reviewWorkflow.js";
 import { runReviewSummarizeWorkflow } from "./reviewSummarizeWorkflow.js";
 
 type ReviewSessionResponseInput = ReviewSessionResponse | undefined;
+const GITLAB_MR_URL_PATTERN = /\/-\/merge_requests\/(\d+)(?:[/?#]|$)/i;
 
 function assertResponseType<T extends ReviewSessionResponse["type"]>(
   response: ReviewSessionResponseInput,
@@ -179,10 +180,34 @@ function getReviewStartMessage(input: ReviewWorkflowInput): string | null {
   return "Do you want to ask questions about this merge request?";
 }
 
+function tryParseMergeRequestIidFromUrl(url: string | undefined): number | null {
+  if (!url) {
+    return null;
+  }
+
+  const match = url.match(GITLAB_MR_URL_PATTERN);
+  if (!match) {
+    return null;
+  }
+
+  const mrIid = Number(match[1]);
+  return Number.isFinite(mrIid) ? mrIid : null;
+}
+
 export async function* runInteractiveReviewSession(
   input: ReviewWorkflowInput
 ): AsyncGenerator<ReviewSessionEffect, ReviewSessionResult, ReviewSessionResponseInput> {
   const resolvedInput: ReviewWorkflowInput = { ...input };
+
+  if (
+    resolvedInput.provider !== "reviewboard" &&
+    !(typeof resolvedInput.mrIid === "number" && Number.isFinite(resolvedInput.mrIid))
+  ) {
+    const explicitMrIid = tryParseMergeRequestIidFromUrl(resolvedInput.url);
+    if (explicitMrIid !== null) {
+      resolvedInput.mrIid = explicitMrIid;
+    }
+  }
 
   if (!resolvedInput.local && resolvedInput.mode === "interactive") {
     if (!(typeof resolvedInput.mrIid === "number" && Number.isFinite(resolvedInput.mrIid))) {
@@ -192,32 +217,28 @@ export async function* runInteractiveReviewSession(
           ? await loadReviewBoardSelectionOptions(resolvedInput)
           : await loadGitLabSelectionOptions(resolvedInput);
 
-      if (options.length === 1) {
-        resolvedInput.mrIid = options[0].value;
-      } else {
-        const selection = assertResponseType(
-          yield {
-            type: "select_review_target",
-            provider,
-            message:
-              provider === "reviewboard"
-                ? "Select review request (type to search)"
-                : "Select merge request (type to search)",
-            options,
-          },
-          "review_target_selected"
-        );
-        if (!selection.mrIid) {
-          return {
-            action: "cancelled",
-            message:
-              provider === "reviewboard"
-                ? "Review request selection cancelled."
-                : "Merge request selection cancelled.",
-          };
-        }
-        resolvedInput.mrIid = selection.mrIid;
+      const selection = assertResponseType(
+        yield {
+          type: "select_review_target",
+          provider,
+          message:
+            provider === "reviewboard"
+              ? "Select review request (type to search)"
+              : "Select merge request (type to search)",
+          options,
+        },
+        "review_target_selected"
+      );
+      if (!selection.mrIid) {
+        return {
+          action: "cancelled",
+          message:
+            provider === "reviewboard"
+              ? "Review request selection cancelled."
+              : "Merge request selection cancelled.",
+        };
       }
+      resolvedInput.mrIid = selection.mrIid;
     }
   }
 

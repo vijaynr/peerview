@@ -36,6 +36,11 @@ const REVIEW_BOARD_SIGNATURE_HEADERS = [
   "x-reviewboard-signature-256",
   "x-hub-signature-256",
 ] as const;
+const GITLAB_WEBHOOK_PATH = "/gitlab";
+const REVIEW_BOARD_WEBHOOK_PATH = "/reviewboard";
+const STATUS_PATH = "/status";
+
+type WebhookProvider = "gitlab" | "reviewboard";
 
 function parseStructuredFormValue(value: string): unknown {
   const trimmed = value.trim();
@@ -153,44 +158,74 @@ export async function startWebhookServer(
     webhookConcurrency?: number;
     webhookQueueLimit?: number;
     webhookJobTimeoutMs?: number;
-    mode?: string;
   }
 ) {
   const runtime = await loadWorkflowRuntime();
-  const mode = options?.mode || "gitlab";
 
   if (options?.webhookConcurrency) runtime.webhookConcurrency = options.webhookConcurrency;
   if (options?.webhookQueueLimit) runtime.webhookQueueLimit = options.webhookQueueLimit;
   if (options?.webhookJobTimeoutMs) runtime.webhookJobTimeoutMs = options.webhookJobTimeoutMs;
 
-  const gitlabKey = envOrConfig("GITLAB_KEY", runtime.gitlabKey, "");
-  const rbToken = envOrConfig("RB_TOKEN", runtime.rbToken, "");
-  const webhookSecret = envOrConfig("GITLAB_WEBHOOK_SECRET", runtime.gitlabWebhookSecret, "");
-  const rbWebhookSecret = envOrConfig("RB_WEBHOOK_SECRET", runtime.rbWebhookSecret, "");
+  runtime.gitlabKey = envOrConfig("GITLAB_KEY", runtime.gitlabKey, "");
+  runtime.rbToken = envOrConfig("RB_TOKEN", runtime.rbToken, "");
+  runtime.gitlabWebhookSecret = envOrConfig(
+    "GITLAB_WEBHOOK_SECRET",
+    runtime.gitlabWebhookSecret,
+    ""
+  );
+  runtime.rbWebhookSecret = envOrConfig("RB_WEBHOOK_SECRET", runtime.rbWebhookSecret, "");
 
   const sslCertPath =
     options?.sslCertPath || envOrConfig("SSL_CERT_PATH", runtime.sslCertPath, "");
   const sslKeyPath = options?.sslKeyPath || envOrConfig("SSL_KEY_PATH", runtime.sslKeyPath, "");
   const sslCaPath = options?.sslCaPath || envOrConfig("SSL_CA_PATH", runtime.sslCaPath, "");
 
-  if (mode === "gitlab" && (!runtime.gitlabUrl || !gitlabKey)) {
-    throw new Error("Missing GitLab configuration. Run `cr init` or set GITLAB_URL/GITLAB_KEY.");
-  }
-  if (mode === "reviewboard" && (!runtime.rbUrl || !rbToken)) {
-    throw new Error(
-      "Missing Review Board configuration. Run `cr init --rb` or set RB_URL/RB_TOKEN."
-    );
+  const workQueue = new WorkQueue(runtime);
+
+  function resolveProvider(url: string | undefined): WebhookProvider | null {
+    const pathname = new URL(url ?? "/", "http://localhost").pathname;
+    if (pathname === GITLAB_WEBHOOK_PATH) {
+      return "gitlab";
+    }
+    if (pathname === REVIEW_BOARD_WEBHOOK_PATH) {
+      return "reviewboard";
+    }
+    return null;
   }
 
-  const workQueue = new WorkQueue(runtime, mode === "reviewboard" ? rbToken : gitlabKey, mode);
+  function getConfigError(provider: WebhookProvider): string | null {
+    if (provider === "gitlab" && (!runtime.gitlabUrl || !runtime.gitlabKey)) {
+      return "Missing GitLab configuration. Run `cr init --gitlab` or set GITLAB_URL/GITLAB_KEY.";
+    }
+    if (provider === "reviewboard" && (!runtime.rbUrl || !runtime.rbToken)) {
+      return "Missing Review Board configuration. Run `cr init --rb` or set RB_URL/RB_TOKEN.";
+    }
+    return null;
+  }
 
   const requestListener = async (req: IncomingMessage, res: ServerResponse) => {
-    console.log(`[WEBHOOK] Incoming ${req.method} request to ${req.url} (Mode: ${mode})`);
+    const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
+    console.log(`[WEBHOOK] Incoming ${req.method} request to ${pathname}`);
 
-    if (req.url === "/status" && req.method === "GET") {
+    if (pathname === STATUS_PATH && req.method === "GET") {
       res.statusCode = 200;
       res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify(workQueue.getStatus()));
+      res.end(
+        JSON.stringify({
+          ...workQueue.getStatus(),
+          routes: {
+            gitlab: GITLAB_WEBHOOK_PATH,
+            reviewboard: REVIEW_BOARD_WEBHOOK_PATH,
+          },
+        })
+      );
+      return;
+    }
+
+    const provider = resolveProvider(req.url);
+    if (!provider) {
+      res.statusCode = 404;
+      res.end("Not Found");
       return;
     }
 
@@ -200,9 +235,18 @@ export async function startWebhookServer(
       return;
     }
 
-    if (mode === "gitlab" && webhookSecret) {
+    const configError = getConfigError(provider);
+    if (configError) {
+      logger.warn("webhook", configError, { provider });
+      res.statusCode = 503;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ status: "error", provider, message: configError }));
+      return;
+    }
+
+    if (provider === "gitlab" && runtime.gitlabWebhookSecret) {
       const token = req.headers["x-gitlab-token"];
-      if (token !== webhookSecret) {
+      if (token !== runtime.gitlabWebhookSecret) {
         console.error("[WEBHOOK] Forbidden: Invalid GitLab token received.");
         logger.warn("webhook", "Forbidden: Invalid GitLab token");
         res.statusCode = 403;
@@ -224,8 +268,8 @@ export async function startWebhookServer(
           return;
         }
 
-        if (mode === "reviewboard" && rbWebhookSecret) {
-          if (!verifyReviewBoardSignature(req, body, rbWebhookSecret)) {
+        if (provider === "reviewboard" && runtime.rbWebhookSecret) {
+          if (!verifyReviewBoardSignature(req, body, runtime.rbWebhookSecret)) {
             console.error("[WEBHOOK] Forbidden: Invalid Review Board signature received.");
             logger.warn("webhook", "Forbidden: Invalid Review Board signature");
             res.statusCode = 403;
@@ -240,7 +284,7 @@ export async function startWebhookServer(
         let requestId: number | undefined;
         let projectId: string | number | undefined;
 
-        if (mode === "gitlab") {
+        if (provider === "gitlab") {
           const gitlabEvent = event as GitLabWebhookEvent;
           const objectKind = gitlabEvent.object_kind;
           if (objectKind !== "merge_request") {
@@ -257,7 +301,7 @@ export async function startWebhookServer(
           }
           requestId = mrAttributes?.iid;
           projectId = gitlabEvent.project?.id;
-        } else if (mode === "reviewboard") {
+        } else {
           const reviewBoardEvent = event as ReviewBoardWebhookEvent;
           const eventType = getReviewBoardEventType(req, reviewBoardEvent);
           if (eventType !== SUPPORTED_REVIEW_BOARD_EVENT) {
@@ -287,7 +331,7 @@ export async function startWebhookServer(
           return;
         }
 
-        const jobId = workQueue.enqueue(projectId || "default", requestId);
+        const jobId = workQueue.enqueue(provider, projectId || "default", requestId);
 
         if (!jobId) {
           console.error("[WEBHOOK] Rejected: Queue is full");
@@ -297,7 +341,7 @@ export async function startWebhookServer(
         }
 
         console.log(
-          `[WEBHOOK] Accepted ${mode === "gitlab" ? "MR !" : "RR #"} ${requestId} from project ${projectId}. Job ID: ${jobId}`
+          `[WEBHOOK] Accepted ${provider === "gitlab" ? "MR !" : "RR #"} ${requestId} from project ${projectId}. Job ID: ${jobId}`
         );
 
         res.statusCode = 202;
@@ -345,7 +389,10 @@ export async function startWebhookServer(
   server.listen(port, () => {
     logger.info("webhook", `Webhook server listening on port ${port} (${protocol})`);
     console.log(`[WEBHOOK] Server listening on port ${port} (${protocol})`);
-    console.log(`[WEBHOOK] Endpoint: POST ${protocol}://localhost:${port}/`);
+    console.log(`[WEBHOOK] Endpoints:`);
+    console.log(`[WEBHOOK]   POST ${protocol}://localhost:${port}${GITLAB_WEBHOOK_PATH}`);
+    console.log(`[WEBHOOK]   POST ${protocol}://localhost:${port}${REVIEW_BOARD_WEBHOOK_PATH}`);
+    console.log(`[WEBHOOK]   GET  ${protocol}://localhost:${port}${STATUS_PATH}`);
   });
 
   return server;

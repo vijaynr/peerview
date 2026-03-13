@@ -5,6 +5,7 @@ import { printDivider } from "./console.js";
 type PromptQuestions = Parameters<typeof prompts>[0];
 type PromptOptions = Parameters<typeof prompts>[1];
 type PromptResult = Awaited<ReturnType<typeof prompts>>;
+export const abortOnCancel = { onCancel: () => false } satisfies PromptOptions;
 
 // √ = Windows tick (U+221A), ✓ = Unix tick (U+2713), ✔ = heavy check (U+2714)
 // ✖ = heavy cross (U+2716), ✗ = ballot X (U+2717), × = multiplication sign (U+00D7)
@@ -63,7 +64,7 @@ export async function askForOptionalFeedback(props: {
       message: props.confirmMessage,
       initial: false,
     },
-    { onCancel: () => true }
+    abortOnCancel
   );
   if (!retry.redo) {
     return null;
@@ -75,7 +76,7 @@ export async function askForOptionalFeedback(props: {
       name: "feedback",
       message: props.feedbackMessage ?? "Please enter your feedback (press Enter when done)",
     },
-    { onCancel: () => true }
+    abortOnCancel
   );
   const feedback = String(feedbackAnswer.feedback ?? "").trim();
   return feedback || null;

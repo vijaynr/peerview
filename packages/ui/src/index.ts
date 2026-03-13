@@ -18,7 +18,7 @@ export {
   printChatAnswer,
   printBanner,
 } from "./console.js";
-export { promptWithFrame, askForOptionalFeedback } from "./prompt.js";
+export { promptWithFrame, askForOptionalFeedback, abortOnCancel } from "./prompt.js";
 export {
   LiveController,
   createWorkflowStatusController,

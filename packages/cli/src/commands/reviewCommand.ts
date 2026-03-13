@@ -7,6 +7,7 @@ import {
 } from "@cr/ui";
 import { askForOptionalFeedback, promptWithFrame } from "@cr/ui";
 import {
+  abortOnCancel,
   createWorkflowStatusController,
   runLiveTask,
   runLiveChatLoop,
@@ -67,7 +68,7 @@ async function maybePostReviewNotes(args: {
           message: "Post this review comment to Review Board?",
           initial: false,
         },
-        { onCancel: () => true }
+        abortOnCancel
       );
       shouldPost = Boolean(response.shouldPost);
     }
@@ -100,7 +101,7 @@ async function maybePostReviewNotes(args: {
         message: "Post this review comment to GitLab?",
         initial: false,
       },
-      { onCancel: () => true }
+      abortOnCancel
     );
     shouldPost = Boolean(response.shouldPost);
   }
@@ -180,7 +181,7 @@ async function runReviewWorkflowTask(args: {
               );
             },
           },
-          { onCancel: () => true }
+          abortOnCancel
         );
         step = await session.next({
           type: "review_target_selected",
@@ -204,7 +205,7 @@ async function runReviewWorkflowTask(args: {
             min: 1,
             instructions: false,
           },
-          { onCancel: () => true }
+          abortOnCancel
         );
         step = await session.next({
           type: "review_agents_selected",
@@ -220,7 +221,7 @@ async function runReviewWorkflowTask(args: {
           message: effect.message,
           initial: false,
         },
-        { onCancel: () => true }
+        abortOnCancel
       );
       step = await session.next({
         type: "review_action_confirmed",

@@ -55,12 +55,10 @@ describe("WorkQueue default review agents", () => {
         openaiModel: "gpt-4o",
         useCustomStreaming: false,
         defaultReviewAgents: ["general", "security"],
-      },
-      "gitlab-key",
-      "gitlab"
+      }
     );
 
-    queue.enqueue("group/project", 7);
+    queue.enqueue("gitlab", "group/project", 7);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(runReviewWorkflowMock).toHaveBeenCalledTimes(1);
@@ -90,12 +88,10 @@ describe("WorkQueue default review agents", () => {
         openaiModel: "gpt-4o",
         useCustomStreaming: false,
         defaultReviewAgents: ["general", "security"],
-      },
-      "rb-token",
-      "reviewboard"
+      }
     );
 
-    queue.enqueue("demo-repo", 42);
+    queue.enqueue("reviewboard", "demo-repo", 42);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(runReviewBoardWorkflowMock).toHaveBeenCalledTimes(1);

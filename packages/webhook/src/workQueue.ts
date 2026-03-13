@@ -13,26 +13,28 @@ export class WorkQueue {
   private completed = new Map<string, ReviewJob>();
   private activeWorkers = 0;
 
-  constructor(
-    private runtime: WorkflowRuntime,
-    private token: string,
-    private mode: string = "gitlab"
-  ) {}
+  constructor(private runtime: WorkflowRuntime) {}
 
-  public enqueue(projectId: number | string, mrIid: number): string | null {
+  public enqueue(
+    provider: "gitlab" | "reviewboard",
+    projectId: number | string,
+    mrIid: number
+  ): string | null {
     if (this.queue.length >= this.runtime.webhookQueueLimit) {
       logger.error("webhook", "Queue at capacity, rejecting job", {
         queueSize: this.queue.length,
         maxSize: this.runtime.webhookQueueLimit,
+        provider,
         projectId,
         mrIid,
       });
       return null;
     }
 
-    const jobId = `${projectId}-${mrIid}-${Date.now()}`;
+    const jobId = `${provider}-${projectId}-${mrIid}-${Date.now()}`;
     const job: ReviewJob = {
       id: jobId,
+      provider,
       projectId,
       mrIid,
       status: "queued",
@@ -64,7 +66,7 @@ export class WorkQueue {
     job.startedAt = new Date();
 
     console.log(
-      `[WORKER] Starting job ${job.id} (Active: ${this.activeWorkers}/${this.runtime.webhookConcurrency}, Mode: ${this.mode})`
+      `[WORKER] Starting job ${job.id} (Active: ${this.activeWorkers}/${this.runtime.webhookConcurrency}, Provider: ${job.provider})`
     );
 
     try {
@@ -81,7 +83,7 @@ export class WorkQueue {
         const agentNames = this.runtime.defaultReviewAgents;
         const agentMode = agentNames.length > 1 ? "multi" : "single";
 
-        if (this.mode === "reviewboard") {
+        if (job.provider === "reviewboard") {
           const result = await runReviewBoardWorkflow({
             repoPath: process.cwd(),
             repoRoot,
@@ -95,7 +97,7 @@ export class WorkQueue {
             agentNames,
             agentMode,
           });
-          await maybePostReviewBoardComment(result, "ci", true, this.token);
+          await maybePostReviewBoardComment(result, "ci", true, this.runtime.rbToken);
           return result;
         } else {
           const projectPath = String(job.projectId);
@@ -114,7 +116,7 @@ export class WorkQueue {
             agentMode,
           });
 
-          await maybePostReviewComment(result, "ci", true, this.token);
+          await maybePostReviewComment(result, "ci", true, this.runtime.gitlabKey);
           return result;
         }
       })();

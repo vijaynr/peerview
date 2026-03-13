@@ -189,7 +189,7 @@ Use the same feature name or folder across commands so they reference the same \
   }
 }
 
-async function runWebhookSetup(args: string[] = []): Promise<void> {
+async function runWebhookSetup(_args: string[] = []): Promise<void> {
   const existing = await loadCRConfig();
 
   createSpinner("Loading settings...")
@@ -199,73 +199,52 @@ async function runWebhookSetup(args: string[] = []): Promise<void> {
       text: "Initialize Webhook and SSL configuration",
     });
 
-  const mode = getFlag(args, "mode", "gitlab");
+  printEmptyLine();
+  printInfo(
+    "This sets up one webhook server for both providers. Use /gitlab for GitLab and /reviewboard for Review Board."
+  );
+  printWarning(
+    "Review Board webhook support is summary-only today. Configure only the review_request_published event and use the same HMAC secret in Review Board and CR."
+  );
 
-  if (mode !== "gitlab" && mode !== "reviewboard") {
-    printError(`Unsupported mode '${mode}'. Currently 'gitlab' and 'reviewboard' are supported.`);
-    process.exitCode = 1;
-    return;
-  }
-
-  const isRb = mode === "reviewboard";
-
-  if (isRb) {
-    printEmptyLine();
-    printWarning(
-      "Review Board webhook mode is summary-only today. Configure only the review_request_published event and use the same HMAC secret in Review Board and CR."
-    );
-  } else {
-    printEmptyLine();
-    printInfo(
-      "GitLab mode selected. This will set up the webhook secret and optional SSL configuration for the 'cr serve' command."
-    );
-  }
-
-  const prompts = [];
-
-  if (isRb) {
-    prompts.push(
-      {
-        type: "text",
-        name: "rbUrl",
-        message: "Review Board URL",
-        initial: existing.rbUrl ?? defaultConfig.rbUrl,
-      },
-      {
-        type: "password",
-        name: "rbToken",
-        message: "Review Board API Token",
-        initial: existing.rbToken ?? "",
-      },
-      {
-        type: "password",
-        name: "rbWebhookSecret",
-        message: "Review Board Webhook Secret (HMAC signing secret)",
-        initial: existing.rbWebhookSecret ?? "",
-      }
-    );
-  } else {
-    prompts.push(
-      {
-        type: "text",
-        name: "gitlabUrl",
-        message: "GitLab URL",
-        initial: existing.gitlabUrl ?? defaultConfig.gitlabUrl,
-      },
-      {
-        type: "password",
-        name: "gitlabKey",
-        message: "GitLab Access Token (api scope)",
-        initial: existing.gitlabKey ?? "",
-      },
-      {
-        type: "password",
-        name: "gitlabWebhookSecret",
-        message: "GitLab Webhook Secret (X-Gitlab-Token)",
-        initial: existing.gitlabWebhookSecret ?? "",
-      }
-    );
-  }
+  const prompts: Parameters<typeof promptWithFrame>[0] = [
+    {
+      type: "text",
+      name: "gitlabUrl",
+      message: "GitLab URL",
+      initial: existing.gitlabUrl ?? defaultConfig.gitlabUrl,
+    },
+    {
+      type: "password",
+      name: "gitlabKey",
+      message: "GitLab Access Token (api scope)",
+      initial: existing.gitlabKey ?? "",
+    },
+    {
+      type: "password",
+      name: "gitlabWebhookSecret",
+      message: "GitLab Webhook Secret (X-Gitlab-Token)",
+      initial: existing.gitlabWebhookSecret ?? "",
+    },
+    {
+      type: "text",
+      name: "rbUrl",
+      message: "Review Board URL",
+      initial: existing.rbUrl ?? defaultConfig.rbUrl,
+    },
+    {
+      type: "password",
+      name: "rbToken",
+      message: "Review Board API Token",
+      initial: existing.rbToken ?? "",
+    },
+    {
+      type: "password",
+      name: "rbWebhookSecret",
+      message: "Review Board Webhook Secret (HMAC signing secret)",
+      initial: existing.rbWebhookSecret ?? "",
+    },
+  ];
 
   prompts.push(
     {
@@ -306,7 +285,7 @@ async function runWebhookSetup(args: string[] = []): Promise<void> {
     }
   );
 
-  const answers = (await promptWithFrame(prompts as Parameters<typeof promptWithFrame>[0], {
+  const answers = (await promptWithFrame(prompts, {
     onCancel: () => true,
   })) as WebhookSetupAnswers;
 
@@ -316,24 +295,17 @@ async function runWebhookSetup(args: string[] = []): Promise<void> {
   }
 
   const nextConfig: CRConfig = {
+    ...existing,
     openaiApiUrl: existing.openaiApiUrl ?? defaultConfig.openaiApiUrl,
     openaiApiKey: existing.openaiApiKey ?? "",
     openaiModel: existing.openaiModel ?? defaultConfig.openaiModel,
     useCustomStreaming: existing.useCustomStreaming ?? false,
-    gitlabUrl: existing.gitlabUrl ?? defaultConfig.gitlabUrl,
-    gitlabKey: existing.gitlabKey ?? "",
-    ...existing,
-    ...(isRb
-      ? {
-          rbUrl: answers.rbUrl || undefined,
-          rbToken: answers.rbToken || undefined,
-          rbWebhookSecret: answers.rbWebhookSecret || undefined,
-        }
-      : {
-          gitlabUrl: answers.gitlabUrl || existing.gitlabUrl || defaultConfig.gitlabUrl,
-          gitlabKey: answers.gitlabKey || existing.gitlabKey || "",
-          gitlabWebhookSecret: answers.gitlabWebhookSecret || undefined,
-        }),
+    gitlabUrl: answers.gitlabUrl || existing.gitlabUrl || defaultConfig.gitlabUrl,
+    gitlabKey: answers.gitlabKey || existing.gitlabKey || "",
+    gitlabWebhookSecret: answers.gitlabWebhookSecret || undefined,
+    rbUrl: answers.rbUrl || undefined,
+    rbToken: answers.rbToken || undefined,
+    rbWebhookSecret: answers.rbWebhookSecret || undefined,
     sslCertPath: answers.sslCertPath || undefined,
     sslKeyPath: answers.sslKeyPath || undefined,
     sslCaPath: answers.sslCaPath || undefined,

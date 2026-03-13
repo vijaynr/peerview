@@ -15,7 +15,7 @@ mock.module("@cr/webhook", () => ({
 const { runServeCommand } = await import("../packages/cli/src/commands/serveCommand.js");
 
 describe("serveCommand help", () => {
-  it("documents Review Board mode and setup guidance", async () => {
+  it("documents unified webhook paths and Review Board setup guidance", async () => {
     await runServeCommand(["--help"]);
 
     expect(printCommandHelpMock).toHaveBeenCalledTimes(1);
@@ -23,9 +23,9 @@ describe("serveCommand help", () => {
     const options = sections.find((section) => section.title === "OPTIONS")?.lines.join("\n") ?? "";
     const examples = sections.find((section) => section.title === "EXAMPLES")?.lines.join("\n") ?? "";
 
-    expect(options).toContain("GitLab or Review Board events");
-    expect(options).toContain("gitlab or reviewboard");
-    expect(examples).toContain("--mode reviewboard");
+    expect(options).toContain("one webhook server");
+    expect(examples).toContain("/gitlab");
+    expect(examples).toContain("/reviewboard");
     expect(examples).toContain("review_request_published");
     expect(examples).toContain("HMAC secret");
   });

@@ -13,7 +13,7 @@ import type {
 } from "@cr/core";
 import { COLORS, DOT } from "./constants.js";
 import { printChatAnswer, printDivider, printReviewSummary, printWarning } from "./console.js";
-import { askForOptionalFeedback, promptWithFrame } from "./prompt.js";
+import { abortOnCancel, askForOptionalFeedback, promptWithFrame } from "./prompt.js";
 function buildCreateReviewResultBody(result: {
   sourceLabel: string;
   targetLabel?: string;
@@ -345,7 +345,7 @@ export async function runLiveChatLoop(args: {
   while (true) {
     const response = await promptWithFrame(
       { type: "text", name: "question", message: "" },
-      { onCancel: () => true }
+      abortOnCancel
     );
     const question = String(response.question ?? "").trim();
     if (!question || question.toLowerCase() === "exit") {
@@ -406,7 +406,7 @@ export async function runLiveCreateReviewTask(args: {
             message: `Enter target branch (default: ${effect.defaultBranch})`,
             initial: effect.defaultBranch,
           },
-          { onCancel: () => true }
+          abortOnCancel
         );
         step = await workflow.next({
           type: "target_branch_resolved",
@@ -438,7 +438,7 @@ export async function runLiveCreateReviewTask(args: {
             : `Create ${getReviewEntityLabel(effect.entityType).toLowerCase()}?`,
           initial: true,
         },
-        { onCancel: () => true }
+        abortOnCancel
       );
       step = await workflow.next({
         type: "upsert_confirmed",

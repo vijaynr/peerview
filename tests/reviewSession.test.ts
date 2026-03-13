@@ -1,11 +1,16 @@
-import { describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 
-const loadCRConfigMock = mock(async () => ({ defaultReviewAgents: ["general", "security"] }));
+const loadCRConfigMock = mock(async () => ({
+  defaultReviewAgents: ["general", "security"],
+  gitlabUrl: "https://gitlab.example.com",
+  gitlabKey: "gitlab-key",
+}));
 const listBundledReviewAgentNamesMock = mock(() => ["general", "security", "clean-code"]);
 const normalizeReviewAgentNamesMock = mock((agentNames?: string[]) => {
   const values = (agentNames ?? ["general"]).map((name) => name.trim().toLowerCase());
   return Array.from(new Set(values.filter(Boolean)));
 });
+const listMergeRequestsMock = mock(async () => []);
 const runInteractiveReviewWorkflowMock = mock((input: any) =>
   (async function* () {
     return {
@@ -22,7 +27,7 @@ mock.module("@cr/core", () => ({
   envOrConfig: (_key: string, value: string | undefined, fallback: string) => value || fallback,
   getCurrentUser: async () => ({ username: "demo" }),
   getOriginRemoteUrl: async () => "https://gitlab.example.com/group/project.git",
-  listMergeRequests: async () => [],
+  listMergeRequests: listMergeRequestsMock,
   listReviewRequests: async () => [],
   loadCRConfig: loadCRConfigMock,
   rbRequest: async () => ({ review_requests: [] }),
@@ -60,6 +65,62 @@ mock.module("../packages/workflows/src/reviewSummarizeWorkflow.js", () => ({
 const { runInteractiveReviewSession } = await import("../packages/workflows/src/reviewSession.js");
 
 describe("review session agent selection", () => {
+  beforeEach(() => {
+    listMergeRequestsMock.mockClear();
+    runInteractiveReviewWorkflowMock.mockClear();
+  });
+
+  it("prompts for merge request selection in interactive remote mode even with one result", async () => {
+    listMergeRequestsMock.mockResolvedValueOnce([{ iid: 17, state: "opened", title: "Only MR" }]);
+
+    const session = runInteractiveReviewSession({
+      repoPath: ".",
+      repoRoot: ".",
+      mode: "interactive",
+      workflow: "summarize",
+      local: false,
+      state: "opened",
+      provider: "gitlab",
+    });
+
+    const firstStep = await session.next();
+    expect(firstStep.done).toBe(false);
+    expect(firstStep.value).toMatchObject({
+      type: "select_review_target",
+      options: [{ value: 17 }],
+    });
+
+    const secondStep = await session.next({
+      type: "review_target_selected",
+      mrIid: 17,
+    });
+    expect(secondStep.done).toBe(true);
+    expect(secondStep.value).toMatchObject({
+      action: "summary",
+    });
+    expect(listMergeRequestsMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses an explicit merge request URL without prompting for selection", async () => {
+    const session = runInteractiveReviewSession({
+      repoPath: ".",
+      repoRoot: ".",
+      mode: "interactive",
+      workflow: "summarize",
+      local: false,
+      state: "opened",
+      provider: "gitlab",
+      url: "https://gitlab.example.com/group/project/-/merge_requests/42",
+    });
+
+    const result = await session.next();
+    expect(result.done).toBe(true);
+    expect(result.value).toMatchObject({
+      action: "summary",
+    });
+    expect(listMergeRequestsMock).not.toHaveBeenCalled();
+  });
+
   it("prompts for review agents in interactive review mode and passes them through", async () => {
     const session = runInteractiveReviewSession({
       repoPath: ".",
@@ -90,6 +151,7 @@ describe("review session agent selection", () => {
         aggregated: true,
       },
     });
+    expect(runInteractiveReviewWorkflowMock).toHaveBeenCalledTimes(1);
     expect(runInteractiveReviewWorkflowMock.mock.calls[0]?.[0]).toMatchObject({
       agentNames: ["security", "clean-code"],
       agentMode: "multi",
@@ -116,7 +178,8 @@ describe("review session agent selection", () => {
         aggregated: true,
       },
     });
-    expect(runInteractiveReviewWorkflowMock.mock.calls[1]?.[0]).toMatchObject({
+    expect(runInteractiveReviewWorkflowMock).toHaveBeenCalledTimes(1);
+    expect(runInteractiveReviewWorkflowMock.mock.calls[0]?.[0]).toMatchObject({
       agentNames: ["general", "security"],
       agentMode: "multi",
     });

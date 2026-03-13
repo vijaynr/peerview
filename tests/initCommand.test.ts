@@ -61,29 +61,18 @@ mock.module("@cr/core", () => ({
 }));
 
 describe("initCommand - specialized setup flows", () => {
-  it("should ask for GitLab specific configs in gitlab mode", async () => {
+  it("should ask for both GitLab and Review Board webhook configs", async () => {
     mockConfig = { gitlabWebhookSecret: "old-secret" };
     lastQuestions = [];
     lastSavedConfig = null;
 
-    await runInitCommand(["--webhook", "--mode", "gitlab"]);
+    await runInitCommand(["--webhook"]);
 
     expect(lastQuestions.some((q) => q.name === "gitlabWebhookSecret")).toBe(true);
-    expect(lastQuestions.some((q) => q.name === "rbUrl")).toBe(false);
-    expect(lastSavedConfig.gitlabWebhookSecret).toBe("new-secret");
-  });
-
-  it("should ask for Review Board specific configs in reviewboard mode", async () => {
-    mockConfig = { rbUrl: "https://old-rb.com", rbToken: "old-token", rbWebhookSecret: "old-rb-secret" };
-    lastQuestions = [];
-    lastSavedConfig = null;
-
-    await runInitCommand(["--webhook", "--mode", "reviewboard"]);
-
-    expect(lastQuestions.some((q) => q.name === "gitlabWebhookSecret")).toBe(false);
     expect(lastQuestions.some((q) => q.name === "rbUrl")).toBe(true);
     expect(lastQuestions.some((q) => q.name === "rbToken")).toBe(true);
     expect(lastQuestions.some((q) => q.name === "rbWebhookSecret")).toBe(true);
+    expect(lastSavedConfig.gitlabWebhookSecret).toBe("new-secret");
     expect(lastSavedConfig.rbUrl).toBe("https://new-rb.com");
     expect(lastSavedConfig.rbToken).toBe("new-token");
     expect(lastSavedConfig.rbWebhookSecret).toBe("new-rb-secret");
@@ -96,7 +85,7 @@ describe("initCommand - specialized setup flows", () => {
     };
     lastSavedConfig = null;
 
-    await runInitCommand(["--webhook", "--mode", "gitlab"]);
+    await runInitCommand(["--webhook"]);
 
     expect(lastSavedConfig.openaiApiKey).toBe("existing-key");
     expect(lastSavedConfig.gitlabKey).toBe("existing-gitlab-key");

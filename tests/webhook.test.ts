@@ -3,6 +3,17 @@ import { afterEach, describe, expect, it, mock } from "bun:test";
 import { startWebhookServer } from "../packages/webhook/src/server.js";
 
 const REVIEW_BOARD_WEBHOOK_SECRET = "rb-webhook-secret";
+const runtime = {
+  gitlabUrl: "https://gitlab.example.com",
+  gitlabKey: "mock-key",
+  rbUrl: "https://reviews.example.com",
+  rbToken: "rb-token",
+  rbWebhookSecret: REVIEW_BOARD_WEBHOOK_SECRET,
+  webhookConcurrency: 1,
+  webhookQueueLimit: 50,
+  webhookJobTimeoutMs: 600000,
+  defaultReviewAgents: ["general", "security"],
+};
 const runReviewWorkflowMock = mock(async () => ({
   output: "Mocked GitLab review result",
   contextLabel: "Mocked MR",
@@ -33,17 +44,7 @@ mock.module("@cr/workflows", () => ({
 }));
 
 mock.module("@cr/core", () => ({
-  loadWorkflowRuntime: async () => ({
-    gitlabUrl: "https://gitlab.example.com",
-    gitlabKey: "mock-key",
-    rbUrl: "https://reviews.example.com",
-    rbToken: "rb-token",
-    rbWebhookSecret: REVIEW_BOARD_WEBHOOK_SECRET,
-    webhookConcurrency: 1,
-    webhookQueueLimit: 50,
-    webhookJobTimeoutMs: 600000,
-    defaultReviewAgents: ["general", "security"],
-  }),
+  loadWorkflowRuntime: async () => ({ ...runtime }),
   envOrConfig: (_key: string, value: string | undefined, fallback: string) => value || fallback,
   getCurrentBranch: async () => "feature/demo",
   getOriginRemoteUrl: async () => "https://gitlab.example.com/group/project.git",
@@ -70,6 +71,11 @@ afterEach(() => {
   while (servers.length > 0) {
     servers.pop()?.close();
   }
+  runtime.gitlabUrl = "https://gitlab.example.com";
+  runtime.gitlabKey = "mock-key";
+  runtime.rbUrl = "https://reviews.example.com";
+  runtime.rbToken = "rb-token";
+  runtime.rbWebhookSecret = REVIEW_BOARD_WEBHOOK_SECRET;
   runReviewWorkflowMock.mockClear();
   runReviewBoardWorkflowMock.mockClear();
   maybePostReviewBoardCommentMock.mockClear();
@@ -105,7 +111,7 @@ describe("Webhook Server", () => {
       },
     };
 
-    const response = await fetch(`http://localhost:${port}/`, {
+    const response = await fetch(`http://localhost:${port}/gitlab`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -125,7 +131,7 @@ describe("Webhook Server", () => {
     const server = await startWebhookServer(port);
     servers.push(server);
 
-    const response = await fetch(`http://localhost:${port}/`, {
+    const response = await fetch(`http://localhost:${port}/gitlab`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -140,7 +146,7 @@ describe("Webhook Server", () => {
 
   it("should accept a signed Review Board review_request_published event without requesting inline comments", async () => {
     const port = 3003;
-    const server = await startWebhookServer(port, { mode: "reviewboard" });
+    const server = await startWebhookServer(port);
     servers.push(server);
 
     const body = JSON.stringify({
@@ -153,7 +159,7 @@ describe("Webhook Server", () => {
       },
     });
 
-    const response = await fetch(`http://localhost:${port}/`, {
+    const response = await fetch(`http://localhost:${port}/reviewboard`, {
       method: "POST",
       headers: buildReviewBoardHeaders(body),
       body,
@@ -179,7 +185,7 @@ describe("Webhook Server", () => {
 
   it("should reject Review Board events with an invalid signature", async () => {
     const port = 3004;
-    const server = await startWebhookServer(port, { mode: "reviewboard" });
+    const server = await startWebhookServer(port);
     servers.push(server);
 
     const body = JSON.stringify({
@@ -192,7 +198,7 @@ describe("Webhook Server", () => {
       },
     });
 
-    const response = await fetch(`http://localhost:${port}/`, {
+    const response = await fetch(`http://localhost:${port}/reviewboard`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -207,7 +213,7 @@ describe("Webhook Server", () => {
 
   it("should reject Review Board events when the signature is missing", async () => {
     const port = 3005;
-    const server = await startWebhookServer(port, { mode: "reviewboard" });
+    const server = await startWebhookServer(port);
     servers.push(server);
 
     const body = JSON.stringify({
@@ -220,7 +226,7 @@ describe("Webhook Server", () => {
       },
     });
 
-    const response = await fetch(`http://localhost:${port}/`, {
+    const response = await fetch(`http://localhost:${port}/reviewboard`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -234,7 +240,7 @@ describe("Webhook Server", () => {
 
   it("should ignore signed Review Board review_published events to avoid loops", async () => {
     const port = 3006;
-    const server = await startWebhookServer(port, { mode: "reviewboard" });
+    const server = await startWebhookServer(port);
     servers.push(server);
 
     const body = JSON.stringify({
@@ -247,7 +253,7 @@ describe("Webhook Server", () => {
       },
     });
 
-    const response = await fetch(`http://localhost:${port}/`, {
+    const response = await fetch(`http://localhost:${port}/reviewboard`, {
       method: "POST",
       headers: buildReviewBoardHeaders(body),
       body,
@@ -260,7 +266,7 @@ describe("Webhook Server", () => {
 
   it("should parse signed form-encoded Review Board events without a payload wrapper", async () => {
     const port = 3007;
-    const server = await startWebhookServer(port, { mode: "reviewboard" });
+    const server = await startWebhookServer(port);
     servers.push(server);
 
     const formBody = new URLSearchParams({
@@ -269,7 +275,7 @@ describe("Webhook Server", () => {
       "review_request.repository.name": "demo-repo",
     }).toString();
 
-    const response = await fetch(`http://localhost:${port}/`, {
+    const response = await fetch(`http://localhost:${port}/reviewboard`, {
       method: "POST",
       headers: buildReviewBoardHeaders(formBody, {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -282,15 +288,68 @@ describe("Webhook Server", () => {
     expect(json.status).toBe("accepted");
   });
 
-  it("should return 405 for non-POST requests", async () => {
+  it("should reject only the workflow whose config is missing", async () => {
     const port = 3008;
+    runtime.rbToken = "";
     const server = await startWebhookServer(port);
     servers.push(server);
 
-    const response = await fetch(`http://localhost:${port}/`, {
+    const reviewBoardResponse = await fetch(`http://localhost:${port}/reviewboard`, {
+      method: "POST",
+      headers: buildReviewBoardHeaders(
+        JSON.stringify({
+          event: "review_request_published",
+          review_request: { id: 42, repository: { name: "demo-repo" } },
+        })
+      ),
+      body: JSON.stringify({
+        event: "review_request_published",
+        review_request: { id: 42, repository: { name: "demo-repo" } },
+      }),
+    });
+
+    const gitlabResponse = await fetch(`http://localhost:${port}/gitlab`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Gitlab-Token": "mock-key",
+      },
+      body: JSON.stringify({
+        object_kind: "merge_request",
+        object_attributes: { action: "open", iid: 9 },
+        project: { id: 118153 },
+      }),
+    });
+
+    expect(reviewBoardResponse.status).toBe(503);
+    expect((await reviewBoardResponse.json()).message).toContain("Missing Review Board configuration");
+    expect(gitlabResponse.status).toBe(202);
+  });
+
+  it("should return 405 for non-POST provider requests", async () => {
+    const port = 3009;
+    const server = await startWebhookServer(port);
+    servers.push(server);
+
+    const response = await fetch(`http://localhost:${port}/gitlab`, {
       method: "GET",
     });
 
     expect(response.status).toBe(405);
+  });
+
+  it("should return status for the unified server", async () => {
+    const port = 3010;
+    const server = await startWebhookServer(port);
+    servers.push(server);
+
+    const response = await fetch(`http://localhost:${port}/status`, {
+      method: "GET",
+    });
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json.routes.gitlab).toBe("/gitlab");
+    expect(json.routes.reviewboard).toBe("/reviewboard");
   });
 });

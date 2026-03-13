@@ -12,11 +12,10 @@ export async function runServeCommand(args: string[]): Promise<void> {
       {
         title: "OPTIONS",
         lines: [
-          "--webhook             Start a webhook server for GitLab or Review Board events",
-          "--mode <mode>         Mode: gitlab or reviewboard (default: gitlab)",
+          "--webhook             Start one webhook server for GitLab and Review Board events",
           "--port, -p <number>   Port to listen on (default: 3000)",
-          "--ssl-cert <path>     Path to SSL certificate (optional)",
-          "--ssl-key <path>      Path to SSL private key (optional)",
+          "--ssl-cert <path>     Path to SSL certificate for HTTPS (optional)",
+          "--ssl-key <path>      Path to SSL private key for HTTPS (optional)",
           "--ssl-ca <path>       Path to SSL CA bundle (optional)",
           "--concurrency <num>   Max concurrent review jobs (default: 3)",
           "--queue-limit <num>   Max jobs in queue (default: 50)",
@@ -27,11 +26,12 @@ export async function runServeCommand(args: string[]): Promise<void> {
         title: "EXAMPLES",
         lines: [
           "cr serve --webhook",
-          "cr serve --webhook --mode reviewboard",
           "cr serve --webhook --concurrency 5 --timeout 300000",
           "cr serve --webhook --port 8443 --ssl-cert ./cert.crt --ssl-key ./cert.key --ssl-ca ./ca.crt",
-          "Review Board mode: configure only the review_request_published webhook event.",
-          "Review Board mode: provide the same HMAC secret here and in Review Board.",
+          "GitLab webhook URL:      https://host:3000/gitlab",
+          "Review Board webhook URL: https://host:3000/reviewboard",
+          "Review Board: configure only the review_request_published webhook event.",
+          "Review Board: provide the same HMAC secret here and in Review Board.",
         ],
       },
     ]);
@@ -39,7 +39,6 @@ export async function runServeCommand(args: string[]): Promise<void> {
   }
 
   const isWebhook = hasFlag(args, "webhook");
-  const mode = getFlag(args, "mode", "gitlab");
   const port = Number(getFlag(args, "port", "3000", "-p"));
   const sslCertPath = getFlag(args, "ssl-cert", "");
   const sslKeyPath = getFlag(args, "ssl-key", "");
@@ -55,12 +54,6 @@ export async function runServeCommand(args: string[]): Promise<void> {
     return;
   }
 
-  if (mode !== "gitlab" && mode !== "reviewboard") {
-    printError(`Unsupported mode '${mode}'. Currently 'gitlab' and 'reviewboard' are supported.`);
-    process.exitCode = 1;
-    return;
-  }
-
   try {
     await startWebhookServer(port, {
       sslCertPath,
@@ -69,7 +62,6 @@ export async function runServeCommand(args: string[]): Promise<void> {
       webhookConcurrency: concurrency ? Number.parseInt(concurrency, 10) : undefined,
       webhookQueueLimit: queueLimit ? Number.parseInt(queueLimit, 10) : undefined,
       webhookJobTimeoutMs: timeoutMs ? Number.parseInt(timeoutMs, 10) : undefined,
-      mode,
     });
   } catch (err) {
     printError(
