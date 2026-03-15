@@ -1,3 +1,4 @@
+import { ReviewBoardHttpClient } from "./http-client.js";
 import type {
   ReviewBoardRequest,
   ReviewBoardRepository,
@@ -7,69 +8,270 @@ import type {
   ReviewBoardReview,
 } from "./types.js";
 
-function isFailureResponse(data: unknown): data is { stat: "fail" } {
-  return Boolean(
-    data &&
-      typeof data === "object" &&
-      "stat" in data &&
-      (data as { stat?: unknown }).stat === "fail"
-  );
-}
+// ---------------------------------------------------------------------------
+// ReviewBoardClient class
+// ---------------------------------------------------------------------------
 
-export interface ReviewBoardClient {
-  listRepositories(): Promise<ReviewBoardRepository[]>;
-  listReviewRequests(
+export class ReviewBoardClient {
+  private readonly http: ReviewBoardHttpClient;
+
+  constructor(baseUrl: string, token: string, username?: string) {
+    this.http = new ReviewBoardHttpClient(baseUrl, token, username);
+  }
+
+  // -------------------------------------------------------------------------
+  // Repositories
+  // -------------------------------------------------------------------------
+
+  async listRepositories(): Promise<ReviewBoardRepository[]> {
+    const response = await this.http.requestJSON<{ repositories: ReviewBoardRepository[] }>(
+      "/api/repositories/?max-results=200"
+    );
+    return response.repositories ?? [];
+  }
+
+  async getRepository(repositoryHref: string): Promise<ReviewBoardRepository> {
+    const response = await this.http.requestJSON<{ repository: ReviewBoardRepository }>(
+      repositoryHref
+    );
+    return response.repository;
+  }
+
+  // -------------------------------------------------------------------------
+  // Review Requests
+  // -------------------------------------------------------------------------
+
+  async listReviewRequests(
     status: "pending" | "submitted" | "all",
     fromUser?: string
-  ): Promise<ReviewBoardRequest[]>;
-  getReviewRequest(requestId: number): Promise<ReviewBoardRequest>;
-  getRepository(repositoryHref: string): Promise<ReviewBoardRepository>;
-  createReviewRequest(repositoryId: number): Promise<ReviewBoardRequest>;
-  updateReviewRequestDraft(
+  ): Promise<ReviewBoardRequest[]> {
+    let endpoint = `/api/review-requests/?status=${status}&counts-only=0&max-results=200&expand=submitter`;
+    if (fromUser) endpoint += `&from-user=${encodeURIComponent(fromUser)}`;
+
+    const response = await this.http.requestJSON<{ review_requests: ReviewBoardRequest[] }>(endpoint);
+    return response.review_requests ?? [];
+  }
+
+  async getReviewRequest(requestId: number): Promise<ReviewBoardRequest> {
+    const response = await this.http.requestJSON<{ review_request: ReviewBoardRequest }>(
+      `/api/review-requests/${requestId}/?expand=submitter,repository`
+    );
+
+    const request = response.review_request;
+    // Hydrate the repository path when it comes back as a link rather than inline
+    if (!request.repository?.path && request.links.repository?.href) {
+      request.repository = await this.getRepository(request.links.repository.href);
+    }
+
+    return request;
+  }
+
+  async createReviewRequest(repositoryId: number): Promise<ReviewBoardRequest> {
+    const response = await this.http.requestFormEncoded<{ review_request: ReviewBoardRequest }>(
+      "/api/review-requests/",
+      "POST",
+      { repository: repositoryId.toString() }
+    );
+    return response.review_request;
+  }
+
+  async updateReviewRequestDraft(
     requestId: number,
     fields: { summary?: string; description?: string }
-  ): Promise<ReviewBoardRequest>;
-  uploadReviewRequestDiff(requestId: number, diff: string, basedir?: string): Promise<ReviewBoardDiffSet>;
-  publishReviewRequest(requestId: number): Promise<ReviewBoardRequest>;
-  getLatestDiffSet(requestId: number): Promise<ReviewBoardDiffSet | null>;
-  getFileDiffs(requestId: number, diffSetId: number): Promise<ReviewBoardFileDiff[]>;
-  getFileDiffData(
+  ): Promise<ReviewBoardRequest> {
+    const params: Record<string, string> = {};
+    if (fields.summary !== undefined) params["summary"] = fields.summary;
+    if (fields.description !== undefined) {
+      params["description"] = fields.description;
+      params["description_text_type"] = "markdown";
+    }
+
+    const response = await this.http.requestFormEncoded<{ review_request: ReviewBoardRequest }>(
+      `/api/review-requests/${requestId}/draft/`,
+      "PUT",
+      params
+    );
+    return response.review_request;
+  }
+
+  async uploadReviewRequestDiff(
+    requestId: number,
+    diff: string,
+    basedir?: string
+  ): Promise<ReviewBoardDiffSet> {
+    const form = new FormData();
+    form.set("path", new Blob([diff], { type: "text/x-patch" }), "review.diff");
+    if (basedir) form.set("basedir", basedir);
+
+    const response = await this.http.requestMultipart<{ diff: ReviewBoardDiffSet }>(
+      `/api/review-requests/${requestId}/draft/diffs/`,
+      form
+    );
+    return response.diff;
+  }
+
+  async publishReviewRequest(requestId: number): Promise<ReviewBoardRequest> {
+    const response = await this.http.requestFormEncoded<{ review_request: ReviewBoardRequest }>(
+      `/api/review-requests/${requestId}/draft/`,
+      "PUT",
+      { public: "1" }
+    );
+    return response.review_request;
+  }
+
+  // -------------------------------------------------------------------------
+  // Diffs
+  // -------------------------------------------------------------------------
+
+  async getLatestDiffSet(requestId: number): Promise<ReviewBoardDiffSet | null> {
+    const response = await this.http.requestJSON<{ diffs: ReviewBoardDiffSet[] }>(
+      `/api/review-requests/${requestId}/diffs/`
+    );
+    const diffs = response.diffs ?? [];
+    return diffs.length > 0 ? diffs[diffs.length - 1]! : null;
+  }
+
+  async getFileDiffs(requestId: number, diffSetId: number): Promise<ReviewBoardFileDiff[]> {
+    const response = await this.http.requestJSON<{ files: ReviewBoardFileDiff[] }>(
+      `/api/review-requests/${requestId}/diffs/${diffSetId}/files/`
+    );
+    return response.files ?? [];
+  }
+
+  async getFileDiffData(
     requestId: number,
     diffSetId: number,
     fileDiffId: number
-  ): Promise<ReviewBoardDiffData>;
-  getRawDiff(requestId: number, revision: number): Promise<string>;
-  createReview(requestId: number, bodyTop: string): Promise<ReviewBoardReview>;
-  addDiffComment(
+  ): Promise<ReviewBoardDiffData> {
+    const response = await this.http.requestJSON<{ diff_data: ReviewBoardDiffData }>(
+      `/api/review-requests/${requestId}/diffs/${diffSetId}/files/${fileDiffId}/diff-data/`
+    );
+    return response.diff_data;
+  }
+
+  /**
+   * Downloads the raw unified diff for a specific revision as plain text.
+   */
+  async getRawDiff(requestId: number, revision: number): Promise<string> {
+    return this.http.requestText(
+      `/api/review-requests/${requestId}/diffs/${revision}/`
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Reviews and Comments
+  // -------------------------------------------------------------------------
+
+  async createReview(requestId: number, bodyTop: string): Promise<ReviewBoardReview> {
+    const response = await this.http.requestFormEncoded<{ review: ReviewBoardReview }>(
+      `/api/review-requests/${requestId}/reviews/`,
+      "POST",
+      { body_top: bodyTop }
+    );
+    return response.review;
+  }
+
+  async addDiffComment(
     requestId: number,
     reviewId: number,
     fileDiffId: number,
     firstLine: number,
     numLines: number,
     text: string
-  ): Promise<void>;
-  publishReview(requestId: number, reviewId: number): Promise<void>;
-  getCurrentUser(): Promise<{ id: number; username: string; fullname: string }>;
-  postReview(
+  ): Promise<void> {
+    await this.http.requestFormEncoded(
+      `/api/review-requests/${requestId}/reviews/${reviewId}/diff-comments/`,
+      "POST",
+      {
+        filediff_id: fileDiffId.toString(),
+        first_line: firstLine.toString(),
+        num_lines: numLines.toString(),
+        text,
+      }
+    );
+  }
+
+  async publishReview(requestId: number, reviewId: number): Promise<void> {
+    await this.http.requestFormEncoded(
+      `/api/review-requests/${requestId}/reviews/${reviewId}/`,
+      "PUT",
+      { public: "1" }
+    );
+  }
+
+  /**
+   * Convenience method: creates a review, attaches inline diff comments,
+   * and publishes it in one call.
+   */
+  async postReview(
     requestId: number,
     summary: string,
-    inlineComments?: Array<{
+    inlineComments: Array<{
       fileDiffId: number;
       line: number;
       text: string;
       numLines?: number;
-    }>
-  ): Promise<ReviewBoardReview>;
+    }> = []
+  ): Promise<ReviewBoardReview> {
+    const review = await this.createReview(requestId, summary);
+    for (const comment of inlineComments) {
+      await this.addDiffComment(
+        requestId,
+        review.id,
+        comment.fileDiffId,
+        comment.line,
+        comment.numLines ?? 1,
+        comment.text
+      );
+    }
+    await this.publishReview(requestId, review.id);
+    return review;
+  }
+
+  // -------------------------------------------------------------------------
+  // Session / User
+  // -------------------------------------------------------------------------
+
+  async getCurrentUser(): Promise<{ id: number; username: string; fullname: string }> {
+    const sessionResponse = await this.http.requestJSON<{
+      session: {
+        authenticated: boolean;
+        links: { user: { href: string; title: string } };
+      };
+    }>("/api/session/");
+
+    if (!sessionResponse.session.authenticated) {
+      throw new Error("Review Board session is not authenticated. Please check your token.");
+    }
+
+    const userHref = sessionResponse.session.links.user.href;
+    const userResponse = await this.http.requestJSON<{
+      user: { id: number; username: string; fullname: string };
+    }>(userHref);
+    return userResponse.user;
+  }
 }
 
-function buildAuthHeader(token: string, username?: string): string {
-  return username
-    ? `Basic ${Buffer.from(`${username}:${token}`).toString("base64")}`
-    : token.toLowerCase().startsWith("token ")
-      ? token
-      : `token ${token}`;
+// ---------------------------------------------------------------------------
+// Factory (backward-compatible)
+// ---------------------------------------------------------------------------
+
+/** Creates a new ReviewBoardClient for the given instance URL and credentials. */
+export function createReviewBoardClient(
+  baseUrl: string,
+  token: string,
+  username?: string
+): ReviewBoardClient {
+  return new ReviewBoardClient(baseUrl, token, username);
 }
 
+// ---------------------------------------------------------------------------
+// Legacy free-function exports (backward-compatible shims)
+// ---------------------------------------------------------------------------
+
+/**
+ * @deprecated Use ReviewBoardClient directly or createReviewBoardClient instead.
+ */
 export async function rbRequest<T>(
   baseUrl: string,
   token: string,
@@ -77,314 +279,180 @@ export async function rbRequest<T>(
   init?: RequestInit,
   username?: string
 ): Promise<T> {
-  const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
-  const url = endpoint.startsWith("http") ? endpoint : `${normalizedBaseUrl}${endpoint}`;
-
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      Authorization: buildAuthHeader(token, username),
-      Accept: "application/json",
-      ...(init?.headers ?? {}),
-    },
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Review Board API ${response.status}: ${body}`);
-  }
-
-  const data: unknown = await response.json();
-  if (isFailureResponse(data)) {
-    throw new Error(`Review Board API error: ${JSON.stringify(data)}`);
-  }
-  return data as T;
+  const http = new ReviewBoardHttpClient(baseUrl, token, username);
+  return http.requestJSON<T>(endpoint, init ?? {});
 }
 
-async function getRepository(
-  baseUrl: string,
-  token: string,
-  repositoryHref: string,
-  username?: string
-): Promise<ReviewBoardRepository> {
-  const response = await rbRequest<{ repository: ReviewBoardRepository }>(
-    baseUrl,
-    token,
-    repositoryHref,
-    {},
-    username
-  );
-  return response.repository;
-}
-
+/**
+ * @deprecated Use ReviewBoardClient.getCurrentUser() instead.
+ */
 export async function getCurrentUser(
   baseUrl: string,
   token: string,
   username?: string
 ): Promise<{ id: number; username: string; fullname: string }> {
-  const sessionResponse = await rbRequest<{
-    session: {
-      authenticated: boolean;
-      links: { user: { href: string; title: string } };
-    };
-  }>(baseUrl, token, "/api/session/", {}, username);
-
-  if (!sessionResponse.session.authenticated) {
-    throw new Error("Review Board session is not authenticated. Please check your token.");
-  }
-
-  const userHref = sessionResponse.session.links.user.href;
-  const userResponse = await rbRequest<{
-    user: { id: number; username: string; fullname: string };
-  }>(baseUrl, token, userHref, {}, username);
-  return userResponse.user;
+  return new ReviewBoardClient(baseUrl, token, username).getCurrentUser();
 }
 
-export function createReviewBoardClient(
+/**
+ * @deprecated Use ReviewBoardClient.listRepositories() instead.
+ */
+export async function listRepositories(
+  baseUrl: string,
+  token: string
+): Promise<ReviewBoardRepository[]> {
+  return new ReviewBoardClient(baseUrl, token).listRepositories();
+}
+
+/**
+ * @deprecated Use ReviewBoardClient.listReviewRequests() instead.
+ */
+export async function listReviewRequests(
   baseUrl: string,
   token: string,
-  username?: string
-): ReviewBoardClient {
-  const client: ReviewBoardClient = {
-    async listRepositories() {
-      const response = await rbRequest<{ repositories: ReviewBoardRepository[] }>(
-        baseUrl,
-        token,
-        "/api/repositories/?max-results=200",
-        {},
-        username
-      );
-      return response.repositories || [];
-    },
+  status: "pending" | "submitted" | "all",
+  fromUser?: string
+): Promise<ReviewBoardRequest[]> {
+  return new ReviewBoardClient(baseUrl, token).listReviewRequests(status, fromUser);
+}
 
-    async listReviewRequests(status, fromUser) {
-      let endpoint = `/api/review-requests/?status=${status}&counts-only=0&max-results=200&expand=submitter`;
-      if (fromUser) {
-        endpoint += `&from-user=${encodeURIComponent(fromUser)}`;
-      }
-      const response = await rbRequest<{ review_requests: ReviewBoardRequest[] }>(
-        baseUrl,
-        token,
-        endpoint,
-        {},
-        username
-      );
-      return response.review_requests || [];
-    },
+/**
+ * @deprecated Use ReviewBoardClient.getReviewRequest() instead.
+ */
+export async function getReviewRequest(
+  baseUrl: string,
+  token: string,
+  requestId: number
+): Promise<ReviewBoardRequest> {
+  return new ReviewBoardClient(baseUrl, token).getReviewRequest(requestId);
+}
 
-    async getReviewRequest(requestId) {
-      const response = await rbRequest<{ review_request: ReviewBoardRequest }>(
-        baseUrl,
-        token,
-        `/api/review-requests/${requestId}/?expand=submitter,repository`,
-        {},
-        username
-      );
+/**
+ * @deprecated Use ReviewBoardClient.getLatestDiffSet() instead.
+ */
+export async function getLatestDiffSet(
+  baseUrl: string,
+  token: string,
+  requestId: number
+): Promise<ReviewBoardDiffSet | null> {
+  return new ReviewBoardClient(baseUrl, token).getLatestDiffSet(requestId);
+}
 
-      const request = response.review_request;
-      if (!request.repository?.path && request.links.repository?.href) {
-        request.repository = await getRepository(baseUrl, token, request.links.repository.href, username);
-      }
+/**
+ * @deprecated Use ReviewBoardClient.getFileDiffs() instead.
+ */
+export async function getFileDiffs(
+  baseUrl: string,
+  token: string,
+  requestId: number,
+  diffSetId: number
+): Promise<ReviewBoardFileDiff[]> {
+  return new ReviewBoardClient(baseUrl, token).getFileDiffs(requestId, diffSetId);
+}
 
-      return request;
-    },
+/**
+ * @deprecated Use ReviewBoardClient.getFileDiffData() instead.
+ */
+export async function getFileDiffData(
+  baseUrl: string,
+  token: string,
+  requestId: number,
+  diffSetId: number,
+  fileDiffId: number
+): Promise<ReviewBoardDiffData> {
+  return new ReviewBoardClient(baseUrl, token).getFileDiffData(requestId, diffSetId, fileDiffId);
+}
 
-    async getRepository(repositoryHref) {
-      return getRepository(baseUrl, token, repositoryHref, username);
-    },
+/**
+ * @deprecated Use ReviewBoardClient.createReviewRequest() instead.
+ */
+export async function createReviewRequest(
+  baseUrl: string,
+  token: string,
+  repositoryId: number
+): Promise<ReviewBoardRequest> {
+  return new ReviewBoardClient(baseUrl, token).createReviewRequest(repositoryId);
+}
 
-    async createReviewRequest(repositoryId) {
-      const response = await rbRequest<{ review_request: ReviewBoardRequest }>(
-        baseUrl,
-        token,
-        "/api/review-requests/",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ repository: repositoryId.toString() }),
-        },
-        username
-      );
-      return response.review_request;
-    },
+/**
+ * @deprecated Use ReviewBoardClient.updateReviewRequestDraft() instead.
+ */
+export async function updateReviewRequestDraft(
+  baseUrl: string,
+  token: string,
+  requestId: number,
+  fields: { summary?: string; description?: string }
+): Promise<ReviewBoardRequest> {
+  return new ReviewBoardClient(baseUrl, token).updateReviewRequestDraft(requestId, fields);
+}
 
-    async updateReviewRequestDraft(requestId, fields) {
-      const body = new URLSearchParams();
-      if (fields.summary !== undefined) {
-        body.set("summary", fields.summary);
-      }
-      if (fields.description !== undefined) {
-        body.set("description", fields.description);
-        body.set("description_text_type", "markdown");
-      }
+/**
+ * @deprecated Use ReviewBoardClient.uploadReviewRequestDiff() instead.
+ */
+export async function uploadReviewRequestDiff(
+  baseUrl: string,
+  token: string,
+  requestId: number,
+  diff: string,
+  basedir?: string
+): Promise<ReviewBoardDiffSet> {
+  return new ReviewBoardClient(baseUrl, token).uploadReviewRequestDiff(requestId, diff, basedir);
+}
 
-      const response = await rbRequest<{ review_request: ReviewBoardRequest }>(
-        baseUrl,
-        token,
-        `/api/review-requests/${requestId}/draft/`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body,
-        },
-        username
-      );
-      return response.review_request;
-    },
+/**
+ * @deprecated Use ReviewBoardClient.publishReviewRequest() instead.
+ */
+export async function publishReviewRequest(
+  baseUrl: string,
+  token: string,
+  requestId: number
+): Promise<ReviewBoardRequest> {
+  return new ReviewBoardClient(baseUrl, token).publishReviewRequest(requestId);
+}
 
-    async uploadReviewRequestDiff(requestId, diff, basedir) {
-      const form = new FormData();
-      form.set("path", new Blob([diff], { type: "text/x-patch" }), "review.diff");
-      if (basedir) {
-        form.set("basedir", basedir);
-      }
+/**
+ * @deprecated Use ReviewBoardClient.createReview() instead.
+ */
+export async function createReview(
+  baseUrl: string,
+  token: string,
+  requestId: number,
+  bodyTop: string
+): Promise<ReviewBoardReview> {
+  return new ReviewBoardClient(baseUrl, token).createReview(requestId, bodyTop);
+}
 
-      const response = await rbRequest<{ diff: ReviewBoardDiffSet }>(
-        baseUrl,
-        token,
-        `/api/review-requests/${requestId}/draft/diffs/`,
-        {
-          method: "POST",
-          body: form,
-        },
-        username
-      );
-      return response.diff;
-    },
+/**
+ * @deprecated Use ReviewBoardClient.addDiffComment() instead.
+ */
+export async function addDiffComment(
+  baseUrl: string,
+  token: string,
+  requestId: number,
+  reviewId: number,
+  fileDiffId: number,
+  firstLine: number,
+  numLines: number,
+  text: string
+): Promise<void> {
+  return new ReviewBoardClient(baseUrl, token).addDiffComment(
+    requestId,
+    reviewId,
+    fileDiffId,
+    firstLine,
+    numLines,
+    text
+  );
+}
 
-    async publishReviewRequest(requestId) {
-      const response = await rbRequest<{ review_request: ReviewBoardRequest }>(
-        baseUrl,
-        token,
-        `/api/review-requests/${requestId}/draft/`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ public: "1" }),
-        },
-        username
-      );
-      return response.review_request;
-    },
-
-    async getLatestDiffSet(requestId) {
-      const response = await rbRequest<{ diffs: ReviewBoardDiffSet[] }>(
-        baseUrl,
-        token,
-        `/api/review-requests/${requestId}/diffs/`,
-        {},
-        username
-      );
-      const diffs = response.diffs || [];
-      return diffs.length > 0 ? diffs[diffs.length - 1] : null;
-    },
-
-    async getFileDiffs(requestId, diffSetId) {
-      const response = await rbRequest<{ files: ReviewBoardFileDiff[] }>(
-        baseUrl,
-        token,
-        `/api/review-requests/${requestId}/diffs/${diffSetId}/files/`,
-        {},
-        username
-      );
-      return response.files || [];
-    },
-
-    async getFileDiffData(requestId, diffSetId, fileDiffId) {
-      const response = await rbRequest<{ diff_data: ReviewBoardDiffData }>(
-        baseUrl,
-        token,
-        `/api/review-requests/${requestId}/diffs/${diffSetId}/files/${fileDiffId}/diff-data/`,
-        {},
-        username
-      );
-      return response.diff_data;
-    },
-
-    async getRawDiff(requestId, revision) {
-      const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
-      const url = `${normalizedBaseUrl}/api/review-requests/${requestId}/diffs/${revision}/`;
-      const response = await fetch(url, {
-        headers: {
-          Authorization: buildAuthHeader(token, username),
-          Accept: "text/x-patch",
-        },
-      });
-      if (!response.ok) {
-        const body = await response.text();
-        throw new Error(`Review Board API ${response.status}: ${body}`);
-      }
-      return response.text();
-    },
-
-    async createReview(requestId, bodyTop) {
-      const response = await rbRequest<{ review: ReviewBoardReview }>(
-        baseUrl,
-        token,
-        `/api/review-requests/${requestId}/reviews/`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ body_top: bodyTop }),
-        },
-        username
-      );
-      return response.review;
-    },
-
-    async addDiffComment(requestId, reviewId, fileDiffId, firstLine, numLines, text) {
-      await rbRequest(
-        baseUrl,
-        token,
-        `/api/review-requests/${requestId}/reviews/${reviewId}/diff-comments/`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            filediff_id: fileDiffId.toString(),
-            first_line: firstLine.toString(),
-            num_lines: numLines.toString(),
-            text,
-          }),
-        },
-        username
-      );
-    },
-
-    async publishReview(requestId, reviewId) {
-      await rbRequest(
-        baseUrl,
-        token,
-        `/api/review-requests/${requestId}/reviews/${reviewId}/`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ public: "1" }),
-        },
-        username
-      );
-    },
-
-    async getCurrentUser() {
-      return getCurrentUser(baseUrl, token, username);
-    },
-
-    async postReview(requestId, summary, inlineComments = []) {
-      const review = await this.createReview(requestId, summary);
-      for (const comment of inlineComments) {
-        await this.addDiffComment(
-          requestId,
-          review.id,
-          comment.fileDiffId,
-          comment.line,
-          comment.numLines || 1,
-          comment.text
-        );
-      }
-      await this.publishReview(requestId, review.id);
-      return review;
-    },
-  };
-
-  return client;
+/**
+ * @deprecated Use ReviewBoardClient.publishReview() instead.
+ */
+export async function publishReview(
+  baseUrl: string,
+  token: string,
+  requestId: number,
+  reviewId: number
+): Promise<void> {
+  return new ReviewBoardClient(baseUrl, token).publishReview(requestId, reviewId);
 }
