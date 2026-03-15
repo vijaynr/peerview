@@ -352,11 +352,10 @@ async function upsertMergeRequest(args: {
 
   if (args.existingMr) {
     phaseReporter.started("upsert_merge_request", `Updating existing MR !${args.existingMr.iid}...`);
-    const url = await args.gitlab.updateMergeRequest(
+    const mr = await args.gitlab.updateMergeRequest(
       args.projectPath,
       args.existingMr.iid,
-      args.title,
-      args.description
+      { title: args.title, description: args.description }
     );
     phaseReporter.completed("upsert_merge_request", "Merge request updated.");
     return {
@@ -367,18 +366,20 @@ async function upsertMergeRequest(args: {
       targetLabel: args.targetBranch,
       title: args.title,
       description: args.description,
-      url,
+      url: mr.web_url,
       action: "updated",
     };
   }
 
   phaseReporter.started("upsert_merge_request", "Creating merge request...");
-  const url = await args.gitlab.createMergeRequest(
+  const mr = await args.gitlab.createMergeRequest(
     args.projectPath,
-    args.sourceBranch,
-    args.targetBranch,
-    args.title,
-    args.description
+    {
+      sourceBranch: args.sourceBranch,
+      targetBranch: args.targetBranch,
+      title: args.title,
+      description: args.description,
+    }
   );
   phaseReporter.completed("upsert_merge_request", "Merge request created.");
   return {
@@ -388,7 +389,7 @@ async function upsertMergeRequest(args: {
     targetLabel: args.targetBranch,
     title: args.title,
     description: args.description,
-    url,
+    url: mr.web_url,
     action: "created",
   };
 }

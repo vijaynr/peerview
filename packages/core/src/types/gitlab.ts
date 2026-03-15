@@ -1,72 +1,17 @@
 /**
  * GitLab API response types.
+ * Implementation lives in @cr/gitlab; this module re-exports for backward compatibility.
  */
-
-export type GitLabBranch = {
-  name: string;
-};
-
-export type GitLabCompare = {
-  diffs?: Array<{ diff?: string }>;
-  commits?: Array<{ id: string; title: string; message: string }>;
-  compare_timeout?: boolean;
-};
-
-export type GitLabMr = {
-  iid: number;
-  web_url: string;
-};
-
-export type GitLabMrWithBasics = {
-  iid: number;
-  title: string;
-  state: string;
-  web_url: string;
-  description?: string;
-  diff_refs?: {
-    base_sha?: string;
-    start_sha?: string;
-    head_sha?: string;
-  };
-};
-
-export type GitLabCommit = {
-  id: string;
-  title: string;
-  message: string;
-};
-
-export type GitLabMrChangesResponse = {
-  changes?: Array<{
-    old_path?: string;
-    new_path?: string;
-    diff?: string;
-  }>;
-};
-
-export type GitLabDiscussion = {
-  notes?: Array<{
-    id?: number;
-    body?: string;
-    system?: boolean;
-    resolved?: boolean;
-    position?: {
-      position_type?: string;
-      new_path?: string;
-      old_path?: string;
-      new_line?: number;
-      old_line?: number;
-      base_sha?: string;
-      start_sha?: string;
-      head_sha?: string;
-    };
-  }>;
-  resolved?: boolean;
-};
-
-export type GitLabInlineComment = {
-  filePath: string;
-  line: number;
-  positionType: "new" | "old";
-  body: string;
-};
+export type {
+  GitLabBranch,
+  GitLabCompare,
+  GitLabMr,
+  GitLabMrDetails as GitLabMrWithBasics,
+  GitLabCommit,
+  GitLabMrChangesResponse,
+  GitLabDiscussion,
+  GitLabInlineComment,
+  GitLabNote,
+  GitLabNotePosition,
+  GitLabDiscussionNote,
+} from "@cr/gitlab";

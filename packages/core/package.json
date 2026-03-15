@@ -7,6 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@cr/gitlab": "workspace:*",
     "@cr/reviewboard": "workspace:*",
     "openai": "^6.6.0",
     "zod": "^4.1.12"
