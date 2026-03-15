@@ -224,6 +224,8 @@ export async function* runInteractiveReviewSession(
           message:
             provider === "reviewboard"
               ? "Select review request (type to search)"
+              : provider === "github"
+              ? "Select pull request (type to search)"
               : "Select merge request (type to search)",
           options,
         },

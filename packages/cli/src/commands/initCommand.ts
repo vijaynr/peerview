@@ -32,6 +32,14 @@ type WebhookSetupAnswers = {
   webhookJobTimeoutMs?: number;
 };
 
+type GitHubSetupAnswers = {
+  openaiApiUrl?: string;
+  openaiApiKey?: string;
+  openaiModel?: string;
+  useCustomStreaming?: boolean;
+  githubToken?: string;
+};
+
 type GitLabSetupAnswers = {
   openaiApiUrl?: string;
   openaiApiKey?: string;
@@ -63,6 +71,7 @@ export async function runInitCommand(args: string[] = []): Promise<void> {
   const isWebhook = hasFlag(args, "webhook");
   const isRb = hasFlag(args, "rb");
   const isGitlab = hasFlag(args, "gitlab");
+  const isGithub = hasFlag(args, "github");
   const isSubversion = hasFlag(args, "subversion") || hasFlag(args, "svn");
 
   if (isSdd) {
@@ -82,6 +91,11 @@ export async function runInitCommand(args: string[] = []): Promise<void> {
 
   if (isGitlab) {
     await runGitLabSetup(args);
+    return;
+  }
+
+  if (isGithub) {
+    await runGitHubSetup(args);
     return;
   }
 
@@ -449,6 +463,70 @@ async function runGitLabSetup(_args: string[] = []): Promise<void> {
     useCustomStreaming: answers.useCustomStreaming ?? false,
     gitlabUrl: answers.gitlabUrl,
     gitlabKey: answers.gitlabKey ?? "",
+  };
+
+  await saveCRConfig(nextConfig);
+
+  printDivider();
+  printSuccess(`Configuration saved to ${CR_CONF_PATH}`);
+  printDivider();
+}
+
+async function runGitHubSetup(_args: string[] = []): Promise<void> {
+  const existing = await loadCRConfig();
+
+  const answers = (await promptWithFrame(
+    [
+      {
+        type: "text",
+        name: "openaiApiUrl",
+        message: "OpenAI API URL",
+        initial: existing.openaiApiUrl ?? defaultConfig.openaiApiUrl,
+      },
+      {
+        type: "password",
+        name: "openaiApiKey",
+        message: "OpenAI API Key",
+        initial: existing.openaiApiKey ?? "",
+      },
+      {
+        type: "text",
+        name: "openaiModel",
+        message: "OpenAI Model",
+        initial: existing.openaiModel ?? defaultConfig.openaiModel,
+      },
+      {
+        type: "toggle",
+        name: "useCustomStreaming",
+        message: "Use custom streaming (SSE format)",
+        initial: existing.useCustomStreaming ?? false,
+        active: "yes",
+        inactive: "no",
+      },
+      {
+        type: "password",
+        name: "githubToken",
+        message: "GitHub Personal Access Token",
+        initial: existing.githubToken ?? "",
+      },
+    ],
+    { onCancel: () => true }
+  )) as GitHubSetupAnswers;
+
+  if (!answers.openaiApiUrl || !answers.openaiModel) {
+    printWarning("Initialization cancelled.");
+    return;
+  }
+
+  const nextConfig: CRConfig = {
+    ...existing,
+    openaiApiUrl: answers.openaiApiUrl,
+    openaiApiKey: answers.openaiApiKey ?? "",
+    openaiModel: answers.openaiModel,
+    useCustomStreaming: answers.useCustomStreaming ?? false,
+    gitlabUrl: existing.gitlabUrl ?? defaultConfig.gitlabUrl,
+    gitlabKey: existing.gitlabKey ?? "",
+    githubToken: answers.githubToken ?? "",
   };
 
   await saveCRConfig(nextConfig);

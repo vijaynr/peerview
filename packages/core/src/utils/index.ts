@@ -9,7 +9,7 @@ export { loadCRConfig, saveCRConfig, readCRConfigContents, envOrConfig } from ".
 export { repoRootFromModule, CR_CONF_PATH } from "./paths.js";
 
 // Git exports
-export { getOriginRemoteUrl, getCurrentBranch } from "./git.js";
+export { getOriginRemoteUrl, getCurrentBranch, detectGitProvider, type GitProvider } from "./git.js";
 
 // GitLab exports
 export {
@@ -31,6 +31,27 @@ export {
   getMergeRequestInlineComments,
   addInlineMergeRequestComment,
 } from "./gitlabComments.js";
+
+// GitHub exports
+export {
+  remoteToGitHubRepoPath,
+  isGitHubRemote,
+  listGitHubBranches,
+  getGitHubDefaultBranch,
+  githubBranchExists,
+  listGitHubPullRequests,
+  findOpenGitHubPullRequestByHead,
+  getGitHubPullRequest,
+  getGitHubPullRequestFiles,
+  getGitHubPullRequestCommits,
+  getGitHubFileContent,
+  addGitHubPullRequestComment,
+  addGitHubInlinePullRequestComment,
+  compareGitHubBranches,
+  findExistingGitHubPullRequest,
+  createGitHubPullRequest,
+  updateGitHubPullRequest,
+} from "./github.js";
 
 // LLM exports
 export { generateTextWithLlm } from "./llm.js";
@@ -68,6 +89,7 @@ export {
   loadWorkflowRuntime,
   createRuntimeLlmClient,
   createRuntimeGitLabClient,
+  createRuntimeGitHubClient,
   createRuntimeSvnClient,
   type WorkflowRuntime,
 } from "./workflowRuntime.js";

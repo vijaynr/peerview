@@ -46,6 +46,7 @@ export {
   CR_CONF_PATH,
   getOriginRemoteUrl,
   getCurrentBranch,
+  detectGitProvider,
   remoteToProjectPath,
   listBranches,
   listMergeRequests,
@@ -60,6 +61,23 @@ export {
   addMergeRequestComment,
   getMergeRequestInlineComments,
   addInlineMergeRequestComment,
+  remoteToGitHubRepoPath,
+  isGitHubRemote,
+  listGitHubBranches,
+  getGitHubDefaultBranch,
+  githubBranchExists,
+  listGitHubPullRequests,
+  findOpenGitHubPullRequestByHead,
+  getGitHubPullRequest,
+  getGitHubPullRequestFiles,
+  getGitHubPullRequestCommits,
+  getGitHubFileContent,
+  addGitHubPullRequestComment,
+  addGitHubInlinePullRequestComment,
+  compareGitHubBranches,
+  findExistingGitHubPullRequest,
+  createGitHubPullRequest,
+  updateGitHubPullRequest,
   generateTextWithLlm,
   loadLocalRepositoryGuidelines,
   loadGitLabRepositoryGuidelines,
@@ -76,7 +94,7 @@ export {
   loadWorkflowRuntime,
   createRuntimeLlmClient,
   createRuntimeGitLabClient,
-  createRuntimeSvnClient,
+  createRuntimeGitHubClient,
 } from "./utils/index.js";
 // extra utils not covered by utils barrel
 export { runWorkflow, runSequentialWorkflow } from "./utils/workflow.js";
@@ -92,6 +110,8 @@ export {
 // clients (GitLabClient/LlmClient interfaces and factories not in utils barrel)
 export type { GitLabClient } from "./clients/gitlabClient.js";
 export { createGitLabClient } from "./clients/gitlabClient.js";
+export type { GitHubClient } from "./clients/githubClient.js";
+export { createGitHubClient } from "./clients/githubClient.js";
 export type { SvnClient } from "./clients/svnClient.js";
 export { createSvnClient } from "./clients/svnClient.js";
 export type { ReviewBoardClient } from "./clients/reviewBoardClient.js";

@@ -1,4 +1,5 @@
 import { createGitLabClient, type GitLabClient } from "../clients/gitlabClient.js";
+import { createGitHubClient, type GitHubClient } from "../clients/githubClient.js";
 import { createLlmClient, type LlmClient } from "../clients/llmClient.js";
 import { createReviewBoardClient, type ReviewBoardClient } from "../clients/reviewBoardClient.js";
 import { createSvnClient, type SvnClient } from "../clients/svnClient.js";
@@ -8,12 +9,14 @@ import { logger } from "./logger.js";
 export type WorkflowRuntime = {
   gitlabUrl: string;
   gitlabKey: string;
+  githubToken: string;
   svnRepositoryUrl: string;
   svnUsername: string;
   svnPassword: string;
   rbUrl: string;
   rbToken: string;
   gitlabWebhookSecret?: string;
+  githubWebhookSecret?: string;
   rbWebhookSecret?: string;
   sslCertPath?: string;
   sslKeyPath?: string;
@@ -40,6 +43,7 @@ export async function loadWorkflowRuntime(): Promise<WorkflowRuntime> {
   const runtime: WorkflowRuntime = {
     gitlabUrl: envOrConfig("GITLAB_URL", config.gitlabUrl, ""),
     gitlabKey: envOrConfig("GITLAB_KEY", config.gitlabKey, ""),
+    githubToken: envOrConfig("GITHUB_TOKEN", config.githubToken, ""),
     svnRepositoryUrl:
       process.env.SVN_REPOSITORY_URL ||
       process.env.SVN_GUIDELINES_BASE_URL ||
@@ -50,6 +54,7 @@ export async function loadWorkflowRuntime(): Promise<WorkflowRuntime> {
     rbUrl: envOrConfig("RB_URL", config.rbUrl, ""),
     rbToken: envOrConfig("RB_TOKEN", config.rbToken, ""),
     gitlabWebhookSecret: envOrConfig("GITLAB_WEBHOOK_SECRET", config.gitlabWebhookSecret, ""),
+    githubWebhookSecret: envOrConfig("GITHUB_WEBHOOK_SECRET", config.githubWebhookSecret, ""),
     rbWebhookSecret: envOrConfig("RB_WEBHOOK_SECRET", config.rbWebhookSecret, ""),
     sslCertPath: envOrConfig("SSL_CERT_PATH", config.sslCertPath, ""),
     sslKeyPath: envOrConfig("SSL_KEY_PATH", config.sslKeyPath, ""),
@@ -104,6 +109,10 @@ export function createRuntimeLlmClient(runtime: WorkflowRuntime): LlmClient {
 
 export function createRuntimeGitLabClient(runtime: WorkflowRuntime): GitLabClient {
   return createGitLabClient(runtime.gitlabUrl, runtime.gitlabKey);
+}
+
+export function createRuntimeGitHubClient(runtime: WorkflowRuntime): GitHubClient {
+  return createGitHubClient(runtime.githubToken);
 }
 
 export function createRuntimeSvnClient(runtime: WorkflowRuntime): SvnClient | null {

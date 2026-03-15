@@ -21,6 +21,17 @@ export type {
   GitLabInlineComment,
 } from "./gitlab.js";
 export type {
+  GitHubBranch,
+  GitHubCompare,
+  GitHubPr,
+  GitHubPrWithBasics,
+  GitHubCommit,
+  GitHubPrFilesResponse,
+  GitHubPrReviewComment,
+  GitHubInlineComment,
+  GitHubRepository,
+} from "./github.js";
+export type {
   ReviewBoardRequest,
   ReviewBoardRepository,
   ReviewBoardDiffSet,

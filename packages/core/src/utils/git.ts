@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import path from "node:path";
 import { logger } from "./logger.js";
+import { isGitHubRemote } from "./github.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -39,4 +40,31 @@ export async function getOriginRemoteUrl(repoPath: string): Promise<string> {
   }
   logger.debug("git", `origin remote url: ${url}`);
   return url;
+}
+
+export type GitProvider = "github" | "gitlab" | "unknown";
+
+/**
+ * Determines the Git provider based on the origin remote URL.
+ */
+export async function detectGitProvider(repoPath: string): Promise<GitProvider> {
+  try {
+    const remoteUrl = await getOriginRemoteUrl(repoPath);
+    
+    if (isGitHubRemote(remoteUrl)) {
+      return "github";
+    }
+    
+    // Check for GitLab - this is more heuristic since GitLab can be self-hosted
+    if (remoteUrl.includes("gitlab.com") || 
+        remoteUrl.includes("gitlab") || 
+        remoteUrl.includes("/-/merge_requests/")) {
+      return "gitlab";
+    }
+    
+    return "unknown";
+  } catch (error) {
+    logger.warn("git", "Could not detect git provider", error instanceof Error ? error : new Error(String(error)));
+    return "unknown";
+  }
 }

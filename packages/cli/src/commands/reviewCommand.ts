@@ -13,7 +13,7 @@ import {
   runLiveChatLoop,
   type LiveController,
 } from "@cr/ui";
-import { envOrConfig, loadCRConfig } from "@cr/core";
+import { envOrConfig, loadCRConfig, detectGitProvider } from "@cr/core";
 import { repoRootFromModule } from "@cr/core";
 import {
   getFlag,
@@ -85,6 +85,35 @@ async function maybePostReviewNotes(args: {
       postedSummaryNoteId: posted.summaryNoteId,
       postedInlineCount: posted.inlineNoteIds.length,
     };
+  }
+
+  if (args.input.provider === "github") {
+    const githubToken = envOrConfig("GITHUB_TOKEN", config.githubToken, "");
+    if (!githubToken) {
+      return { postedInlineCount: 0 };
+    }
+
+    let shouldPost = !args.input.local;
+    if (shouldPost && args.input.mode === "interactive") {
+      const response = await promptWithFrame(
+        {
+          type: "confirm",
+          name: "shouldPost",
+          message: "Post this review comment to GitHub?",
+          initial: false,
+        },
+        abortOnCancel
+      );
+      shouldPost = Boolean(response.shouldPost);
+    }
+    if (!shouldPost) {
+      return { postedInlineCount: 0 };
+    }
+
+    // TODO: Implement GitHub comment posting
+    // const posted = await maybePostGitHubComment(args.result, args.input.mode, shouldPost, githubToken);
+    // For now, just return empty result
+    return { postedInlineCount: 0 };
   }
 
   const gitlabKey = envOrConfig("GITLAB_KEY", config.gitlabKey, "");
@@ -289,13 +318,14 @@ export async function runReviewCommand(args: string[]): Promise<void> {
           "                       chat: Interactive Q&A over MR context",
           "",
           "--path, -p <path>      Path to repository (default: current directory)",
-          "--url, -u <url>        GitLab merge request URL",
+          "--url, -u <url>        GitLab merge request URL or GitHub pull request URL",
           "--from, -f <user>      Filter Review Board requests by user",
           "--rb                   Use Review Board provider",
+          "--github               Use GitHub provider",
           "--mode, -m <mode>      Mode: interactive or ci (default: interactive)",
           "--local                Review uncommitted changes via git diff",
-          "--state, -s <state>    MR state filter: opened, closed, merged, all (default: opened)",
-          "--inline-comments      Post inline review comments to GitLab only",
+          "--state, -s <state>    MR/PR state filter: opened, closed, merged, all (default: opened)",
+          "--inline-comments      Post inline review comments to GitLab/GitHub",
         ],
       },
       {
@@ -334,18 +364,34 @@ export async function runReviewCommand(args: string[]): Promise<void> {
   const local = hasFlag(args, "local");
   const inlineComments = hasFlag(args, "inline-comments");
   const rb = hasFlag(args, "rb");
+  const github = hasFlag(args, "github");
   const fromUser = getFlag(args, "from", "", "-f") || undefined;
   const repoRoot = repoRootFromModule(import.meta.url);
   const stdinDiff = await readStdinDiff();
 
   if (workflowRaw === "chat" && (local || rb)) {
     printAlert({
-      title: "Unsupported Combination",
+      title: "Unsupported Combination", 
       message: "The --local or --rb option is not supported in chat mode.",
       tone: "error",
     });
     process.exitCode = 1;
     return;
+  }
+
+  // Determine provider: explicit flags take precedence, otherwise auto-detect
+  let provider: "gitlab" | "reviewboard" | "github";
+  if (rb) {
+    provider = "reviewboard";
+  } else if (github) {
+    provider = "github";
+  } else if (!local) {
+    // Auto-detect provider based on git remote
+    const gitProvider = await detectGitProvider(repoPath);
+    provider = gitProvider === "github" ? "github" : "gitlab";
+  } else {
+    // For local mode, default to gitlab
+    provider = "gitlab";
   }
 
   if (rb && inlineComments) {
@@ -375,7 +421,7 @@ export async function runReviewCommand(args: string[]): Promise<void> {
     fromUser,
     state,
     stdinDiff,
-    provider: rb ? "reviewboard" : "gitlab",
+    provider,
   };
   const intro = getWorkflowHeadingAndDescription(workflow, local, input.provider);
   const workflowResultTitle = getWorkflowResultTitle(workflow, local, input.provider);

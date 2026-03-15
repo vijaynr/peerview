@@ -45,13 +45,14 @@ export type ReviewWorkflowInput = {
   mode: WorkflowMode;
   workflow: WorkflowKind;
   local: boolean;
-  provider?: "gitlab" | "reviewboard";
+  provider?: "gitlab" | "reviewboard" | "github";
   agentNames?: string[];
   agentMode?: "single" | "multi";
   url?: string;
   fromUser?: string;
   state: MergeRequestState;
   mrIid?: number;
+  prNumber?: number; // GitHub PR number
   stdinDiff?: string;
   inlineComments?: boolean;
   userFeedback?: string;
@@ -79,8 +80,11 @@ export type ReviewWorkflowResult = {
     comment: string;
   }>;
   mrIid?: number;
+  prNumber?: number; // GitHub PR number
   projectPath?: string;
+  repoPath?: string; // GitHub repo path (owner/repo)
   gitlabUrl?: string;
+  githubUrl?: string; // GitHub URL
   rbUrl?: string;
   guidelines?: string;
 };
@@ -116,7 +120,7 @@ export type ReviewSessionEffect =
   | ReviewWorkflowEffect
   | {
       type: "select_review_target";
-      provider: "gitlab" | "reviewboard";
+      provider: "gitlab" | "reviewboard" | "github";
       message: string;
       options: ReviewSelectionOption[];
     }
