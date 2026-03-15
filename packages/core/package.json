@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@cr/gitlab": "workspace:*",
+    "@cr/github": "workspace:*",
     "@cr/reviewboard": "workspace:*",
     "openai": "^6.6.0",
     "zod": "^4.1.12"

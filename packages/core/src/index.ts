@@ -109,8 +109,7 @@ export {
 } from "./utils/paths.js";
 // clients (GitLabClient/LlmClient interfaces and factories not in utils barrel)
 export { GitLabClient, createGitLabClient } from "./clients/gitlabClient.js";
-export type { GitHubClient } from "./clients/githubClient.js";
-export { createGitHubClient } from "./clients/githubClient.js";
+export { GitHubClient, createGitHubClient } from "./clients/githubClient.js";
 export type { SvnClient } from "./clients/svnClient.js";
 export { createSvnClient } from "./clients/svnClient.js";
 export type { ReviewBoardClient } from "./clients/reviewBoardClient.js";
