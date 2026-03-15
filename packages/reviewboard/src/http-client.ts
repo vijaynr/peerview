@@ -62,10 +62,7 @@ export class ReviewBoardHttpClient {
    * Makes a request that expects a JSON response.
    * Throws `ReviewBoardApiError` on non-2xx status or `stat: "fail"` body.
    */
-  async requestJSON<T>(
-    endpoint: string,
-    init: RequestInit = {}
-  ): Promise<T> {
+  async requestJSON<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
     const url = this.resolveUrl(endpoint);
 
     const response = await fetch(url, {

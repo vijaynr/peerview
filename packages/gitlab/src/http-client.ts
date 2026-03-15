@@ -109,15 +109,27 @@ export class GitLabHttpClient {
     return this.request<T>(endpoint, { ...options, method: "GET" });
   }
 
-  post<T>(endpoint: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">): Promise<T> {
+  post<T>(
+    endpoint: string,
+    body?: unknown,
+    options?: Omit<RequestOptions, "method" | "body">
+  ): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: "POST", body });
   }
 
-  put<T>(endpoint: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">): Promise<T> {
+  put<T>(
+    endpoint: string,
+    body?: unknown,
+    options?: Omit<RequestOptions, "method" | "body">
+  ): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: "PUT", body });
   }
 
-  patch<T>(endpoint: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">): Promise<T> {
+  patch<T>(
+    endpoint: string,
+    body?: unknown,
+    options?: Omit<RequestOptions, "method" | "body">
+  ): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: "PATCH", body });
   }
 

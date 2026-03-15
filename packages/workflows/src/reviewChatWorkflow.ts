@@ -1,22 +1,24 @@
-import { getCurrentBranch, getOriginRemoteUrl } from "@cr/core";
-import { type LlmClient } from "@cr/core";
-import { loadPrompt } from "@cr/core";
-import { createWorkflowPhaseReporter } from "./workflowEvents.js";
-import { type GitLabClient, remoteToProjectPath } from "@cr/core";
-import { buildChatPrompt, injectMergeRequestContextIntoTemplate } from "./reviewWorkflowHelper.js";
-import {
-  createRuntimeGitLabClient,
-  createRuntimeLlmClient,
-  loadWorkflowRuntime,
-  type WorkflowRuntime,
-} from "@cr/core";
 import type {
   ReviewChatContext,
   ReviewChatHistoryEntry,
   ReviewWorkflowInput,
   WorkflowEventReporter,
 } from "@cr/core";
-import { runSequentialWorkflow } from "@cr/core";
+import {
+  createRuntimeGitLabClient,
+  createRuntimeLlmClient,
+  type GitLabClient,
+  getCurrentBranch,
+  getOriginRemoteUrl,
+  type LlmClient,
+  loadPrompt,
+  loadWorkflowRuntime,
+  remoteToProjectPath,
+  runSequentialWorkflow,
+  type WorkflowRuntime,
+} from "@cr/core";
+import { buildChatPrompt, injectMergeRequestContextIntoTemplate } from "./reviewWorkflowHelper.js";
+import { createWorkflowPhaseReporter } from "./workflowEvents.js";
 
 type RemoteMrContext = {
   projectPath: string;

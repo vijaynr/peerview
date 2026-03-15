@@ -1,41 +1,41 @@
-import { getCurrentBranch, getOriginRemoteUrl } from "@cr/core";
-import {
-  DEFAULT_REVIEW_AGENT_NAME,
-  type GitLabInlineComment,
-  type GitLabClient,
-  remoteToProjectPath,
-} from "@cr/core";
-import { type LlmClient } from "@cr/core";
-import { loadPrompt, loadReviewAgentPrompt, normalizeReviewAgentNames } from "@cr/core";
-import {
-  createRuntimeSvnClient,
-  loadGitLabRepositoryGuidelines,
-  loadLocalRepositoryGuidelines,
-  loadSvnRepositoryGuidelines,
-} from "@cr/core";
-import { createWorkflowPhaseReporter } from "./workflowEvents.js";
-import {
-  injectMergeRequestContextIntoTemplate,
-  buildChatPrompt,
-  extractJsonObject,
-  parseDiffHunks,
-  resolveInlinePosition,
-  buildInlineReviewPrompt,
-} from "./reviewWorkflowHelper.js";
-import {
-  createRuntimeGitLabClient,
-  createRuntimeLlmClient,
-  loadWorkflowRuntime,
-  type WorkflowRuntime,
-} from "@cr/core";
-import { assert } from "@cr/core";
 import type {
   ReviewWorkflowEffect,
   ReviewWorkflowInput,
   ReviewWorkflowResponse,
   ReviewWorkflowResult,
 } from "@cr/core";
-import { runWorkflow } from "@cr/core";
+import {
+  assert,
+  createRuntimeGitLabClient,
+  createRuntimeLlmClient,
+  createRuntimeSvnClient,
+  DEFAULT_REVIEW_AGENT_NAME,
+  type GitLabClient,
+  type GitLabInlineComment,
+  getCurrentBranch,
+  getOriginRemoteUrl,
+  type LlmClient,
+  loadGitLabRepositoryGuidelines,
+  loadLocalRepositoryGuidelines,
+  loadPrompt,
+  loadReviewAgentPrompt,
+  loadSvnRepositoryGuidelines,
+  loadWorkflowRuntime,
+  normalizeReviewAgentNames,
+  remoteToProjectPath,
+  runWorkflow,
+  type WorkflowRuntime,
+} from "@cr/core";
+import {
+  buildChatPrompt,
+  buildInlineReviewPrompt,
+  extractJsonObject,
+  injectMergeRequestContextIntoTemplate,
+  parseDiffHunks,
+  resolveInlinePosition,
+} from "./reviewWorkflowHelper.js";
+import { createWorkflowPhaseReporter } from "./workflowEvents.js";
+
 export type {
   ReviewChatContext,
   ReviewChatHistoryEntry,
@@ -92,9 +92,7 @@ function reportInlineCommentLimitation(input: Pick<ReviewWorkflowInput, "status"
   );
 }
 
-function assertResponseType(
-  response: ReviewWorkflowResponseInput
-): ReviewWorkflowResponse {
+function assertResponseType(response: ReviewWorkflowResponseInput): ReviewWorkflowResponse {
   if (!response || response.type !== "review_feedback") {
     const actual = response?.type ?? "none";
     throw new Error(`Expected review workflow response "review_feedback", received "${actual}".`);
@@ -163,7 +161,9 @@ function createPromptContextFromRemoteContext(remoteContext: RemoteMrContext): R
 }
 
 function prependFeedback(prompt: string, feedback?: string): string {
-  return feedback?.trim() ? `Human feedback for this re-run:\n${feedback.trim()}\n\n${prompt}` : prompt;
+  return feedback?.trim()
+    ? `Human feedback for this re-run:\n${feedback.trim()}\n\n${prompt}`
+    : prompt;
 }
 
 async function runReviewAgent(args: {
@@ -190,11 +190,14 @@ async function runReviewAgent(args: {
   };
 }
 
-function fillAggregateTemplate(template: string, args: {
-  contextLabel: string;
-  successfulAgentOutputs: string;
-  failedAgents: string;
-}): string {
+function fillAggregateTemplate(
+  template: string,
+  args: {
+    contextLabel: string;
+    successfulAgentOutputs: string;
+    failedAgents: string;
+  }
+): string {
   return template
     .replaceAll("{context_label}", args.contextLabel)
     .replaceAll("{agent_outputs}", args.successfulAgentOutputs)
@@ -214,11 +217,12 @@ async function aggregateAgentOutputs(args: {
     successfulAgentOutputs: args.successfulAgents
       .map((result) => `## ${result.name}\n${result.output}`)
       .join("\n\n"),
-    failedAgents: args.failedAgents.length > 0
-      ? args.failedAgents
-          .map((result) => `- ${result.name}: ${result.error ?? "Unknown error"}`)
-          .join("\n")
-      : "- None",
+    failedAgents:
+      args.failedAgents.length > 0
+        ? args.failedAgents
+            .map((result) => `- ${result.name}: ${result.error ?? "Unknown error"}`)
+            .join("\n")
+        : "- None",
   });
 
   return (await runLlmPrompt(prompt, args.llm)).trim();
@@ -824,10 +828,12 @@ export async function* runInteractiveReviewWorkflow(
       return result;
     }
 
-    const response = assertResponseType(yield {
-      type: "request_review_feedback",
-      result,
-    });
+    const response = assertResponseType(
+      yield {
+        type: "request_review_feedback",
+        result,
+      }
+    );
     const nextFeedback = response.feedback?.trim() ?? "";
     if (!nextFeedback) {
       return result;

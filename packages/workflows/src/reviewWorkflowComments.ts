@@ -1,5 +1,5 @@
-import { createGitLabClient, runWorkflow, type WorkflowMode } from "@cr/core";
 import type { ReviewWorkflowResult } from "@cr/core";
+import { createGitLabClient, runWorkflow, type WorkflowMode } from "@cr/core";
 
 export type PostReviewCommentResult = {
   summaryNoteId?: string;

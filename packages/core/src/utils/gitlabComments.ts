@@ -3,8 +3,9 @@
  * Implementation lives in @cr/gitlab (GitLabClient); this module
  * re-exports free-function wrappers for backward compatibility.
  */
-import { GitLabClient } from "@cr/gitlab";
+
 import type { GitLabInlineComment } from "@cr/gitlab";
+import { GitLabClient } from "@cr/gitlab";
 
 export type { GitLabInlineComment };
 

@@ -1,7 +1,7 @@
-import { createHmac } from "node:crypto";
 import { afterEach, describe, expect, it, mock } from "bun:test";
-import { makeCoreMock, makeWorkflowsMock } from "./mocks.ts";
+import { createHmac } from "node:crypto";
 import { startWebhookServer } from "../packages/webhook/src/server.js";
+import { makeCoreMock, makeWorkflowsMock } from "./mocks.ts";
 
 const REVIEW_BOARD_WEBHOOK_SECRET = "rb-webhook-secret";
 const runtime = {
@@ -37,34 +37,38 @@ const runReviewBoardWorkflowMock = mock(async (input: unknown) => ({
 
 const maybePostReviewBoardCommentMock = mock(async () => null);
 
-mock.module("@cr/workflows", () => makeWorkflowsMock({
-  runReviewWorkflow: runReviewWorkflowMock,
-  maybePostReviewComment: async () => null,
-  runReviewBoardWorkflow: runReviewBoardWorkflowMock,
-  maybePostReviewBoardComment: maybePostReviewBoardCommentMock,
-}));
+mock.module("@cr/workflows", () =>
+  makeWorkflowsMock({
+    runReviewWorkflow: runReviewWorkflowMock,
+    maybePostReviewComment: async () => null,
+    runReviewBoardWorkflow: runReviewBoardWorkflowMock,
+    maybePostReviewBoardComment: maybePostReviewBoardCommentMock,
+  })
+);
 
-mock.module("@cr/core", () => makeCoreMock({
-  loadWorkflowRuntime: async () => ({ ...runtime }),
-  envOrConfig: (_key: string, value: string | undefined, fallback: string) => value || fallback,
-  getCurrentBranch: async () => "feature/demo",
-  getOriginRemoteUrl: async () => "https://gitlab.example.com/group/project.git",
-  remoteToProjectPath: () => "group/project",
-  createRuntimeReviewBoardClient: () => ({
-    getReviewRequest: async () => ({}),
-    getLatestDiffSet: async () => null,
-    getFileDiffs: async () => [],
-    getRawDiff: async () => "",
-  }),
-  logger: {
-    info: () => {},
-    success: () => {},
-    warn: () => {},
-    error: () => {},
-    debug: () => {},
-  },
-  repoRootFromModule: () => "/mock/root",
-}));
+mock.module("@cr/core", () =>
+  makeCoreMock({
+    loadWorkflowRuntime: async () => ({ ...runtime }),
+    envOrConfig: (_key: string, value: string | undefined, fallback: string) => value || fallback,
+    getCurrentBranch: async () => "feature/demo",
+    getOriginRemoteUrl: async () => "https://gitlab.example.com/group/project.git",
+    remoteToProjectPath: () => "group/project",
+    createRuntimeReviewBoardClient: () => ({
+      getReviewRequest: async () => ({}),
+      getLatestDiffSet: async () => null,
+      getFileDiffs: async () => [],
+      getRawDiff: async () => "",
+    }),
+    logger: {
+      info: () => {},
+      success: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+    },
+    repoRootFromModule: () => "/mock/root",
+  })
+);
 
 const servers: Array<{ close: () => void }> = [];
 
@@ -323,7 +327,9 @@ describe("Webhook Server", () => {
     });
 
     expect(reviewBoardResponse.status).toBe(503);
-    expect((await reviewBoardResponse.json()).message).toContain("Missing Review Board configuration");
+    expect((await reviewBoardResponse.json()).message).toContain(
+      "Missing Review Board configuration"
+    );
     expect(gitlabResponse.status).toBe(202);
   });
 

@@ -1,9 +1,12 @@
+import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
 
-const tempRoot = path.join(os.tmpdir(), `cr-config-test-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+const tempRoot = path.join(
+  os.tmpdir(),
+  `cr-config-test-${Date.now()}-${Math.random().toString(16).slice(2)}`
+);
 const confPath = path.join(tempRoot, ".cr.conf");
 const crDir = path.join(tempRoot, ".cr");
 const keyPath = path.join(crDir, "config.key");

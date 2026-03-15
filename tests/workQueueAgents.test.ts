@@ -20,44 +20,46 @@ const runReviewBoardWorkflowMock = mock(async () => ({
 }));
 const maybePostReviewBoardCommentMock = mock(async () => null);
 
-mock.module("@cr/workflows", () => makeWorkflowsMock({
-  runReviewWorkflow: runReviewWorkflowMock,
-  maybePostReviewComment: maybePostReviewCommentMock,
-  runReviewBoardWorkflow: runReviewBoardWorkflowMock,
-  maybePostReviewBoardComment: maybePostReviewBoardCommentMock,
-}));
+mock.module("@cr/workflows", () =>
+  makeWorkflowsMock({
+    runReviewWorkflow: runReviewWorkflowMock,
+    maybePostReviewComment: maybePostReviewCommentMock,
+    runReviewBoardWorkflow: runReviewBoardWorkflowMock,
+    maybePostReviewBoardComment: maybePostReviewBoardCommentMock,
+  })
+);
 
-mock.module("@cr/core", () => makeCoreMock({
-  logger: {
-    success: () => {},
-    error: () => {},
-  },
-  repoRootFromModule: () => "/mock/root",
-}));
+mock.module("@cr/core", () =>
+  makeCoreMock({
+    logger: {
+      success: () => {},
+      error: () => {},
+    },
+    repoRootFromModule: () => "/mock/root",
+  })
+);
 
 const { WorkQueue } = await import("../packages/webhook/src/workQueue.js");
 
 describe("WorkQueue default review agents", () => {
   it("passes configured default agents into GitLab review jobs", async () => {
-    const queue = new WorkQueue(
-      {
-        gitlabUrl: "https://gitlab.example.com",
-        gitlabKey: "gitlab-key",
-        svnRepositoryUrl: "",
-        svnUsername: "",
-        svnPassword: "",
-        rbUrl: "https://reviews.example.com",
-        rbToken: "rb-token",
-        webhookConcurrency: 1,
-        webhookQueueLimit: 10,
-        webhookJobTimeoutMs: 1000,
-        openaiApiUrl: "https://api.example.com/v1",
-        openaiApiKey: "openai-key",
-        openaiModel: "gpt-4o",
-        useCustomStreaming: false,
-        defaultReviewAgents: ["general", "security"],
-      }
-    );
+    const queue = new WorkQueue({
+      gitlabUrl: "https://gitlab.example.com",
+      gitlabKey: "gitlab-key",
+      svnRepositoryUrl: "",
+      svnUsername: "",
+      svnPassword: "",
+      rbUrl: "https://reviews.example.com",
+      rbToken: "rb-token",
+      webhookConcurrency: 1,
+      webhookQueueLimit: 10,
+      webhookJobTimeoutMs: 1000,
+      openaiApiUrl: "https://api.example.com/v1",
+      openaiApiKey: "openai-key",
+      openaiModel: "gpt-4o",
+      useCustomStreaming: false,
+      defaultReviewAgents: ["general", "security"],
+    });
 
     queue.enqueue("gitlab", "group/project", 7);
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -72,25 +74,23 @@ describe("WorkQueue default review agents", () => {
   });
 
   it("passes configured default agents into Review Board review jobs", async () => {
-    const queue = new WorkQueue(
-      {
-        gitlabUrl: "https://gitlab.example.com",
-        gitlabKey: "gitlab-key",
-        svnRepositoryUrl: "",
-        svnUsername: "",
-        svnPassword: "",
-        rbUrl: "https://reviews.example.com",
-        rbToken: "rb-token",
-        webhookConcurrency: 1,
-        webhookQueueLimit: 10,
-        webhookJobTimeoutMs: 1000,
-        openaiApiUrl: "https://api.example.com/v1",
-        openaiApiKey: "openai-key",
-        openaiModel: "gpt-4o",
-        useCustomStreaming: false,
-        defaultReviewAgents: ["general", "security"],
-      }
-    );
+    const queue = new WorkQueue({
+      gitlabUrl: "https://gitlab.example.com",
+      gitlabKey: "gitlab-key",
+      svnRepositoryUrl: "",
+      svnUsername: "",
+      svnPassword: "",
+      rbUrl: "https://reviews.example.com",
+      rbToken: "rb-token",
+      webhookConcurrency: 1,
+      webhookQueueLimit: 10,
+      webhookJobTimeoutMs: 1000,
+      openaiApiUrl: "https://api.example.com/v1",
+      openaiApiKey: "openai-key",
+      openaiModel: "gpt-4o",
+      useCustomStreaming: false,
+      defaultReviewAgents: ["general", "security"],
+    });
 
     queue.enqueue("reviewboard", "demo-repo", 42);
     await new Promise((resolve) => setTimeout(resolve, 0));

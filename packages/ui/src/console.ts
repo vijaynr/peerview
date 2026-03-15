@@ -1,6 +1,6 @@
+import { BANNER_LOGO, BANNER_TEXT } from "./banner.js";
+import { BANNER_COLOR, BORDERS, COLORS, DOT } from "./constants.js";
 import { renderMarkdownForTerminal } from "./markdown.js";
-import { COLORS, DOT, BORDERS, BANNER_COLOR } from "./constants.js";
-import { BANNER_TEXT, BANNER_LOGO } from "./banner.js";
 
 let cachedBannerText: string | null = null;
 const BINARY_BANNER_LABEL = "cr-cli";
@@ -342,7 +342,10 @@ export function printHelpView(): void {
     },
     { cmd: "cr config", desc: "View or edit complete configuration." },
     { cmd: "cr review", desc: "Run review, summarize, or chat workflows." },
-    { cmd: "cr create-review", desc: "Generate or update a merge request or review request draft." },
+    {
+      cmd: "cr create-review",
+      desc: "Generate or update a merge request or review request draft.",
+    },
     { cmd: "cr serve", desc: "Start a webhook server for GitLab or Review Board events." },
     { cmd: "cr help", desc: "Show this help screen." },
   ]);
@@ -417,5 +420,3 @@ export const __test__ = {
   wrapTextByWidth,
   centerLine,
 };
-
-

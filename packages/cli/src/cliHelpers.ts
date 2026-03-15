@@ -46,7 +46,11 @@ export function getWorkflowHeadingAndDescription(
 ): { heading: string; description: string } {
   const isRB = provider === "reviewboard";
   const isGitHub = provider === "github";
-  const itemType = isRB ? "Review Request (Review Board)" : isGitHub ? "Pull Request" : "Merge Request";
+  const itemType = isRB
+    ? "Review Request (Review Board)"
+    : isGitHub
+      ? "Pull Request"
+      : "Merge Request";
 
   if (workflow === "chat") {
     return {
@@ -79,7 +83,11 @@ export function getWorkflowResultTitle(
 ): string {
   const isRB = provider === "reviewboard";
   const isGitHub = provider === "github";
-  const itemType = isRB ? "Review Request (Review Board)" : isGitHub ? "Pull Request" : "Merge Request";
+  const itemType = isRB
+    ? "Review Request (Review Board)"
+    : isGitHub
+      ? "Pull Request"
+      : "Merge Request";
 
   if (workflow === "chat") {
     return "Workflow: Code Review Chat";
@@ -89,4 +97,3 @@ export function getWorkflowResultTitle(
   }
   return "Workflow: Code Review";
 }
-

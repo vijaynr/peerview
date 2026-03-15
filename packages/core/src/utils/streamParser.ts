@@ -25,9 +25,7 @@ export function parseCRSseStream(text: string): string {
       if (content) {
         contentParts.push(content);
       }
-    } catch {
-      continue;
-    }
+    } catch {}
   }
 
   return contentParts.join("");

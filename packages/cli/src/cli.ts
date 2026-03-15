@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
-import { runCommand } from "./commands/index.js";
-import { printAlert, printError, printWarning } from "@cr/ui";
 import { formatKnownNetworkError } from "@cr/core";
+import { printAlert, printError, printWarning } from "@cr/ui";
+import { runCommand } from "./commands/index.js";
 
 async function main(): Promise<void> {
   process.once("SIGINT", () => {

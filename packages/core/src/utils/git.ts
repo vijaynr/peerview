@@ -1,8 +1,8 @@
 import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import path from "node:path";
-import { logger } from "./logger.js";
+import { promisify } from "node:util";
 import { isGitHubRemote } from "./github.js";
+import { logger } from "./logger.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -50,21 +50,27 @@ export type GitProvider = "github" | "gitlab" | "unknown";
 export async function detectGitProvider(repoPath: string): Promise<GitProvider> {
   try {
     const remoteUrl = await getOriginRemoteUrl(repoPath);
-    
+
     if (isGitHubRemote(remoteUrl)) {
       return "github";
     }
-    
+
     // Check for GitLab - this is more heuristic since GitLab can be self-hosted
-    if (remoteUrl.includes("gitlab.com") || 
-        remoteUrl.includes("gitlab") || 
-        remoteUrl.includes("/-/merge_requests/")) {
+    if (
+      remoteUrl.includes("gitlab.com") ||
+      remoteUrl.includes("gitlab") ||
+      remoteUrl.includes("/-/merge_requests/")
+    ) {
       return "gitlab";
     }
-    
+
     return "unknown";
   } catch (error) {
-    logger.warn("git", "Could not detect git provider", error instanceof Error ? error : new Error(String(error)));
+    logger.warn(
+      "git",
+      "Could not detect git provider",
+      error instanceof Error ? error : new Error(String(error))
+    );
     return "unknown";
   }
 }

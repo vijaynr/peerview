@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import { makeUiMock, makeCoreMock, makeWorkflowsMock } from "./mocks.ts";
+import { makeCoreMock, makeUiMock, makeWorkflowsMock } from "./mocks.ts";
 
 const promptWithFrameMock = mock(async () => ({}));
 const setResultMock = mock(() => {});
@@ -9,50 +9,56 @@ const runLiveTaskMock = mock(async (_title: string, run: (ui: any) => Promise<vo
   });
 });
 
-mock.module("@cr/ui", () => makeUiMock({
-  abortOnCancel: { onCancel: () => false },
-  askForOptionalFeedback: mock(async () => null),
-  promptWithFrame: promptWithFrameMock,
-  createWorkflowStatusController: () => ({
-    status: { info: () => {}, success: () => {}, warning: () => {}, error: () => {} },
-    events: { emit: () => {} },
-    stop: () => {},
-    close: () => {},
-  }),
-  runLiveTask: runLiveTaskMock,
-  runLiveChatLoop: mock(async () => {}),
-  printAlert: mock(() => {}),
-  printCommandHelp: mock(() => {}),
-  printReviewComment: mock(() => {}),
-  printReviewSummary: mock(() => {}),
-}));
+mock.module("@cr/ui", () =>
+  makeUiMock({
+    abortOnCancel: { onCancel: () => false },
+    askForOptionalFeedback: mock(async () => null),
+    promptWithFrame: promptWithFrameMock,
+    createWorkflowStatusController: () => ({
+      status: { info: () => {}, success: () => {}, warning: () => {}, error: () => {} },
+      events: { emit: () => {} },
+      stop: () => {},
+      close: () => {},
+    }),
+    runLiveTask: runLiveTaskMock,
+    runLiveChatLoop: mock(async () => {}),
+    printAlert: mock(() => {}),
+    printCommandHelp: mock(() => {}),
+    printReviewComment: mock(() => {}),
+    printReviewSummary: mock(() => {}),
+  })
+);
 
-mock.module("@cr/core", () => makeCoreMock({
-  envOrConfig: (_key: string, value: string | undefined, fallback: string) => value || fallback,
-  loadCRConfig: mock(async () => ({})),
-  repoRootFromModule: () => "/mock/root",
-  detectGitProvider: mock(async () => "gitlab"),
-  getOriginRemoteUrl: mock(async () => "https://gitlab.example.com/group/project.git"),
-}));
+mock.module("@cr/core", () =>
+  makeCoreMock({
+    envOrConfig: (_key: string, value: string | undefined, fallback: string) => value || fallback,
+    loadCRConfig: mock(async () => ({})),
+    repoRootFromModule: () => "/mock/root",
+    detectGitProvider: mock(async () => "gitlab"),
+    getOriginRemoteUrl: mock(async () => "https://gitlab.example.com/group/project.git"),
+  })
+);
 
-mock.module("@cr/workflows", () => makeWorkflowsMock({
-  maybePostReviewComment: mock(async () => null),
-  maybePostReviewBoardComment: mock(async () => null),
-  runReviewWorkflow: mock(async () => ({})),
-  answerReviewChatQuestion: mock(async () => ({ answer: "", history: [] })),
-  runInteractiveReviewSession: mock(async function* () {
-    yield {
-      type: "select_review_target",
-      provider: "gitlab",
-      message: "Select merge request (type to search)",
-      options: [{ title: "!7 [opened] Demo", value: 7 }],
-    };
-    return {
-      action: "cancelled",
-      message: "Merge request selection cancelled.",
-    };
-  }),
-}));
+mock.module("@cr/workflows", () =>
+  makeWorkflowsMock({
+    maybePostReviewComment: mock(async () => null),
+    maybePostReviewBoardComment: mock(async () => null),
+    runReviewWorkflow: mock(async () => ({})),
+    answerReviewChatQuestion: mock(async () => ({ answer: "", history: [] })),
+    runInteractiveReviewSession: mock(async function* () {
+      yield {
+        type: "select_review_target",
+        provider: "gitlab",
+        message: "Select merge request (type to search)",
+        options: [{ title: "!7 [opened] Demo", value: 7 }],
+      };
+      return {
+        action: "cancelled",
+        message: "Merge request selection cancelled.",
+      };
+    }),
+  })
+);
 
 const { runReviewCommand } = await import("../packages/cli/src/commands/reviewCommand.js");
 

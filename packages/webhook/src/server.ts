@@ -1,12 +1,12 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { readFileSync } from "node:fs";
 import {
   createServer as createHttpServer,
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
-import { readFileSync } from "node:fs";
-import { createHmac, timingSafeEqual } from "node:crypto";
-import { loadWorkflowRuntime, envOrConfig, logger } from "@cr/core";
+import { envOrConfig, loadWorkflowRuntime, logger } from "@cr/core";
 import { WorkQueue } from "./workQueue.js";
 
 type GitLabWebhookEvent = {
@@ -113,7 +113,10 @@ function getReviewBoardEventType(
 }
 
 function normalizeSignature(rawValue: string): string {
-  return rawValue.trim().replace(/^sha(256|1)=/i, "").toLowerCase();
+  return rawValue
+    .trim()
+    .replace(/^sha(256|1)=/i, "")
+    .toLowerCase();
 }
 
 function getReviewBoardSignature(req: IncomingMessage): string | null {
@@ -127,11 +130,7 @@ function getReviewBoardSignature(req: IncomingMessage): string | null {
   return null;
 }
 
-function verifyReviewBoardSignature(
-  req: IncomingMessage,
-  body: string,
-  secret: string
-): boolean {
+function verifyReviewBoardSignature(req: IncomingMessage, body: string, secret: string): boolean {
   const provided = getReviewBoardSignature(req);
   if (!provided) {
     return false;
@@ -175,8 +174,7 @@ export async function startWebhookServer(
   );
   runtime.rbWebhookSecret = envOrConfig("RB_WEBHOOK_SECRET", runtime.rbWebhookSecret, "");
 
-  const sslCertPath =
-    options?.sslCertPath || envOrConfig("SSL_CERT_PATH", runtime.sslCertPath, "");
+  const sslCertPath = options?.sslCertPath || envOrConfig("SSL_CERT_PATH", runtime.sslCertPath, "");
   const sslKeyPath = options?.sslKeyPath || envOrConfig("SSL_KEY_PATH", runtime.sslKeyPath, "");
   const sslCaPath = options?.sslCaPath || envOrConfig("SSL_CA_PATH", runtime.sslCaPath, "");
 
@@ -363,7 +361,7 @@ export async function startWebhookServer(
     });
   };
 
-  let server;
+  let server: ReturnType<typeof createHttpServer> | ReturnType<typeof createHttpsServer>;
   let protocol = "http";
 
   if (sslCertPath && sslKeyPath) {

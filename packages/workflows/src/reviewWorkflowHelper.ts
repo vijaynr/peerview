@@ -1,7 +1,7 @@
 import type { ReviewChatContext, ReviewChatHistoryEntry } from "@cr/core";
 
 export { type DiffHunk, parseDiffHunks } from "./diffUtils.js";
-export { resolveInlinePosition, buildInlineReviewPrompt } from "./reviewWorkflowInlineHelper.js";
+export { buildInlineReviewPrompt, resolveInlinePosition } from "./reviewWorkflowInlineHelper.js";
 
 export function extractJsonObject(text: string): Record<string, unknown> {
   const trimmed = text.trim();

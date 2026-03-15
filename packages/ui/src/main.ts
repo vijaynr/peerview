@@ -1,19 +1,20 @@
 import { EventEmitter } from "node:events";
 import type {
-  StatusReporter,
-  WorkflowEventReporter,
-  WorkflowName,
-  WorkflowMode,
-  ReviewChatContext,
-  ReviewChatHistoryEntry,
-  CreateReviewWorkflowInput,
   CreateReviewWorkflowEffect,
+  CreateReviewWorkflowInput,
   CreateReviewWorkflowResponse,
   CreateReviewWorkflowResult,
+  ReviewChatContext,
+  ReviewChatHistoryEntry,
+  StatusReporter,
+  WorkflowEventReporter,
+  WorkflowMode,
+  WorkflowName,
 } from "@cr/core";
-import { COLORS, DOT } from "./constants.js";
 import { printChatAnswer, printDivider, printReviewSummary, printWarning } from "./console.js";
+import { COLORS, DOT } from "./constants.js";
 import { abortOnCancel, askForOptionalFeedback, promptWithFrame } from "./prompt.js";
+
 function buildCreateReviewResultBody(result: {
   sourceLabel: string;
   targetLabel?: string;
@@ -33,6 +34,7 @@ function buildCreateReviewResultBody(result: {
 function getReviewEntityLabel(entityType: "merge_request" | "review_request"): string {
   return entityType === "review_request" ? "Review Request" : "Merge Request";
 }
+
 import { createSpinner, type OraSpinner } from "./spinner.js";
 
 type LiveLevel = "info" | "success" | "warning" | "error";
@@ -370,7 +372,11 @@ export async function runLiveCreateReviewTask(args: {
   status: WorkflowStatusController;
   runWorkflow: (
     input: CreateReviewWorkflowInput
-  ) => AsyncGenerator<CreateReviewWorkflowEffect, CreateReviewWorkflowResult, CreateReviewWorkflowResponse | undefined>;
+  ) => AsyncGenerator<
+    CreateReviewWorkflowEffect,
+    CreateReviewWorkflowResult,
+    CreateReviewWorkflowResponse | undefined
+  >;
 }): Promise<void> {
   const { repoPath, targetBranch, repoRoot, mode, ui, status, runWorkflow } = args;
 
@@ -461,6 +467,4 @@ export async function runLiveCreateReviewTask(args: {
   ui.setResult(statusText, buildCreateReviewResultBody(result));
 }
 
-
 export const runLiveCreateMrTask = runLiveCreateReviewTask;
-

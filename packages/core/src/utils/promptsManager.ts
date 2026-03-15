@@ -1,8 +1,8 @@
+import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { existsSync } from "node:fs";
-import { CR_PROMPTS_DIR } from "./paths.js";
 import { bundledPrompts } from "../resources/index.js";
+import { CR_PROMPTS_DIR } from "./paths.js";
 
 export const DEFAULT_REVIEW_AGENT_NAME = "general";
 const REVIEW_AGENT_PROMPT_DIR = "review-agents";
@@ -38,9 +38,7 @@ export function listBundledReviewAgentNames(): string[] {
 export function normalizeReviewAgentNames(agentNames?: string[]): string[] {
   const normalized = Array.from(
     new Set(
-      (agentNames ?? [])
-        .map((name) => name.trim().toLowerCase())
-        .filter((name) => name.length > 0)
+      (agentNames ?? []).map((name) => name.trim().toLowerCase()).filter((name) => name.length > 0)
     )
   );
 

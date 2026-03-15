@@ -1,4 +1,4 @@
+export * from "./client.js";
+export { ReviewBoardApiError, ReviewBoardHttpClient } from "./http-client.js";
 export * from "./types.js";
 export * from "./utils.js";
-export * from "./client.js";
-export { ReviewBoardHttpClient, ReviewBoardApiError } from "./http-client.js";

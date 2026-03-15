@@ -1,5 +1,5 @@
-import { generateTextWithLlm } from "../utils/llm.js";
 import type { LlmConfig } from "../types/llm.js";
+import { generateTextWithLlm } from "../utils/llm.js";
 
 export interface LlmClient {
   generate(prompt: string): Promise<string>;

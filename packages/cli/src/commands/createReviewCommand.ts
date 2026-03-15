@@ -1,10 +1,14 @@
 import path from "node:path";
-import { printCommandHelp } from "@cr/ui";
-import { createWorkflowStatusController, runLiveTask, runLiveCreateReviewTask } from "@cr/ui";
-import { repoRootFromModule } from "@cr/core";
-import { getFlag, hasFlag } from "../cliHelpers.js";
-import { runCreateReviewWorkflow } from "@cr/workflows";
 import type { CreateReviewProvider, WorkflowMode } from "@cr/core";
+import { repoRootFromModule } from "@cr/core";
+import {
+  createWorkflowStatusController,
+  printCommandHelp,
+  runLiveCreateReviewTask,
+  runLiveTask,
+} from "@cr/ui";
+import { runCreateReviewWorkflow } from "@cr/workflows";
+import { getFlag, hasFlag } from "../cliHelpers.js";
 
 function resolveProvider(args: string[]): CreateReviewProvider {
   const gl = hasFlag(args, "gl");
@@ -64,22 +68,26 @@ export async function runCreateReviewCommand(args: string[]): Promise<void> {
       : "Generate or update a merge request draft from branch changes.";
 
   try {
-    await runLiveTask(entityLabel, async (ui) => {
-      const status = createWorkflowStatusController({ ui, workflow: "createReview" });
-      await runLiveCreateReviewTask({
-        repoPath,
-        targetBranch,
-        repoRoot,
-        mode,
-        ui,
-        status,
-        runWorkflow: (input) =>
-          runCreateReviewWorkflow({
-            ...input,
-            provider,
-          }),
-      });
-    }, description);
+    await runLiveTask(
+      entityLabel,
+      async (ui) => {
+        const status = createWorkflowStatusController({ ui, workflow: "createReview" });
+        await runLiveCreateReviewTask({
+          repoPath,
+          targetBranch,
+          repoRoot,
+          mode,
+          ui,
+          status,
+          runWorkflow: (input) =>
+            runCreateReviewWorkflow({
+              ...input,
+              provider,
+            }),
+        });
+      },
+      description
+    );
   } catch {
     process.exitCode = 1;
   }

@@ -1,10 +1,10 @@
+import { logger, repoRootFromModule, type WorkflowRuntime } from "@cr/core";
 import {
-  runReviewWorkflow,
+  maybePostReviewBoardComment,
   maybePostReviewComment,
   runReviewBoardWorkflow,
-  maybePostReviewBoardComment,
+  runReviewWorkflow,
 } from "@cr/workflows";
-import { logger, repoRootFromModule, type WorkflowRuntime } from "@cr/core";
 import type { ReviewJob } from "./index.js";
 
 export class WorkQueue {

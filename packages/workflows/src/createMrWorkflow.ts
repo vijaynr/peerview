@@ -8,7 +8,11 @@ import { runCreateReviewWorkflow } from "./createReviewWorkflow.js";
 
 export async function* runCreateMrWorkflow(
   input: CreateMrWorkflowInput
-): AsyncGenerator<CreateMrWorkflowEffect, CreateMrWorkflowResult, CreateMrWorkflowResponse | undefined> {
+): AsyncGenerator<
+  CreateMrWorkflowEffect,
+  CreateMrWorkflowResult,
+  CreateMrWorkflowResponse | undefined
+> {
   return yield* runCreateReviewWorkflow({
     ...input,
     provider: "gitlab",

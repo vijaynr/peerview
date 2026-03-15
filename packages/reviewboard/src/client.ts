@@ -1,10 +1,10 @@
 import { ReviewBoardHttpClient } from "./http-client.js";
 import type {
-  ReviewBoardRequest,
-  ReviewBoardRepository,
+  ReviewBoardDiffData,
   ReviewBoardDiffSet,
   ReviewBoardFileDiff,
-  ReviewBoardDiffData,
+  ReviewBoardRepository,
+  ReviewBoardRequest,
   ReviewBoardReview,
 } from "./types.js";
 
@@ -48,7 +48,9 @@ export class ReviewBoardClient {
     let endpoint = `/api/review-requests/?status=${status}&counts-only=0&max-results=200&expand=submitter`;
     if (fromUser) endpoint += `&from-user=${encodeURIComponent(fromUser)}`;
 
-    const response = await this.http.requestJSON<{ review_requests: ReviewBoardRequest[] }>(endpoint);
+    const response = await this.http.requestJSON<{ review_requests: ReviewBoardRequest[] }>(
+      endpoint
+    );
     return response.review_requests ?? [];
   }
 
@@ -153,9 +155,7 @@ export class ReviewBoardClient {
    * Downloads the raw unified diff for a specific revision as plain text.
    */
   async getRawDiff(requestId: number, revision: number): Promise<string> {
-    return this.http.requestText(
-      `/api/review-requests/${requestId}/diffs/${revision}/`
-    );
+    return this.http.requestText(`/api/review-requests/${requestId}/diffs/${revision}/`);
   }
 
   // -------------------------------------------------------------------------

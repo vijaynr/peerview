@@ -1,32 +1,32 @@
 import { URL } from "node:url";
-import { GitHubHttpClient, GitHubApiError } from "./http-client.js";
+import { GitHubApiError, GitHubHttpClient } from "./http-client.js";
 import type {
+  CreatePullRequestParams,
   GitHubBranch,
-  GitHubRepository,
-  GitHubPr,
-  GitHubPrDetails,
-  GitHubPrFile,
   GitHubCommit,
   GitHubCompare,
   GitHubFileContent,
-  GitHubIssueComment,
-  GitHubReviewComment,
-  GitHubReview,
   GitHubInlineComment,
+  GitHubIssueComment,
+  GitHubPr,
+  GitHubPrDetails,
+  GitHubPrFile,
+  GitHubRepository,
+  GitHubReview,
+  GitHubReviewComment,
   PullRequestState,
-  CreatePullRequestParams,
-  UpdatePullRequestParams,
   ReviewComment,
   ReviewEvent,
+  UpdatePullRequestParams,
 } from "./types.js";
 
 export type {
+  CreatePullRequestParams,
   GitHubInlineComment,
   PullRequestState,
-  CreatePullRequestParams,
-  UpdatePullRequestParams,
   ReviewComment,
   ReviewEvent,
+  UpdatePullRequestParams,
 };
 
 // ---------------------------------------------------------------------------
@@ -141,11 +141,7 @@ export class GitHubClient {
    * Returns raw file content at a specific ref.
    * Returns null if the file does not exist (404).
    */
-  async getFileContent(
-    repoPath: string,
-    filePath: string,
-    ref: string
-  ): Promise<string | null> {
+  async getFileContent(repoPath: string, filePath: string, ref: string): Promise<string | null> {
     const response = await this.http.get<GitHubFileContent | null>(
       `/repos/${repoPath}/contents/${encodeURIComponent(filePath)}?ref=${encodeURIComponent(ref)}`,
       { notFoundReturnsNull: true }
@@ -161,11 +157,7 @@ export class GitHubClient {
   /**
    * Compares two branches and returns a unified diff string.
    */
-  async compareBranches(
-    repoPath: string,
-    baseBranch: string,
-    headBranch: string
-  ): Promise<string> {
+  async compareBranches(repoPath: string, baseBranch: string, headBranch: string): Promise<string> {
     const compare = await this.http.get<GitHubCompare>(
       `/repos/${repoPath}/compare/${encodeURIComponent(baseBranch)}...${encodeURIComponent(headBranch)}`
     );
@@ -193,9 +185,7 @@ export class GitHubClient {
     repoPath: string,
     state: PullRequestState = "open"
   ): Promise<GitHubPrDetails[]> {
-    return this.http.get<GitHubPrDetails[]>(
-      `/repos/${repoPath}/pulls?state=${state}&per_page=100`
-    );
+    return this.http.get<GitHubPrDetails[]>(`/repos/${repoPath}/pulls?state=${state}&per_page=100`);
   }
 
   /**
@@ -226,9 +216,7 @@ export class GitHubClient {
     baseBranch: string
   ): Promise<GitHubPr | null> {
     const all = await this.listPullRequests(repoPath, "open");
-    const match = all.find(
-      (pr) => pr.head.ref === headBranch && pr.base.ref === baseBranch
-    );
+    const match = all.find((pr) => pr.head.ref === headBranch && pr.base.ref === baseBranch);
     return match ? { number: match.number, html_url: match.html_url } : null;
   }
 
@@ -243,9 +231,7 @@ export class GitHubClient {
    * Returns the list of files changed in a pull request.
    */
   async getPullRequestFiles(repoPath: string, prNumber: number): Promise<GitHubPrFile[]> {
-    return this.http.get<GitHubPrFile[]>(
-      `/repos/${repoPath}/pulls/${prNumber}/files?per_page=100`
-    );
+    return this.http.get<GitHubPrFile[]>(`/repos/${repoPath}/pulls/${prNumber}/files?per_page=100`);
   }
 
   /**
@@ -322,11 +308,7 @@ export class GitHubClient {
    * Posts a top-level comment on the pull request.
    * Returns the comment's HTML URL.
    */
-  async addPullRequestComment(
-    repoPath: string,
-    prNumber: number,
-    body: string
-  ): Promise<string> {
+  async addPullRequestComment(repoPath: string, prNumber: number, body: string): Promise<string> {
     const comment = await this.http.post<GitHubIssueComment>(
       `/repos/${repoPath}/issues/${prNumber}/comments`,
       { body }

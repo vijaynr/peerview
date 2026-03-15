@@ -1,25 +1,25 @@
 import {
-  DEFAULT_REVIEW_AGENT_NAME,
-  createRuntimeLlmClient,
-  createRuntimeSvnClient,
   createReviewBoardClient,
+  createRuntimeLlmClient,
   createRuntimeReviewBoardClient,
-  loadSvnRepositoryGuidelines,
-  loadWorkflowRuntime,
-  runWorkflow,
+  createRuntimeSvnClient,
+  DEFAULT_REVIEW_AGENT_NAME,
+  type LlmClient,
   loadPrompt,
   loadReviewAgentPrompt,
+  loadSvnRepositoryGuidelines,
+  loadWorkflowRuntime,
   normalizeReviewAgentNames,
-  type LlmClient,
-  type ReviewWorkflowEffect,
   type ReviewBoardClient,
+  type ReviewWorkflowEffect,
   type ReviewWorkflowInput,
   type ReviewWorkflowResponse,
   type ReviewWorkflowResult,
+  runWorkflow,
   type WorkflowRuntime,
 } from "@cr/core";
-import { createWorkflowPhaseReporter } from "./workflowEvents.js";
 import { injectMergeRequestContextIntoTemplate } from "./reviewWorkflowHelper.js";
+import { createWorkflowPhaseReporter } from "./workflowEvents.js";
 
 const WORKFLOW_NAME = "review";
 
@@ -51,7 +51,9 @@ function reportFeedbackRegeneration(input: Pick<ReviewWorkflowInput, "status">):
   input.status?.info("Regenerating review with your feedback...");
 }
 
-function reportInlineCommentLimitation(input: Pick<ReviewWorkflowInput, "inlineComments" | "status">): void {
+function reportInlineCommentLimitation(
+  input: Pick<ReviewWorkflowInput, "inlineComments" | "status">
+): void {
   if (input.inlineComments) {
     input.status?.warning(
       "Review Board inline diff comments are not supported yet. This review will post a summary comment only."
@@ -59,9 +61,7 @@ function reportInlineCommentLimitation(input: Pick<ReviewWorkflowInput, "inlineC
   }
 }
 
-function assertResponseType(
-  response: ReviewWorkflowResponseInput
-): ReviewWorkflowResponse {
+function assertResponseType(response: ReviewWorkflowResponseInput): ReviewWorkflowResponse {
   if (!response || response.type !== "review_feedback") {
     const actual = response?.type ?? "none";
     throw new Error(`Expected review workflow response "review_feedback", received "${actual}".`);
@@ -107,7 +107,9 @@ function buildPromptContext(context: ReviewBoardContext) {
 }
 
 function prependFeedback(prompt: string, feedback?: string): string {
-  return feedback?.trim() ? `Human feedback for this re-run:\n${feedback.trim()}\n\n${prompt}` : prompt;
+  return feedback?.trim()
+    ? `Human feedback for this re-run:\n${feedback.trim()}\n\n${prompt}`
+    : prompt;
 }
 
 async function runReviewAgent(args: {
@@ -134,11 +136,14 @@ async function runReviewAgent(args: {
   };
 }
 
-function fillAggregateTemplate(template: string, args: {
-  contextLabel: string;
-  successfulAgentOutputs: string;
-  failedAgents: string;
-}): string {
+function fillAggregateTemplate(
+  template: string,
+  args: {
+    contextLabel: string;
+    successfulAgentOutputs: string;
+    failedAgents: string;
+  }
+): string {
   return template
     .replaceAll("{context_label}", args.contextLabel)
     .replaceAll("{agent_outputs}", args.successfulAgentOutputs)
@@ -158,9 +163,12 @@ async function aggregateAgentOutputs(args: {
     successfulAgentOutputs: args.successfulAgents
       .map((result) => `## ${result.name}\n${result.output}`)
       .join("\n\n"),
-    failedAgents: args.failedAgents.length > 0
-      ? args.failedAgents.map((result) => `- ${result.name}: ${result.error ?? "Unknown error"}`).join("\n")
-      : "- None",
+    failedAgents:
+      args.failedAgents.length > 0
+        ? args.failedAgents
+            .map((result) => `- ${result.name}: ${result.error ?? "Unknown error"}`)
+            .join("\n")
+        : "- None",
   });
 
   return (await args.llm.generate(prompt)).trim();
@@ -369,10 +377,12 @@ export async function* runInteractiveReviewBoardWorkflow(
       return result;
     }
 
-    const response = assertResponseType(yield {
-      type: "request_review_feedback",
-      result,
-    });
+    const response = assertResponseType(
+      yield {
+        type: "request_review_feedback",
+        result,
+      }
+    );
     const nextFeedback = response.feedback?.trim() ?? "";
     if (!nextFeedback) {
       return result;

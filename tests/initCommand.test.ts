@@ -1,63 +1,68 @@
-import { describe, it, expect, mock } from "bun:test";
-import { makeUiMock, makeCoreMock } from "./mocks.ts";
+import { describe, expect, it, mock } from "bun:test";
 import { runInitCommand } from "../packages/cli/src/commands/initCommand.js";
+import { makeCoreMock, makeUiMock } from "./mocks.ts";
 
 let lastQuestions: any[] = [];
 let lastSavedConfig: any = null;
 let mockConfig: any = {};
 
-mock.module("@cr/ui", () => makeUiMock({
-  promptWithFrame: mock(async (questions: any) => {
-    lastQuestions = questions;
-    const answers: any = {};
-    for (const q of questions) {
-      if (q.name === "gitlabWebhookSecret") answers[q.name] = "new-secret";
-      else if (q.name === "rbUrl") answers[q.name] = "https://new-rb.com";
-      else if (q.name === "rbToken") answers[q.name] = "new-token";
-      else if (q.name === "rbWebhookSecret") answers[q.name] = "new-rb-secret";
-      else if (q.name === "svnRepositoryUrl") answers[q.name] = "https://svn.example.com/repos/project";
-      else if (q.name === "svnUsername") answers[q.name] = "svn-user";
-      else if (q.name === "svnPassword") answers[q.name] = "svn-pass";
-      else if (q.name === "webhookConcurrency") answers[q.name] = 10;
-      else answers[q.name] = q.initial;
-    }
-    return answers;
-  }),
-  createSpinner: () => ({
-    start: function () {
-      return this;
-    },
-    stopAndPersist: function () {
-      return this;
-    },
-    fail: function () {
-      return this;
-    },
-  }),
-  printError: mock(() => {}),
-  printSuccess: mock(() => {}),
-  printWarning: mock(() => {}),
-  printInfo: mock(() => {}),
-  printDivider: mock(() => {}),
-  printEmptyLine: mock(() => {}),
-  printWorkflowOutput: mock(() => {}),
-}));
+mock.module("@cr/ui", () =>
+  makeUiMock({
+    promptWithFrame: mock(async (questions: any) => {
+      lastQuestions = questions;
+      const answers: any = {};
+      for (const q of questions) {
+        if (q.name === "gitlabWebhookSecret") answers[q.name] = "new-secret";
+        else if (q.name === "rbUrl") answers[q.name] = "https://new-rb.com";
+        else if (q.name === "rbToken") answers[q.name] = "new-token";
+        else if (q.name === "rbWebhookSecret") answers[q.name] = "new-rb-secret";
+        else if (q.name === "svnRepositoryUrl")
+          answers[q.name] = "https://svn.example.com/repos/project";
+        else if (q.name === "svnUsername") answers[q.name] = "svn-user";
+        else if (q.name === "svnPassword") answers[q.name] = "svn-pass";
+        else if (q.name === "webhookConcurrency") answers[q.name] = 10;
+        else answers[q.name] = q.initial;
+      }
+      return answers;
+    }),
+    createSpinner: () => ({
+      start: function () {
+        return this;
+      },
+      stopAndPersist: function () {
+        return this;
+      },
+      fail: function () {
+        return this;
+      },
+    }),
+    printError: mock(() => {}),
+    printSuccess: mock(() => {}),
+    printWarning: mock(() => {}),
+    printInfo: mock(() => {}),
+    printDivider: mock(() => {}),
+    printEmptyLine: mock(() => {}),
+    printWorkflowOutput: mock(() => {}),
+  })
+);
 
-mock.module("@cr/core", () => makeCoreMock({
-  loadCRConfig: mock(async () => mockConfig),
-  saveCRConfig: mock(async (config: any) => {
-    lastSavedConfig = config;
-  }),
-  initializeCRHome: mock(async () => {}),
-  repoRootFromModule: () => "/mock/root",
-  CR_CONF_PATH: "/mock/cr.conf",
-  defaultConfig: {
-    openaiApiUrl: "https://api.openai.com/v1",
-    openaiModel: "gpt-4",
-    gitlabUrl: "https://gitlab.com",
-    rbUrl: "https://reviews.reviewboard.org",
-  },
-}));
+mock.module("@cr/core", () =>
+  makeCoreMock({
+    loadCRConfig: mock(async () => mockConfig),
+    saveCRConfig: mock(async (config: any) => {
+      lastSavedConfig = config;
+    }),
+    initializeCRHome: mock(async () => {}),
+    repoRootFromModule: () => "/mock/root",
+    CR_CONF_PATH: "/mock/cr.conf",
+    defaultConfig: {
+      openaiApiUrl: "https://api.openai.com/v1",
+      openaiModel: "gpt-4",
+      gitlabUrl: "https://gitlab.com",
+      rbUrl: "https://reviews.reviewboard.org",
+    },
+  })
+);
 
 describe("initCommand - specialized setup flows", () => {
   it("should ask for both GitLab and Review Board webhook configs", async () => {

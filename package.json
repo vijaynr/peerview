@@ -16,22 +16,18 @@
     "create-mr": "bun run packages/cli/src/cli.ts create-mr",
     "test": "bun test tests",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint packages --ext .ts",
-    "lint:fix": "eslint packages --ext .ts --fix",
-    "format": "prettier --write packages",
-    "format:check": "prettier --check packages",
+    "lint": "biome lint packages/ tests/",
+    "lint:fix": "biome lint --write packages/ tests/",
+    "format": "biome format --write packages/ tests/",
+    "format:check": "biome format packages/ tests/",
     "build:bin": "bun build --compile --minify packages/cli/src/cli.ts --outfile dist/cr",
     "build:bin-compress": "bun build --compile --minify packages/cli/src/cli.ts --outfile dist/cr && (upx dist/cr.exe || echo 'upx not found, skipping compression')",
     "build": "bun run typecheck && bun run build:bin"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.7",
+    "@types/bun": "latest",
     "@types/node": "^24.6.0",
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0",
-    "eslint": "^9.0.0",
-    "eslint-config-prettier": "^9.0.0",
-    "prettier": "^3.0.0",
-    "typescript": "^5.9.3",
-    "@types/bun": "latest"
+    "typescript": "^5.9.3"
   }
 }

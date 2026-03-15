@@ -1,21 +1,29 @@
-import { initializeCRHome } from "@cr/core";
-import { loadCRConfig, saveCRConfig, setupSpecs, type SpecTarget } from "@cr/core";
-import { CR_CONF_PATH, repoRootFromModule } from "@cr/core";
+import path from "node:path";
 import {
+  CR_CONF_PATH,
+  type CRConfig,
+  defaultConfig,
+  initializeCRHome,
+  loadCRConfig,
+  repoRootFromModule,
+  type SpecTarget,
+  saveCRConfig,
+  setupSpecs,
+} from "@cr/core";
+import {
+  COLORS,
+  createSpinner,
+  DOT,
+  printDivider,
+  printEmptyLine,
   printError,
+  printInfo,
   printSuccess,
   printWarning,
-  createSpinner,
-  printDivider,
-  promptWithFrame,
-  printInfo,
   printWorkflowOutput,
-  printEmptyLine,
+  promptWithFrame,
 } from "@cr/ui";
-import { defaultConfig, type CRConfig } from "@cr/core";
-import { COLORS, DOT } from "@cr/ui";
-import { hasFlag, getFlag } from "../cliHelpers.js";
-import path from "node:path";
+import { getFlag, hasFlag } from "../cliHelpers.js";
 
 type WebhookSetupAnswers = {
   rbUrl?: string;

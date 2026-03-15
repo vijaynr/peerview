@@ -1,17 +1,19 @@
-import { getCurrentBranch, getOriginRemoteUrl } from "@cr/core";
-import { type LlmClient } from "@cr/core";
-import { loadPrompt } from "@cr/core";
-import { createWorkflowPhaseReporter } from "./workflowEvents.js";
-import { type GitLabClient, remoteToProjectPath } from "@cr/core";
-import { injectMergeRequestContextIntoTemplate } from "./reviewWorkflowHelper.js";
+import type { ReviewWorkflowInput, ReviewWorkflowResult } from "@cr/core";
 import {
   createRuntimeGitLabClient,
   createRuntimeLlmClient,
+  type GitLabClient,
+  getCurrentBranch,
+  getOriginRemoteUrl,
+  type LlmClient,
+  loadPrompt,
   loadWorkflowRuntime,
+  remoteToProjectPath,
+  runWorkflow,
   type WorkflowRuntime,
 } from "@cr/core";
-import type { ReviewWorkflowInput, ReviewWorkflowResult } from "@cr/core";
-import { runWorkflow } from "@cr/core";
+import { injectMergeRequestContextIntoTemplate } from "./reviewWorkflowHelper.js";
+import { createWorkflowPhaseReporter } from "./workflowEvents.js";
 
 type RemoteMrContext = {
   projectPath: string;

@@ -1,20 +1,20 @@
-import {
-  createReviewBoardClient,
-  normalizeBaseUrl,
-  reviewBoardToRequestId,
-  rbRequest,
-  getCurrentUser,
-} from "@cr/reviewboard";
 import type {
-  ReviewBoardRequest,
-  ReviewBoardRepository,
+  ReviewBoardDiffData,
   ReviewBoardDiffSet,
   ReviewBoardFileDiff,
-  ReviewBoardDiffData,
+  ReviewBoardRepository,
+  ReviewBoardRequest,
   ReviewBoardReview,
 } from "@cr/reviewboard";
+import {
+  createReviewBoardClient,
+  getCurrentUser,
+  normalizeBaseUrl,
+  rbRequest,
+  reviewBoardToRequestId,
+} from "@cr/reviewboard";
 
-export { normalizeBaseUrl, reviewBoardToRequestId, rbRequest, getCurrentUser };
+export { getCurrentUser, normalizeBaseUrl, rbRequest, reviewBoardToRequestId };
 
 export async function listRepositories(
   baseUrl: string,

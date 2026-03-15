@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import type { LlmConfig } from "../types/llm.js";
-import { parseCRSseStream } from "./streamParser.js";
 import { logger } from "./logger.js";
+import { parseCRSseStream } from "./streamParser.js";
 
 async function generateTextWithOpenAiLike(config: LlmConfig, prompt: string): Promise<string> {
   logger.debug("llm", `generate (openai-like), model=${config.model}, prompt_len=${prompt.length}`);

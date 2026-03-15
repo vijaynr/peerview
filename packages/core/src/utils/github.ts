@@ -4,8 +4,9 @@
  * backward-compatible free-function wrappers for @cr/core consumers.
  */
 import { GitHubClient } from "@cr/github";
-export { isGitHubRemote } from "@cr/github";
+
 export type { GitHubInlineComment } from "@cr/github";
+export { isGitHubRemote } from "@cr/github";
 
 function client(token: string): GitHubClient {
   return new GitHubClient(token);

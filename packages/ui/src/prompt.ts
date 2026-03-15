@@ -1,6 +1,6 @@
 import prompts from "prompts";
-import { DOT } from "./constants.js";
 import { printDivider } from "./console.js";
+import { DOT } from "./constants.js";
 
 type PromptQuestions = Parameters<typeof prompts>[0];
 type PromptOptions = Parameters<typeof prompts>[1];

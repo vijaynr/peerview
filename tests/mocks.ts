@@ -71,11 +71,21 @@ export function makeUiMock(overrides: Record<string, unknown> = {}): Record<stri
     runLiveCreateMrTask: mock(async () => ({})),
     // spinner
     createSpinner: mock(() => ({
-      start() { return this; },
-      stop() { return this; },
-      succeed() { return this; },
-      fail() { return this; },
-      stopAndPersist() { return this; },
+      start() {
+        return this;
+      },
+      stop() {
+        return this;
+      },
+      succeed() {
+        return this;
+      },
+      fail() {
+        return this;
+      },
+      stopAndPersist() {
+        return this;
+      },
     })),
     // banner
     BANNER_TEXT: "",
@@ -96,8 +106,7 @@ export function makeCoreMock(overrides: Record<string, unknown> = {}): Record<st
     loadCRConfig: mock(async () => ({})),
     saveCRConfig: mock(async () => {}),
     readCRConfigContents: mock(async () => ""),
-    envOrConfig: (_key: string, value: string | undefined, fallback: string) =>
-      value ?? fallback,
+    envOrConfig: (_key: string, value: string | undefined, fallback: string) => value ?? fallback,
     CR_CONF_PATH: "/mock/.cr.conf",
     defaultConfig: {},
     // bootstrap / setup
@@ -218,7 +227,9 @@ export function makeCoreMock(overrides: Record<string, unknown> = {}): Record<st
 // @cr/workflows
 // ---------------------------------------------------------------------------
 
-export function makeWorkflowsMock(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+export function makeWorkflowsMock(
+  overrides: Record<string, unknown> = {}
+): Record<string, unknown> {
   return {
     runReviewWorkflow: mock(async () => ({
       output: "",
@@ -227,7 +238,9 @@ export function makeWorkflowsMock(overrides: Record<string, unknown> = {}): Reco
       selectedAgents: [],
       aggregated: false,
     })),
-    runInteractiveReviewWorkflow: mock(async function* () { return {}; }),
+    runInteractiveReviewWorkflow: mock(async function* () {
+      return {};
+    }),
     runReviewBoardWorkflow: mock(async () => ({
       output: "",
       contextLabel: "",
@@ -237,7 +250,9 @@ export function makeWorkflowsMock(overrides: Record<string, unknown> = {}): Reco
       rbUrl: "",
       mrIid: 0,
     })),
-    runInteractiveReviewBoardWorkflow: mock(async function* () { return {}; }),
+    runInteractiveReviewBoardWorkflow: mock(async function* () {
+      return {};
+    }),
     maybePostReviewBoardComment: mock(async () => null),
     runReviewChatWorkflow: mock(async () => ({
       contextLabel: "",
@@ -254,9 +269,15 @@ export function makeWorkflowsMock(overrides: Record<string, unknown> = {}): Reco
       selectedAgents: [],
       aggregated: false,
     })),
-    runCreateReviewWorkflow: mock(async function* () { return {}; }),
-    runCreateMrWorkflow: mock(async function* () { return {}; }),
-    runInteractiveReviewSession: mock(async function* () { return {}; }),
+    runCreateReviewWorkflow: mock(async function* () {
+      return {};
+    }),
+    runCreateMrWorkflow: mock(async function* () {
+      return {};
+    }),
+    runInteractiveReviewSession: mock(async function* () {
+      return {};
+    }),
     maybePostReviewComment: mock(async () => null),
     createWorkflowPhaseReporter: mock(() => ({})),
     extractJsonObject: mock((text: string) => ({})),

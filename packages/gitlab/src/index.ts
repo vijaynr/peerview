@@ -1,26 +1,26 @@
-export { GitLabClient, createGitLabClient, remoteToProjectPath } from "./client.js";
-export { GitLabHttpClient, GitLabApiError } from "./http-client.js";
+export { createGitLabClient, GitLabClient, remoteToProjectPath } from "./client.js";
 export type { RequestOptions } from "./http-client.js";
+export { GitLabApiError, GitLabHttpClient } from "./http-client.js";
 export type {
+  CreateMergeRequestParams,
   // Branches / repo
   GitLabBranch,
-  GitLabProject,
-  // Merge requests
-  MergeRequestState,
-  GitLabMr,
-  GitLabMrDetails,
-  CreateMergeRequestParams,
-  UpdateMergeRequestParams,
   // Commits
   GitLabCommit,
+  GitLabCompare,
+  GitLabDiscussion,
+  GitLabDiscussionNote,
+  GitLabInlineComment,
+  GitLabMr,
   // Diff
   GitLabMrChange,
   GitLabMrChangesResponse,
-  GitLabCompare,
+  GitLabMrDetails,
   // Notes / discussions
   GitLabNote,
   GitLabNotePosition,
-  GitLabDiscussionNote,
-  GitLabDiscussion,
-  GitLabInlineComment,
+  GitLabProject,
+  // Merge requests
+  MergeRequestState,
+  UpdateMergeRequestParams,
 } from "./types.js";

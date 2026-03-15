@@ -15,7 +15,11 @@ async function svn(args: string[], repoPath: string, trimOutput: boolean = true)
     logger.trace("svn", `result: ${result.slice(0, 200)}`);
     return result;
   } catch (error) {
-    logger.error("svn", `failed: svn ${args.join(" ")}`, error instanceof Error ? error : new Error(String(error)));
+    logger.error(
+      "svn",
+      `failed: svn ${args.join(" ")}`,
+      error instanceof Error ? error : new Error(String(error))
+    );
     throw error;
   }
 }

@@ -1,6 +1,7 @@
 import { GitLabClient, GitLabHttpClient } from "@cr/gitlab";
-export { remoteToProjectPath } from "@cr/gitlab";
+
 export type { GitLabInlineComment } from "@cr/gitlab";
+export { remoteToProjectPath } from "@cr/gitlab";
 
 // ---------------------------------------------------------------------------
 // Legacy free-function API — thin wrappers around GitLabClient.
@@ -24,7 +25,11 @@ export function gitlabRequest<T>(
   const { silent } = init ?? {};
   let parsedBody: unknown;
   if (init?.body && typeof init.body === "string") {
-    try { parsedBody = JSON.parse(init.body); } catch { parsedBody = init.body; }
+    try {
+      parsedBody = JSON.parse(init.body);
+    } catch {
+      parsedBody = init.body;
+    }
   }
   return new GitLabHttpClient(baseUrl, token).request<T>(endpoint, {
     method,

@@ -1,9 +1,12 @@
+import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
 
-const tempRoot = path.join(os.tmpdir(), `cr-prompts-test-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+const tempRoot = path.join(
+  os.tmpdir(),
+  `cr-prompts-test-${Date.now()}-${Math.random().toString(16).slice(2)}`
+);
 const crDir = path.join(tempRoot, ".cr");
 const promptsDir = path.join(crDir, "prompts");
 
@@ -38,13 +41,7 @@ describe("review agent prompts", () => {
   it("loads bundled review agent prompts", async () => {
     const agents = listBundledReviewAgentNames();
 
-    expect(agents).toEqual([
-      "clean-code",
-      "general",
-      "performance",
-      "security",
-      "test-quality",
-    ]);
+    expect(agents).toEqual(["clean-code", "general", "performance", "security", "test-quality"]);
 
     const prompt = await loadReviewAgentPrompt("security", tempRoot);
     expect(prompt).toContain("security reviewer agent");

@@ -4,12 +4,12 @@
  */
 export type {
   GitHubBranch,
-  GitHubCompare,
-  GitHubPrDetails as GitHubPrWithBasics,
-  GitHubPr,
   GitHubCommit,
+  GitHubCompare,
+  GitHubInlineComment,
+  GitHubPr,
+  GitHubPrDetails as GitHubPrWithBasics,
   GitHubPrFile as GitHubPrFilesResponse,
   GitHubRepository,
   GitHubReviewComment as GitHubPrReviewComment,
-  GitHubInlineComment,
 } from "@cr/github";

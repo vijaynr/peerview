@@ -13,9 +13,7 @@ async function tryReadLocalFile(filePath: string): Promise<string | undefined> {
   }
 }
 
-export async function loadLocalRepositoryGuidelines(
-  repoPath: string
-): Promise<string | undefined> {
+export async function loadLocalRepositoryGuidelines(repoPath: string): Promise<string | undefined> {
   for (const fileName of GUIDELINE_FILE_NAMES) {
     const content = await tryReadLocalFile(path.join(repoPath, fileName));
     if (content) {

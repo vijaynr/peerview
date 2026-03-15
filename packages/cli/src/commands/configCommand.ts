@@ -1,7 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { CR_CONF_PATH, readCRConfigContents } from "@cr/core";
-import { createSpinner, printInfo, printRawOutput, printWarning } from "@cr/ui";
-import { COLORS, DOT } from "@cr/ui";
+import { COLORS, createSpinner, DOT, printInfo, printRawOutput, printWarning } from "@cr/ui";
 
 function resolveEditor(): string | undefined {
   return process.env.CR_EDITOR || process.env.VISUAL || process.env.EDITOR;

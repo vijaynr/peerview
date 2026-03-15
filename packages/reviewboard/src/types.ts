@@ -82,4 +82,3 @@ export type ReviewBoardReview = {
     diff_comments: { href: string };
   };
 };
-

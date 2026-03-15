@@ -24,18 +24,20 @@ const runInteractiveReviewWorkflowMock = mock((input: any) =>
   })()
 );
 
-mock.module("@cr/core", () => makeCoreMock({
-  envOrConfig: (_key: string, value: string | undefined, fallback: string) => value || fallback,
-  getCurrentUser: async () => ({ username: "demo" }),
-  getOriginRemoteUrl: async () => "https://gitlab.example.com/group/project.git",
-  listMergeRequests: listMergeRequestsMock,
-  listReviewRequests: async () => [],
-  loadCRConfig: loadCRConfigMock,
-  rbRequest: async () => ({ review_requests: [] }),
-  remoteToProjectPath: () => "group/project",
-  listBundledReviewAgentNames: listBundledReviewAgentNamesMock,
-  normalizeReviewAgentNames: normalizeReviewAgentNamesMock,
-}));
+mock.module("@cr/core", () =>
+  makeCoreMock({
+    envOrConfig: (_key: string, value: string | undefined, fallback: string) => value || fallback,
+    getCurrentUser: async () => ({ username: "demo" }),
+    getOriginRemoteUrl: async () => "https://gitlab.example.com/group/project.git",
+    listMergeRequests: listMergeRequestsMock,
+    listReviewRequests: async () => [],
+    loadCRConfig: loadCRConfigMock,
+    rbRequest: async () => ({ review_requests: [] }),
+    remoteToProjectPath: () => "group/project",
+    listBundledReviewAgentNames: listBundledReviewAgentNamesMock,
+    normalizeReviewAgentNames: normalizeReviewAgentNamesMock,
+  })
+);
 
 mock.module("../packages/workflows/src/reviewWorkflow.js", () => ({
   runInteractiveReviewWorkflow: runInteractiveReviewWorkflowMock,

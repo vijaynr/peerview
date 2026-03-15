@@ -1,42 +1,40 @@
 import path from "node:path";
-import {
-  printAlert,
-  printCommandHelp,
-  printReviewComment,
-  printReviewSummary,
-} from "@cr/ui";
-import { askForOptionalFeedback, promptWithFrame } from "@cr/ui";
-import {
-  abortOnCancel,
-  createWorkflowStatusController,
-  runLiveTask,
-  runLiveChatLoop,
-  type LiveController,
-} from "@cr/ui";
-import { envOrConfig, loadCRConfig, detectGitProvider } from "@cr/core";
-import { repoRootFromModule } from "@cr/core";
-import {
-  getFlag,
-  getWorkflowHeadingAndDescription,
-  getWorkflowResultTitle,
-  hasFlag,
-  readStdinDiff,
-  type ReviewWorkflowKind,
-} from "../cliHelpers.js";
-import {
-  maybePostReviewComment,
-  maybePostReviewBoardComment,
-  runReviewWorkflow,
-  runInteractiveReviewSession,
-  type ReviewWorkflowInput,
-} from "@cr/workflows";
-import { answerReviewChatQuestion } from "@cr/workflows";
 import type {
   ReviewSessionEffect,
   ReviewSessionResponse,
   ReviewSessionResult,
   WorkflowMode,
 } from "@cr/core";
+import { detectGitProvider, envOrConfig, loadCRConfig, repoRootFromModule } from "@cr/core";
+import {
+  abortOnCancel,
+  askForOptionalFeedback,
+  createWorkflowStatusController,
+  type LiveController,
+  printAlert,
+  printCommandHelp,
+  printReviewComment,
+  printReviewSummary,
+  promptWithFrame,
+  runLiveChatLoop,
+  runLiveTask,
+} from "@cr/ui";
+import {
+  answerReviewChatQuestion,
+  maybePostReviewBoardComment,
+  maybePostReviewComment,
+  type ReviewWorkflowInput,
+  runInteractiveReviewSession,
+  type runReviewWorkflow,
+} from "@cr/workflows";
+import {
+  getFlag,
+  getWorkflowHeadingAndDescription,
+  getWorkflowResultTitle,
+  hasFlag,
+  type ReviewWorkflowKind,
+  readStdinDiff,
+} from "../cliHelpers.js";
 
 async function askForFeedbackIteration(): Promise<string | null> {
   return askForOptionalFeedback({
@@ -157,7 +155,7 @@ async function runReviewWorkflowTask(args: {
 }): Promise<void> {
   const { input, repoRoot, workflowResultTitle, ui } = args;
 
-  let status = createWorkflowStatusController({
+  const status = createWorkflowStatusController({
     ui,
     workflow:
       input.workflow === "chat"
@@ -200,10 +198,7 @@ async function runReviewWorkflowTask(args: {
             name: "mrIid",
             message: effect.message,
             choices: effect.options,
-            suggest: (
-              search: string,
-              choices: Array<{ title: string; value?: number }>
-            ) => {
+            suggest: (search: string, choices: Array<{ title: string; value?: number }>) => {
               const searchTerm = search.toLowerCase();
               return Promise.resolve(
                 choices.filter((choice) => choice.title.toLowerCase().includes(searchTerm))
@@ -371,7 +366,7 @@ export async function runReviewCommand(args: string[]): Promise<void> {
 
   if (workflowRaw === "chat" && (local || rb)) {
     printAlert({
-      title: "Unsupported Combination", 
+      title: "Unsupported Combination",
       message: "The --local or --rb option is not supported in chat mode.",
       tone: "error",
     });
@@ -397,7 +392,8 @@ export async function runReviewCommand(args: string[]): Promise<void> {
   if (rb && inlineComments) {
     printAlert({
       title: "Unsupported Combination",
-      message: "Review Board reviews currently support summary comments only. Remove --inline-comments.",
+      message:
+        "Review Board reviews currently support summary comments only. Remove --inline-comments.",
       tone: "error",
     });
     process.exitCode = 1;
@@ -443,7 +439,3 @@ export async function runReviewCommand(args: string[]): Promise<void> {
     process.exitCode = 1;
   }
 }
-
-
-
-

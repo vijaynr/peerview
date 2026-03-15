@@ -76,56 +76,60 @@ const rbClient = {
   }),
 };
 
-mock.module("@cr/core", () => makeCoreMock({
-  remoteToProjectPath: (remoteUrl: string) => remoteUrl,
-  getCurrentBranch: mock(async () => "feature/test"),
-  getOriginRemoteUrl: mock(async () => "https://gitlab.example.com/group/project.git"),
-  logger: {
-    debug: () => {},
-    trace: () => {},
-    warn: () => {},
-    error: () => {},
-  },
-  loadPrompt: mock(async () => "{mr_changes}"),
-  createRuntimeGitLabClient: mock(() => ({
-    branchExists: async () => true,
-    listBranches: async () => ["main", "feature/test"],
-    getDefaultBranch: async () => "main",
-    compareBranches: async () => "diff",
-    findExistingMergeRequest: async () => null,
-    createMergeRequest: async () => "https://gitlab.example.com/mr/1",
-    updateMergeRequest: async () => "https://gitlab.example.com/mr/1",
-  })),
-  createRuntimeLlmClient: createRuntimeLlmClientMock,
-  createRuntimeReviewBoardClient: createRuntimeReviewBoardClientMock,
-  loadWorkflowRuntime: mock(async () => ({
-    gitlabUrl: "https://gitlab.example.com",
-    gitlabKey: "gl-token",
-    rbUrl: "https://reviews.example.com",
-    rbToken: "rb-token",
-    svnRepositoryUrl: "https://svn.example.com/repos/project",
-    svnUsername: "",
-    svnPassword: "",
-    gitlabWebhookSecret: "",
-    rbWebhookSecret: "",
-    sslCertPath: "",
-    sslKeyPath: "",
-    sslCaPath: "",
-    webhookConcurrency: 1,
-    webhookQueueLimit: 50,
-    webhookJobTimeoutMs: 600000,
-    openaiApiUrl: "https://api.openai.com/v1",
-    openaiApiKey: "openai-token",
-    openaiModel: "gpt-4o",
-    useCustomStreaming: false,
-  })),
-  isSvnWorkingCopy: isSvnWorkingCopyMock,
-  getSvnDiff: getSvnDiffMock,
-  getSvnRepoRootUrl: getSvnRepoRootUrlMock,
-  getSvnWorkingCopyUrl: getSvnWorkingCopyUrlMock,
-}));
+mock.module("@cr/core", () =>
+  makeCoreMock({
+    remoteToProjectPath: (remoteUrl: string) => remoteUrl,
+    getCurrentBranch: mock(async () => "feature/test"),
+    getOriginRemoteUrl: mock(async () => "https://gitlab.example.com/group/project.git"),
+    logger: {
+      debug: () => {},
+      trace: () => {},
+      warn: () => {},
+      error: () => {},
+    },
+    loadPrompt: mock(async () => "{mr_changes}"),
+    createRuntimeGitLabClient: mock(() => ({
+      branchExists: async () => true,
+      listBranches: async () => ["main", "feature/test"],
+      getDefaultBranch: async () => "main",
+      compareBranches: async () => "diff",
+      findExistingMergeRequest: async () => null,
+      createMergeRequest: async () => "https://gitlab.example.com/mr/1",
+      updateMergeRequest: async () => "https://gitlab.example.com/mr/1",
+    })),
+    createRuntimeLlmClient: createRuntimeLlmClientMock,
+    createRuntimeReviewBoardClient: createRuntimeReviewBoardClientMock,
+    loadWorkflowRuntime: mock(async () => ({
+      gitlabUrl: "https://gitlab.example.com",
+      gitlabKey: "gl-token",
+      rbUrl: "https://reviews.example.com",
+      rbToken: "rb-token",
+      svnRepositoryUrl: "https://svn.example.com/repos/project",
+      svnUsername: "",
+      svnPassword: "",
+      gitlabWebhookSecret: "",
+      rbWebhookSecret: "",
+      sslCertPath: "",
+      sslKeyPath: "",
+      sslCaPath: "",
+      webhookConcurrency: 1,
+      webhookQueueLimit: 50,
+      webhookJobTimeoutMs: 600000,
+      openaiApiUrl: "https://api.openai.com/v1",
+      openaiApiKey: "openai-token",
+      openaiModel: "gpt-4o",
+      useCustomStreaming: false,
+    })),
+    isSvnWorkingCopy: isSvnWorkingCopyMock,
+    getSvnDiff: getSvnDiffMock,
+    getSvnRepoRootUrl: getSvnRepoRootUrlMock,
+    getSvnWorkingCopyUrl: getSvnWorkingCopyUrlMock,
+  })
+);
 
-const { runCreateReviewWorkflow } = await import("../packages/workflows/src/createReviewWorkflow.js");
+const { runCreateReviewWorkflow } = await import(
+  "../packages/workflows/src/createReviewWorkflow.js"
+);
 
 describe("createReview workflow", () => {
   beforeEach(() => {
@@ -186,6 +190,10 @@ describe("createReview workflow", () => {
     });
 
     expect(rbCallLog).toEqual(["create", "upload", "update", "publish"]);
-    expect(rbClient.uploadReviewRequestDiff).toHaveBeenCalledWith(77, "Index: src/file.ts\n+change", "/trunk");
+    expect(rbClient.uploadReviewRequestDiff).toHaveBeenCalledWith(
+      77,
+      "Index: src/file.ts\n+change",
+      "/trunk"
+    );
   });
 });

@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
-import { marked } from "marked";
 import type { MarkedExtension } from "marked";
+import { marked } from "marked";
 
 const require = createRequire(import.meta.url);
 

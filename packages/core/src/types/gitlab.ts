@@ -4,14 +4,14 @@
  */
 export type {
   GitLabBranch,
-  GitLabCompare,
-  GitLabMr,
-  GitLabMrDetails as GitLabMrWithBasics,
   GitLabCommit,
-  GitLabMrChangesResponse,
+  GitLabCompare,
   GitLabDiscussion,
+  GitLabDiscussionNote,
   GitLabInlineComment,
+  GitLabMr,
+  GitLabMrChangesResponse,
+  GitLabMrDetails as GitLabMrWithBasics,
   GitLabNote,
   GitLabNotePosition,
-  GitLabDiscussionNote,
 } from "@cr/gitlab";

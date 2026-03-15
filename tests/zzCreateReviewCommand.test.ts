@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import { makeUiMock, makeCoreMock, makeWorkflowsMock } from "./mocks.ts";
+import { makeCoreMock, makeUiMock, makeWorkflowsMock } from "./mocks.ts";
 
 const printCommandHelpMock = mock(() => {});
 const runLiveTaskMock = mock(async (_title: string, run: (ui: unknown) => Promise<void>) => {
@@ -40,32 +40,46 @@ const runCreateReviewWorkflowMock = mock((input: any) =>
   })()
 );
 
-mock.module("@cr/ui", () => makeUiMock({
-  printCommandHelp: printCommandHelpMock,
-  runLiveTask: runLiveTaskMock,
-  createWorkflowStatusController: createWorkflowStatusControllerMock,
-  runLiveCreateReviewTask: runLiveCreateReviewTaskMock,
-}));
+mock.module("@cr/ui", () =>
+  makeUiMock({
+    printCommandHelp: printCommandHelpMock,
+    runLiveTask: runLiveTaskMock,
+    createWorkflowStatusController: createWorkflowStatusControllerMock,
+    runLiveCreateReviewTask: runLiveCreateReviewTaskMock,
+  })
+);
 
-mock.module("@cr/core", () => makeCoreMock({
-  repoRootFromModule: () => "/mock/root",
-}));
+mock.module("@cr/core", () =>
+  makeCoreMock({
+    repoRootFromModule: () => "/mock/root",
+  })
+);
 
-mock.module("@cr/workflows", () => makeWorkflowsMock({
-  runCreateReviewWorkflow: runCreateReviewWorkflowMock,
-}));
+mock.module("@cr/workflows", () =>
+  makeWorkflowsMock({
+    runCreateReviewWorkflow: runCreateReviewWorkflowMock,
+  })
+);
 
-const { runCreateReviewCommand } = await import("../packages/cli/src/commands/createReviewCommand.js");
-const { runCreateMergeRequestCommand } = await import("../packages/cli/src/commands/createMrCommand.js");
+const { runCreateReviewCommand } = await import(
+  "../packages/cli/src/commands/createReviewCommand.js"
+);
+const { runCreateMergeRequestCommand } = await import(
+  "../packages/cli/src/commands/createMrCommand.js"
+);
 
 describe("create review command", () => {
   it("documents the generic command and provider flags", async () => {
     await runCreateReviewCommand(["--help"]);
 
     expect(printCommandHelpMock).toHaveBeenCalledTimes(1);
-    const sections = printCommandHelpMock.mock.calls[0]?.[0] as Array<{ title: string; lines: string[] }>;
+    const sections = printCommandHelpMock.mock.calls[0]?.[0] as Array<{
+      title: string;
+      lines: string[];
+    }>;
     const options = sections.find((section) => section.title === "OPTIONS")?.lines.join("\n") ?? "";
-    const examples = sections.find((section) => section.title === "EXAMPLES")?.lines.join("\n") ?? "";
+    const examples =
+      sections.find((section) => section.title === "EXAMPLES")?.lines.join("\n") ?? "";
 
     expect(options).toContain("--gl");
     expect(options).toContain("--rb");
@@ -87,7 +101,9 @@ describe("create review command", () => {
     await runCreateReviewCommand(["--rb"]);
 
     expect(runCreateReviewWorkflowMock).toHaveBeenCalledTimes(1);
-    expect(runCreateReviewWorkflowMock.mock.calls[0]?.[0]).toMatchObject({ provider: "reviewboard" });
+    expect(runCreateReviewWorkflowMock.mock.calls[0]?.[0]).toMatchObject({
+      provider: "reviewboard",
+    });
   });
 
   it("keeps create-mr as a GitLab alias", async () => {
@@ -100,8 +116,8 @@ describe("create review command", () => {
   });
 
   it("rejects conflicting provider flags", async () => {
-    await expect(runCreateReviewCommand(["--gl", "--rb"]))
-      .rejects
-      .toThrow("Pass only one provider flag");
+    await expect(runCreateReviewCommand(["--gl", "--rb"])).rejects.toThrow(
+      "Pass only one provider flag"
+    );
   });
 });

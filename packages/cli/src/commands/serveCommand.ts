@@ -1,6 +1,6 @@
 import { printCommandHelp, printError } from "@cr/ui";
-import { getFlag, hasFlag } from "../cliHelpers.js";
 import { startWebhookServer } from "@cr/webhook";
+import { getFlag, hasFlag } from "../cliHelpers.js";
 
 export async function runServeCommand(args: string[]): Promise<void> {
   if (args.includes("--help") || args.includes("-h")) {

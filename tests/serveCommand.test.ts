@@ -4,10 +4,12 @@ import { makeUiMock } from "./mocks.ts";
 const printCommandHelpMock = mock(() => {});
 const printErrorMock = mock(() => {});
 
-mock.module("@cr/ui", () => makeUiMock({
-  printCommandHelp: printCommandHelpMock,
-  printError: printErrorMock,
-}));
+mock.module("@cr/ui", () =>
+  makeUiMock({
+    printCommandHelp: printCommandHelpMock,
+    printError: printErrorMock,
+  })
+);
 
 mock.module("@cr/webhook", () => ({
   startWebhookServer: async () => ({}),
@@ -20,9 +22,13 @@ describe("serveCommand help", () => {
     await runServeCommand(["--help"]);
 
     expect(printCommandHelpMock).toHaveBeenCalledTimes(1);
-    const sections = printCommandHelpMock.mock.calls[0]?.[0] as Array<{ title: string; lines: string[] }>;
+    const sections = printCommandHelpMock.mock.calls[0]?.[0] as Array<{
+      title: string;
+      lines: string[];
+    }>;
     const options = sections.find((section) => section.title === "OPTIONS")?.lines.join("\n") ?? "";
-    const examples = sections.find((section) => section.title === "EXAMPLES")?.lines.join("\n") ?? "";
+    const examples =
+      sections.find((section) => section.title === "EXAMPLES")?.lines.join("\n") ?? "";
 
     expect(options).toContain("one webhook server");
     expect(examples).toContain("/gitlab");

@@ -1,23 +1,3 @@
-import {
-  remoteToProjectPath,
-  type GitLabClient,
-  type LlmClient,
-  getCurrentBranch,
-  getOriginRemoteUrl,
-  logger,
-  loadPrompt,
-  createRuntimeGitLabClient,
-  createRuntimeLlmClient,
-  createRuntimeReviewBoardClient,
-  loadWorkflowRuntime,
-  isSvnWorkingCopy,
-  getSvnDiff,
-  getSvnRepoRootUrl,
-  getSvnWorkingCopyUrl,
-  type ReviewBoardClient,
-  type ReviewBoardRepository,
-  type WorkflowRuntime,
-} from "@cr/core";
 import type {
   CreateReviewDraft,
   CreateReviewProvider,
@@ -26,6 +6,26 @@ import type {
   CreateReviewWorkflowResponse,
   CreateReviewWorkflowResult,
   StatusLevel,
+} from "@cr/core";
+import {
+  createRuntimeGitLabClient,
+  createRuntimeLlmClient,
+  createRuntimeReviewBoardClient,
+  type GitLabClient,
+  getCurrentBranch,
+  getOriginRemoteUrl,
+  getSvnDiff,
+  getSvnRepoRootUrl,
+  getSvnWorkingCopyUrl,
+  isSvnWorkingCopy,
+  type LlmClient,
+  loadPrompt,
+  loadWorkflowRuntime,
+  logger,
+  type ReviewBoardClient,
+  type ReviewBoardRepository,
+  remoteToProjectPath,
+  type WorkflowRuntime,
 } from "@cr/core";
 import { createWorkflowPhaseReporter } from "./workflowEvents.js";
 
@@ -92,7 +92,11 @@ function fallbackDescription(entityLabel: string, diff: string): string {
   ].join("\n");
 }
 
-function fallbackTitle(provider: CreateReviewProvider, sourceLabel: string, targetLabel?: string): string {
+function fallbackTitle(
+  provider: CreateReviewProvider,
+  sourceLabel: string,
+  targetLabel?: string
+): string {
   if (provider === "reviewboard") {
     return `Review changes from ${sourceLabel}`.slice(0, 100);
   }
@@ -123,7 +127,9 @@ function assertResponseType<T extends CreateReviewWorkflowResponse["type"]>(
 ): Extract<CreateReviewWorkflowResponse, { type: T }> {
   if (!response || response.type !== expected) {
     const actual = response?.type ?? "none";
-    throw new Error(`Expected create-review workflow response "${expected}", received "${actual}".`);
+    throw new Error(
+      `Expected create-review workflow response "${expected}", received "${actual}".`
+    );
   }
   return response as Extract<CreateReviewWorkflowResponse, { type: T }>;
 }
@@ -150,7 +156,9 @@ async function initializeReviewBoardClients(runtime: WorkflowRuntime): Promise<{
   llm: LlmClient;
 }> {
   if (!runtime.rbUrl || !runtime.rbToken) {
-    throw new Error("Missing Review Board configuration. Run `cr init --rb` or set RB_URL/RB_TOKEN.");
+    throw new Error(
+      "Missing Review Board configuration. Run `cr init --rb` or set RB_URL/RB_TOKEN."
+    );
   }
   return {
     rb: createRuntimeReviewBoardClient(runtime),
@@ -165,7 +173,11 @@ async function resolveGitLabRepositoryContext(input: CreateReviewWorkflowInput):
   const sourceBranch = await getCurrentBranch(input.repoPath);
   const remoteUrl = await getOriginRemoteUrl(input.repoPath);
   const projectPath = remoteToProjectPath(remoteUrl);
-  logger.debug("create-review", "gitlab repo context resolved", { sourceBranch, remoteUrl, projectPath });
+  logger.debug("create-review", "gitlab repo context resolved", {
+    sourceBranch,
+    remoteUrl,
+    projectPath,
+  });
   return { sourceBranch, projectPath };
 }
 
@@ -187,7 +199,9 @@ async function validateBranches(args: {
     );
   }
   if (args.inputTargetBranch && !targetExists) {
-    throw new Error(`Target branch '${args.inputTargetBranch}' does not exist in remote repository.`);
+    throw new Error(
+      `Target branch '${args.inputTargetBranch}' does not exist in remote repository.`
+    );
   }
 }
 
@@ -202,7 +216,9 @@ async function loadRemoteBranches(args: {
     args.gitlab.listBranches(args.projectPath),
     args.gitlab.getDefaultBranch(args.projectPath),
   ]);
-  const defaultBranch = branches.includes(rawDefaultBranch) ? rawDefaultBranch : (branches[0] ?? "");
+  const defaultBranch = branches.includes(rawDefaultBranch)
+    ? rawDefaultBranch
+    : (branches[0] ?? "");
   phaseReporter.completed("load_remote_branches", "Loaded remote branches.");
   return { branches, defaultBranch };
 }
@@ -253,7 +269,10 @@ async function getBranchDiff(args: {
   targetBranch: string;
 }): Promise<string> {
   const phaseReporter = createWorkflowPhaseReporter(WORKFLOW_NAME, args.input.events);
-  phaseReporter.started("get_branch_diff", `Getting branch diff (${args.sourceBranch} -> ${args.targetBranch})...`);
+  phaseReporter.started(
+    "get_branch_diff",
+    `Getting branch diff (${args.sourceBranch} -> ${args.targetBranch})...`
+  );
   const branchDiff = await args.gitlab.compareBranches(
     args.projectPath,
     args.sourceBranch,
@@ -284,7 +303,11 @@ async function generateDraft(args: {
   const phaseReporter = createWorkflowPhaseReporter(WORKFLOW_NAME, args.input.events);
 
   if (!args.runtime.openaiApiUrl || !args.runtime.openaiApiKey) {
-    reportStatus(args.input, "warning", `LLM config missing; using fallback ${entityLabel} title/description.`);
+    reportStatus(
+      args.input,
+      "warning",
+      `LLM config missing; using fallback ${entityLabel} title/description.`
+    );
     return { title, description };
   }
 
@@ -296,7 +319,10 @@ async function generateDraft(args: {
     }
     phaseReporter.started("generate_mr_draft", `Generating ${entityLabel} description...`);
     description = await args.llm.generate(prompt);
-    phaseReporter.completed("generate_mr_draft", `${entityLabel[0]!.toUpperCase()}${entityLabel.slice(1)} description generated.`);
+    phaseReporter.completed(
+      "generate_mr_draft",
+      `${entityLabel[0]!.toUpperCase()}${entityLabel.slice(1)} description generated.`
+    );
 
     const titlePrompt = [
       `Generate a concise ${entityLabel} title (max 100 chars).`,
@@ -335,7 +361,11 @@ async function findExistingMergeRequest(args: {
   sourceBranch: string;
   targetBranch: string;
 }): Promise<{ iid: number; web_url: string } | null> {
-  return args.gitlab.findExistingMergeRequest(args.projectPath, args.sourceBranch, args.targetBranch);
+  return args.gitlab.findExistingMergeRequest(
+    args.projectPath,
+    args.sourceBranch,
+    args.targetBranch
+  );
 }
 
 async function upsertMergeRequest(args: {
@@ -351,12 +381,14 @@ async function upsertMergeRequest(args: {
   const phaseReporter = createWorkflowPhaseReporter(WORKFLOW_NAME, args.input.events);
 
   if (args.existingMr) {
-    phaseReporter.started("upsert_merge_request", `Updating existing MR !${args.existingMr.iid}...`);
-    const mr = await args.gitlab.updateMergeRequest(
-      args.projectPath,
-      args.existingMr.iid,
-      { title: args.title, description: args.description }
+    phaseReporter.started(
+      "upsert_merge_request",
+      `Updating existing MR !${args.existingMr.iid}...`
     );
+    const mr = await args.gitlab.updateMergeRequest(args.projectPath, args.existingMr.iid, {
+      title: args.title,
+      description: args.description,
+    });
     phaseReporter.completed("upsert_merge_request", "Merge request updated.");
     return {
       provider: "gitlab",
@@ -372,15 +404,12 @@ async function upsertMergeRequest(args: {
   }
 
   phaseReporter.started("upsert_merge_request", "Creating merge request...");
-  const mr = await args.gitlab.createMergeRequest(
-    args.projectPath,
-    {
-      sourceBranch: args.sourceBranch,
-      targetBranch: args.targetBranch,
-      title: args.title,
-      description: args.description,
-    }
-  );
+  const mr = await args.gitlab.createMergeRequest(args.projectPath, {
+    sourceBranch: args.sourceBranch,
+    targetBranch: args.targetBranch,
+    title: args.title,
+    description: args.description,
+  });
   phaseReporter.completed("upsert_merge_request", "Merge request created.");
   return {
     provider: "gitlab",
@@ -431,7 +460,9 @@ function resolveRepositoryMatch(args: {
   repoRootUrl: string;
   workingCopyUrl: string;
 }): { repository: ReviewBoardRepository; basedir?: string } {
-  const configuredUrl = args.configuredRepositoryUrl ? normalizeUrl(args.configuredRepositoryUrl) : undefined;
+  const configuredUrl = args.configuredRepositoryUrl
+    ? normalizeUrl(args.configuredRepositoryUrl)
+    : undefined;
   const repoRootUrl = normalizeUrl(args.repoRootUrl);
   const workingCopyUrl = normalizeUrl(args.workingCopyUrl);
 
@@ -554,7 +585,11 @@ async function createReviewBoardRequest(args: {
 
 async function* runGitLabCreateReviewWorkflow(
   input: CreateReviewWorkflowInput
-): AsyncGenerator<CreateReviewWorkflowEffect, CreateReviewWorkflowResult, CreateReviewWorkflowResponseInput> {
+): AsyncGenerator<
+  CreateReviewWorkflowEffect,
+  CreateReviewWorkflowResult,
+  CreateReviewWorkflowResponseInput
+> {
   const runtime = assertRuntime(await initializeRuntime());
   const { gitlab, llm } = await initializeGitLabClients(runtime);
   const { sourceBranch, projectPath } = await resolveGitLabRepositoryContext(input);
@@ -638,7 +673,8 @@ async function* runGitLabCreateReviewWorkflow(
       type: "request_draft_feedback",
       draft,
     };
-    const nextFeedback = assertResponseType(feedbackResponse, "draft_feedback").feedback?.trim() ?? "";
+    const nextFeedback =
+      assertResponseType(feedbackResponse, "draft_feedback").feedback?.trim() ?? "";
     if (!nextFeedback) {
       break;
     }
@@ -668,13 +704,12 @@ async function* runGitLabCreateReviewWorkflow(
       ? await confirmUpsert({ input, response: undefined })
       : await confirmUpsert({
           input,
-          response:
-            yield {
-              type: "confirm_upsert",
-              draft: finalDraft,
-              entityType: "merge_request",
-              existingEntityId: existingMr?.iid,
-            },
+          response: yield {
+            type: "confirm_upsert",
+            draft: finalDraft,
+            entityType: "merge_request",
+            existingEntityId: existingMr?.iid,
+          },
         });
 
   if (!shouldProceed) {
@@ -705,7 +740,11 @@ async function* runGitLabCreateReviewWorkflow(
 
 async function* runReviewBoardCreateReviewWorkflow(
   input: CreateReviewWorkflowInput
-): AsyncGenerator<CreateReviewWorkflowEffect, CreateReviewWorkflowResult, CreateReviewWorkflowResponseInput> {
+): AsyncGenerator<
+  CreateReviewWorkflowEffect,
+  CreateReviewWorkflowResult,
+  CreateReviewWorkflowResponseInput
+> {
   if (input.targetBranch) {
     throw new Error("--target-branch is only supported for GitLab create-review.");
   }
@@ -766,7 +805,8 @@ async function* runReviewBoardCreateReviewWorkflow(
       type: "request_draft_feedback",
       draft,
     };
-    const nextFeedback = assertResponseType(feedbackResponse, "draft_feedback").feedback?.trim() ?? "";
+    const nextFeedback =
+      assertResponseType(feedbackResponse, "draft_feedback").feedback?.trim() ?? "";
     if (!nextFeedback) {
       break;
     }
@@ -788,12 +828,11 @@ async function* runReviewBoardCreateReviewWorkflow(
       ? await confirmUpsert({ input, response: undefined })
       : await confirmUpsert({
           input,
-          response:
-            yield {
-              type: "confirm_upsert",
-              draft: finalDraft,
-              entityType: "review_request",
-            },
+          response: yield {
+            type: "confirm_upsert",
+            draft: finalDraft,
+            entityType: "review_request",
+          },
         });
 
   if (!shouldProceed) {
@@ -825,7 +864,11 @@ async function* runReviewBoardCreateReviewWorkflow(
 
 export async function* runCreateReviewWorkflow(
   input: CreateReviewWorkflowInput
-): AsyncGenerator<CreateReviewWorkflowEffect, CreateReviewWorkflowResult, CreateReviewWorkflowResponseInput> {
+): AsyncGenerator<
+  CreateReviewWorkflowEffect,
+  CreateReviewWorkflowResult,
+  CreateReviewWorkflowResponseInput
+> {
   if (getProvider(input) === "reviewboard") {
     return yield* runReviewBoardCreateReviewWorkflow({
       ...input,
@@ -838,5 +881,3 @@ export async function* runCreateReviewWorkflow(
     provider: "gitlab",
   });
 }
-
-

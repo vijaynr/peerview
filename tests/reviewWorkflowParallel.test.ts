@@ -34,86 +34,88 @@ async function waitForAgentStarts(): Promise<void> {
   }
 }
 
-mock.module("@cr/core", () => makeCoreMock({
-  DEFAULT_REVIEW_AGENT_NAME: "general",
-  getCurrentBranch: async () => "feature/demo",
-  getOriginRemoteUrl: async () => "https://gitlab.example.com/group/project.git",
-  remoteToProjectPath: () => "group/project",
-  loadPrompt: async (name: string) => {
-    if (name === "review.txt") {
-      return "STANDARD REVIEW\n{mr_changes}";
-    }
-    if (name === "review-aggregate.txt") {
-      return "AGGREGATE\n{context_label}\n{agent_outputs}\n{failed_agents}";
-    }
-    throw new Error(`unexpected prompt: ${name}`);
-  },
-  loadReviewAgentPrompt: async (name: string) => `AGENT:${name}\n{mr_changes}`,
-  normalizeReviewAgentNames: (agentNames?: string[]) => {
-    const values = (agentNames ?? ["general"]).map((name) => name.trim().toLowerCase());
-    return Array.from(new Set(values.filter(Boolean)));
-  },
-  createRuntimeSvnClient: () => null,
-  loadGitLabRepositoryGuidelines: async () => undefined,
-  loadLocalRepositoryGuidelines: async () => undefined,
-  loadSvnRepositoryGuidelines: async () => undefined,
-  createRuntimeGitLabClient: () => ({
-    getMergeRequest: async () => ({}),
-    getMergeRequestChanges: async () => [],
-    getMergeRequestCommits: async () => [],
-    findOpenMergeRequestBySourceBranch: async () => ({ iid: 1 }),
-    getMergeRequestInlineComments: async () => [],
-  }),
-  createRuntimeLlmClient: () => ({
-    generate: async (prompt: string) => {
-      if (prompt.startsWith("AGENT:")) {
-        const firstLine = prompt.split("\n", 1)[0];
-        const agentName = firstLine.slice("AGENT:".length);
-        startedAgents.push(agentName);
-        return getDeferred(agentName).promise;
+mock.module("@cr/core", () =>
+  makeCoreMock({
+    DEFAULT_REVIEW_AGENT_NAME: "general",
+    getCurrentBranch: async () => "feature/demo",
+    getOriginRemoteUrl: async () => "https://gitlab.example.com/group/project.git",
+    remoteToProjectPath: () => "group/project",
+    loadPrompt: async (name: string) => {
+      if (name === "review.txt") {
+        return "STANDARD REVIEW\n{mr_changes}";
       }
-      if (prompt.startsWith("AGGREGATE")) {
-        aggregateCallCount += 1;
-        return "aggregated review";
+      if (name === "review-aggregate.txt") {
+        return "AGGREGATE\n{context_label}\n{agent_outputs}\n{failed_agents}";
       }
-      return "single review";
+      throw new Error(`unexpected prompt: ${name}`);
     },
-  }),
-  loadWorkflowRuntime: async () => ({
-    gitlabUrl: "https://gitlab.example.com",
-    gitlabKey: "gitlab-key",
-    svnRepositoryUrl: "",
-    svnUsername: "",
-    svnPassword: "",
-    rbUrl: "https://reviews.example.com",
-    rbToken: "rb-token",
-    webhookConcurrency: 1,
-    webhookQueueLimit: 50,
-    webhookJobTimeoutMs: 600000,
-    openaiApiUrl: "https://api.example.com/v1",
-    openaiApiKey: "openai-key",
-    openaiModel: "gpt-4o",
-    useCustomStreaming: false,
-    defaultReviewAgents: ["general"],
-  }),
-  assert: (value: unknown, message: string) => {
-    if (!value) {
-      throw new Error(message);
-    }
-    return value;
-  },
-  runWorkflow: async ({ initialState, steps, routes, start }: any) => {
-    const state = { ...initialState };
-    let current = start;
-    while (current && current !== "end") {
-      const updates = await steps[current](state);
-      Object.assign(state, updates);
-      const route = routes[current];
-      current = typeof route === "function" ? route(state) : route;
-    }
-    return state;
-  },
-}));
+    loadReviewAgentPrompt: async (name: string) => `AGENT:${name}\n{mr_changes}`,
+    normalizeReviewAgentNames: (agentNames?: string[]) => {
+      const values = (agentNames ?? ["general"]).map((name) => name.trim().toLowerCase());
+      return Array.from(new Set(values.filter(Boolean)));
+    },
+    createRuntimeSvnClient: () => null,
+    loadGitLabRepositoryGuidelines: async () => undefined,
+    loadLocalRepositoryGuidelines: async () => undefined,
+    loadSvnRepositoryGuidelines: async () => undefined,
+    createRuntimeGitLabClient: () => ({
+      getMergeRequest: async () => ({}),
+      getMergeRequestChanges: async () => [],
+      getMergeRequestCommits: async () => [],
+      findOpenMergeRequestBySourceBranch: async () => ({ iid: 1 }),
+      getMergeRequestInlineComments: async () => [],
+    }),
+    createRuntimeLlmClient: () => ({
+      generate: async (prompt: string) => {
+        if (prompt.startsWith("AGENT:")) {
+          const firstLine = prompt.split("\n", 1)[0];
+          const agentName = firstLine.slice("AGENT:".length);
+          startedAgents.push(agentName);
+          return getDeferred(agentName).promise;
+        }
+        if (prompt.startsWith("AGGREGATE")) {
+          aggregateCallCount += 1;
+          return "aggregated review";
+        }
+        return "single review";
+      },
+    }),
+    loadWorkflowRuntime: async () => ({
+      gitlabUrl: "https://gitlab.example.com",
+      gitlabKey: "gitlab-key",
+      svnRepositoryUrl: "",
+      svnUsername: "",
+      svnPassword: "",
+      rbUrl: "https://reviews.example.com",
+      rbToken: "rb-token",
+      webhookConcurrency: 1,
+      webhookQueueLimit: 50,
+      webhookJobTimeoutMs: 600000,
+      openaiApiUrl: "https://api.example.com/v1",
+      openaiApiKey: "openai-key",
+      openaiModel: "gpt-4o",
+      useCustomStreaming: false,
+      defaultReviewAgents: ["general"],
+    }),
+    assert: (value: unknown, message: string) => {
+      if (!value) {
+        throw new Error(message);
+      }
+      return value;
+    },
+    runWorkflow: async ({ initialState, steps, routes, start }: any) => {
+      const state = { ...initialState };
+      let current = start;
+      while (current && current !== "end") {
+        const updates = await steps[current](state);
+        Object.assign(state, updates);
+        const route = routes[current];
+        current = typeof route === "function" ? route(state) : route;
+      }
+      return state;
+    },
+  })
+);
 
 const { runReviewWorkflow } = await import("../packages/workflows/src/reviewWorkflow.ts");
 

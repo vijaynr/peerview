@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { CR_ASSETS_DIR, CR_DIR, CR_LOGS_DIR, CR_PROMPTS_DIR } from "./paths.js";
 import { bundledPrompts } from "../resources/index.js";
+import { CR_ASSETS_DIR, CR_DIR, CR_LOGS_DIR, CR_PROMPTS_DIR } from "./paths.js";
 
 async function writeBundledFiles(targetDir: string, files: Record<string, string>): Promise<void> {
   await fs.mkdir(targetDir, { recursive: true });

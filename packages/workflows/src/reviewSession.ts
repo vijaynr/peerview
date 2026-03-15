@@ -1,27 +1,27 @@
 import {
   envOrConfig,
-  getCurrentUser as rbGetCurrentUser,
   getOriginRemoteUrl,
-  listMergeRequests,
-  listReviewRequests as rbListRequests,
-  loadCRConfig,
-  rbRequest,
-  remoteToProjectPath,
   listBundledReviewAgentNames,
-  normalizeReviewAgentNames,
+  listMergeRequests,
+  loadCRConfig,
   type MergeRequestState,
+  normalizeReviewAgentNames,
   type ReviewAgentSelectionOption,
   type ReviewBoardRequest,
+  type ReviewSelectionOption,
   type ReviewSessionEffect,
   type ReviewSessionResponse,
   type ReviewSessionResult,
-  type ReviewSelectionOption,
   type ReviewWorkflowInput,
+  getCurrentUser as rbGetCurrentUser,
+  listReviewRequests as rbListRequests,
+  rbRequest,
+  remoteToProjectPath,
 } from "@cr/core";
-import { answerReviewChatQuestion, runReviewChatWorkflow } from "./reviewChatWorkflow.js";
 import { runInteractiveReviewBoardWorkflow } from "./reviewBoardWorkflow.js";
-import { runInteractiveReviewWorkflow } from "./reviewWorkflow.js";
+import { answerReviewChatQuestion, runReviewChatWorkflow } from "./reviewChatWorkflow.js";
 import { runReviewSummarizeWorkflow } from "./reviewSummarizeWorkflow.js";
+import { runInteractiveReviewWorkflow } from "./reviewWorkflow.js";
 
 type ReviewSessionResponseInput = ReviewSessionResponse | undefined;
 const GITLAB_MR_URL_PATTERN = /\/-\/merge_requests\/(\d+)(?:[/?#]|$)/i;
@@ -37,9 +37,7 @@ function assertResponseType<T extends ReviewSessionResponse["type"]>(
   return response as Extract<ReviewSessionResponse, { type: T }>;
 }
 
-function getReviewBoardStatusMap(
-  state: MergeRequestState
-): "pending" | "submitted" | "all" {
+function getReviewBoardStatusMap(state: MergeRequestState): "pending" | "submitted" | "all" {
   const rbStatusMap: Record<MergeRequestState, "pending" | "submitted" | "all"> = {
     opened: "pending",
     closed: "all",
@@ -124,15 +122,17 @@ async function loadReviewBoardSelectionOptions(
     );
 
     const seenIds = new Set<number>();
-    requests = [...outgoing, ...(incomingDirectResp.review_requests ?? []), ...(incomingGroupsResp.review_requests ?? [])].filter(
-      (request) => {
-        if (seenIds.has(request.id)) {
-          return false;
-        }
-        seenIds.add(request.id);
-        return true;
+    requests = [
+      ...outgoing,
+      ...(incomingDirectResp.review_requests ?? []),
+      ...(incomingGroupsResp.review_requests ?? []),
+    ].filter((request) => {
+      if (seenIds.has(request.id)) {
+        return false;
       }
-    );
+      seenIds.add(request.id);
+      return true;
+    });
   }
 
   if (requests.length === 0) {
@@ -225,8 +225,8 @@ export async function* runInteractiveReviewSession(
             provider === "reviewboard"
               ? "Select review request (type to search)"
               : provider === "github"
-              ? "Select pull request (type to search)"
-              : "Select merge request (type to search)",
+                ? "Select pull request (type to search)"
+                : "Select merge request (type to search)",
           options,
         },
         "review_target_selected"
@@ -320,9 +320,7 @@ export async function* runInteractiveReviewSession(
   let step = await reviewSession.next();
   while (!step.done) {
     const response = yield step.value;
-    step = await reviewSession.next(
-      response?.type === "review_feedback" ? response : undefined
-    );
+    step = await reviewSession.next(response?.type === "review_feedback" ? response : undefined);
   }
 
   return {

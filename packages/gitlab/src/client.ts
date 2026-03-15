@@ -1,24 +1,29 @@
 import { URL } from "node:url";
-import { GitLabHttpClient, GitLabApiError } from "./http-client.js";
+import { GitLabApiError, GitLabHttpClient } from "./http-client.js";
 import type {
+  CreateMergeRequestParams,
   GitLabBranch,
-  GitLabProject,
-  GitLabMr,
-  GitLabMrDetails,
   GitLabCommit,
-  GitLabMrChange,
-  GitLabMrChangesResponse,
   GitLabCompare,
-  GitLabNote,
   GitLabDiscussion,
   GitLabDiscussionNote,
   GitLabInlineComment,
+  GitLabMr,
+  GitLabMrChange,
+  GitLabMrChangesResponse,
+  GitLabMrDetails,
+  GitLabNote,
+  GitLabProject,
   MergeRequestState,
-  CreateMergeRequestParams,
   UpdateMergeRequestParams,
 } from "./types.js";
 
-export type { GitLabInlineComment, MergeRequestState, CreateMergeRequestParams, UpdateMergeRequestParams };
+export type {
+  CreateMergeRequestParams,
+  GitLabInlineComment,
+  MergeRequestState,
+  UpdateMergeRequestParams,
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -111,10 +116,9 @@ export class GitLabClient {
     const ep = encodeProject(projectPath);
     const eb = encodeURIComponent(branchName);
     try {
-      await this.http.get<GitLabBranch>(
-        `/api/v4/projects/${ep}/repository/branches/${eb}`,
-        { silent: true }
-      );
+      await this.http.get<GitLabBranch>(`/api/v4/projects/${ep}/repository/branches/${eb}`, {
+        silent: true,
+      });
       return true;
     } catch (err) {
       if (err instanceof GitLabApiError && err.status === 404) return false;
@@ -130,11 +134,7 @@ export class GitLabClient {
    * Fetches the raw content of a file at a specific ref.
    * Returns null if the file does not exist (404).
    */
-  async getFileRaw(
-    projectPath: string,
-    filePath: string,
-    ref: string
-  ): Promise<string | null> {
+  async getFileRaw(projectPath: string, filePath: string, ref: string): Promise<string | null> {
     const ep = encodeProject(projectPath);
     const encodedPath = encodeURIComponent(filePath);
     return this.http.requestText(
@@ -228,18 +228,13 @@ export class GitLabClient {
    */
   async getMergeRequest(projectPath: string, mrIid: number): Promise<GitLabMrDetails> {
     const ep = encodeProject(projectPath);
-    return this.http.get<GitLabMrDetails>(
-      `/api/v4/projects/${ep}/merge_requests/${mrIid}`
-    );
+    return this.http.get<GitLabMrDetails>(`/api/v4/projects/${ep}/merge_requests/${mrIid}`);
   }
 
   /**
    * Returns the file-level diff changes for a merge request.
    */
-  async getMergeRequestDiff(
-    projectPath: string,
-    mrIid: number
-  ): Promise<GitLabMrChange[]> {
+  async getMergeRequestDiff(projectPath: string, mrIid: number): Promise<GitLabMrChange[]> {
     const ep = encodeProject(projectPath);
     const response = await this.http.get<GitLabMrChangesResponse>(
       `/api/v4/projects/${ep}/merge_requests/${mrIid}/changes`
@@ -250,10 +245,7 @@ export class GitLabClient {
   /**
    * Returns all commits included in a merge request (up to 100).
    */
-  async getMergeRequestCommits(
-    projectPath: string,
-    mrIid: number
-  ): Promise<GitLabCommit[]> {
+  async getMergeRequestCommits(projectPath: string, mrIid: number): Promise<GitLabCommit[]> {
     const ep = encodeProject(projectPath);
     return this.http.get<GitLabCommit[]>(
       `/api/v4/projects/${ep}/merge_requests/${mrIid}/commits?per_page=100`
@@ -272,20 +264,17 @@ export class GitLabClient {
     params: CreateMergeRequestParams
   ): Promise<GitLabMrDetails> {
     const ep = encodeProject(projectPath);
-    return this.http.post<GitLabMrDetails>(
-      `/api/v4/projects/${ep}/merge_requests`,
-      {
-        source_branch: params.sourceBranch,
-        target_branch: params.targetBranch,
-        title: params.title,
-        description: params.description ?? "",
-        assignee_ids: params.assigneeIds,
-        reviewer_ids: params.reviewerIds,
-        labels: params.labels?.join(","),
-        remove_source_branch: params.removeSourceBranch,
-        squash: params.squash,
-      }
-    );
+    return this.http.post<GitLabMrDetails>(`/api/v4/projects/${ep}/merge_requests`, {
+      source_branch: params.sourceBranch,
+      target_branch: params.targetBranch,
+      title: params.title,
+      description: params.description ?? "",
+      assignee_ids: params.assigneeIds,
+      reviewer_ids: params.reviewerIds,
+      labels: params.labels?.join(","),
+      remove_source_branch: params.removeSourceBranch,
+      squash: params.squash,
+    });
   }
 
   /**
@@ -297,18 +286,15 @@ export class GitLabClient {
     params: UpdateMergeRequestParams
   ): Promise<GitLabMrDetails> {
     const ep = encodeProject(projectPath);
-    return this.http.put<GitLabMrDetails>(
-      `/api/v4/projects/${ep}/merge_requests/${mrIid}`,
-      {
-        title: params.title,
-        description: params.description,
-        labels: params.labels?.join(","),
-        assignee_ids: params.assigneeIds,
-        reviewer_ids: params.reviewerIds,
-        target_branch: params.targetBranch,
-        state_event: params.stateEvent,
-      }
-    );
+    return this.http.put<GitLabMrDetails>(`/api/v4/projects/${ep}/merge_requests/${mrIid}`, {
+      title: params.title,
+      description: params.description,
+      labels: params.labels?.join(","),
+      assignee_ids: params.assigneeIds,
+      reviewer_ids: params.reviewerIds,
+      target_branch: params.targetBranch,
+      state_event: params.stateEvent,
+    });
   }
 
   /**
@@ -330,10 +316,7 @@ export class GitLabClient {
    * Returns all non-system notes (comments) on a merge request.
    * This includes general comments but not inline diff comments.
    */
-  async listMergeRequestNotes(
-    projectPath: string,
-    mrIid: number
-  ): Promise<GitLabNote[]> {
+  async listMergeRequestNotes(projectPath: string, mrIid: number): Promise<GitLabNote[]> {
     const ep = encodeProject(projectPath);
     const notes = await this.http.get<GitLabNote[]>(
       `/api/v4/projects/${ep}/merge_requests/${mrIid}/notes?per_page=100`
@@ -345,11 +328,7 @@ export class GitLabClient {
    * Posts a top-level comment (note) on the merge request.
    * Returns the created note ID as a string.
    */
-  async addMergeRequestComment(
-    projectPath: string,
-    mrIid: number,
-    body: string
-  ): Promise<string> {
+  async addMergeRequestComment(projectPath: string, mrIid: number, body: string): Promise<string> {
     const ep = encodeProject(projectPath);
     const note = await this.http.post<GitLabNote>(
       `/api/v4/projects/${ep}/merge_requests/${mrIid}/notes`,
@@ -369,11 +348,7 @@ export class GitLabClient {
    * @param comment - Optional explanation to include with the change request.
    * @returns The created note ID as a string.
    */
-  async requestChanges(
-    projectPath: string,
-    mrIid: number,
-    comment?: string
-  ): Promise<string> {
+  async requestChanges(projectPath: string, mrIid: number, comment?: string): Promise<string> {
     const body = [
       "## 🔴 Changes Requested",
       "",
@@ -389,10 +364,7 @@ export class GitLabClient {
   /**
    * Returns all discussions on a merge request, including inline diff threads.
    */
-  async listDiscussions(
-    projectPath: string,
-    mrIid: number
-  ): Promise<GitLabDiscussion[]> {
+  async listDiscussions(projectPath: string, mrIid: number): Promise<GitLabDiscussion[]> {
     const ep = encodeProject(projectPath);
     return this.http.get<GitLabDiscussion[]>(
       `/api/v4/projects/${ep}/merge_requests/${mrIid}/discussions?per_page=100`
@@ -403,17 +375,17 @@ export class GitLabClient {
    * Returns all unresolved inline diff comments on a merge request.
    * Comments that belong to outdated diff versions are filtered out.
    */
-  async listInlineComments(
-    projectPath: string,
-    mrIid: number
-  ): Promise<GitLabInlineComment[]> {
+  async listInlineComments(projectPath: string, mrIid: number): Promise<GitLabInlineComment[]> {
     const [discussions, mr] = await Promise.all([
       this.listDiscussions(projectPath, mrIid),
       this.getMergeRequest(projectPath, mrIid),
     ]);
 
-    const { base_sha: currentBase, start_sha: currentStart, head_sha: currentHead } =
-      mr.diff_refs ?? {};
+    const {
+      base_sha: currentBase,
+      start_sha: currentStart,
+      head_sha: currentHead,
+    } = mr.diff_refs ?? {};
 
     const result: GitLabInlineComment[] = [];
 
@@ -435,10 +407,7 @@ export class GitLabClient {
         const line = pos.new_line ?? pos.old_line;
         if (!filePath || !line) continue;
 
-        const endLine =
-          pos.line_range?.end
-            ? (pos.new_line ?? pos.old_line ?? line)
-            : line;
+        const endLine = pos.line_range?.end ? (pos.new_line ?? pos.old_line ?? line) : line;
 
         result.push({
           discussionId: discussion.id,
@@ -534,11 +503,7 @@ export class GitLabClient {
   /**
    * Resolves an existing discussion thread on a merge request.
    */
-  async resolveDiscussion(
-    projectPath: string,
-    mrIid: number,
-    discussionId: string
-  ): Promise<void> {
+  async resolveDiscussion(projectPath: string, mrIid: number, discussionId: string): Promise<void> {
     const ep = encodeProject(projectPath);
     await this.http.put<GitLabDiscussion>(
       `/api/v4/projects/${ep}/merge_requests/${mrIid}/discussions/${encodeURIComponent(discussionId)}`,

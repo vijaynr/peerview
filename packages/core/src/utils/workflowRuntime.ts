@@ -1,5 +1,5 @@
-import { createGitLabClient, type GitLabClient } from "../clients/gitlabClient.js";
 import { createGitHubClient, type GitHubClient } from "../clients/githubClient.js";
+import { createGitLabClient, type GitLabClient } from "../clients/gitlabClient.js";
 import { createLlmClient, type LlmClient } from "../clients/llmClient.js";
 import { createReviewBoardClient, type ReviewBoardClient } from "../clients/reviewBoardClient.js";
 import { createSvnClient, type SvnClient } from "../clients/svnClient.js";
@@ -75,7 +75,9 @@ export async function loadWorkflowRuntime(): Promise<WorkflowRuntime> {
     openaiApiKey: envOrConfig("OPENAI_API_KEY", config.openaiApiKey, ""),
     openaiModel: envOrConfig("OPENAI_MODEL", config.openaiModel, "gpt-4o"),
     useCustomStreaming,
-    defaultReviewAgents: config.defaultReviewAgents?.length ? config.defaultReviewAgents : ["general"],
+    defaultReviewAgents: config.defaultReviewAgents?.length
+      ? config.defaultReviewAgents
+      : ["general"],
   };
 
   logger.debug("runtime", "workflow runtime loaded", {

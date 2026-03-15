@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { makeUiMock, makeCoreMock } from "./mocks.ts";
+import { makeCoreMock, makeUiMock } from "./mocks.ts";
 
 const createSpinnerMock = mock(() => ({
   start() {
@@ -15,17 +15,21 @@ const printWarningMock = mock(() => {});
 const spawnSyncMock = mock(() => ({ status: 0 }));
 const readCRConfigContentsMock = mock(async () => "[cr]\nopenai_model = gpt-4.1\n");
 
-mock.module("@cr/ui", () => makeUiMock({
-  createSpinner: createSpinnerMock,
-  printInfo: printInfoMock,
-  printRawOutput: printRawOutputMock,
-  printWarning: printWarningMock,
-}));
+mock.module("@cr/ui", () =>
+  makeUiMock({
+    createSpinner: createSpinnerMock,
+    printInfo: printInfoMock,
+    printRawOutput: printRawOutputMock,
+    printWarning: printWarningMock,
+  })
+);
 
-mock.module("@cr/core", () => makeCoreMock({
-  CR_CONF_PATH: "/mock/.cr.conf",
-  readCRConfigContents: readCRConfigContentsMock,
-}));
+mock.module("@cr/core", () =>
+  makeCoreMock({
+    CR_CONF_PATH: "/mock/.cr.conf",
+    readCRConfigContents: readCRConfigContentsMock,
+  })
+);
 
 mock.module("node:child_process", () => ({
   spawnSync: spawnSyncMock,

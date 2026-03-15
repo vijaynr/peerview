@@ -1,10 +1,10 @@
-import fs from "node:fs/promises";
-import { existsSync } from "node:fs";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { existsSync } from "node:fs";
+import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import { CR_CONF_KEY_PATH, CR_CONF_PATH } from "./paths.js";
 import type { CRConfig } from "../types/config.js";
+import { CR_CONF_KEY_PATH, CR_CONF_PATH } from "./paths.js";
 
 const configSchema = z.object({
   openaiApiUrl: z.string(),
@@ -104,11 +104,7 @@ export function decryptConfigSecret(value: string, key: Buffer): string {
     throw new Error("Unsupported encrypted config secret format.");
   }
 
-  const decipher = createDecipheriv(
-    ENCRYPTION_ALGORITHM,
-    key,
-    Buffer.from(ivBase64, "base64")
-  );
+  const decipher = createDecipheriv(ENCRYPTION_ALGORITHM, key, Buffer.from(ivBase64, "base64"));
   decipher.setAuthTag(Buffer.from(tagBase64, "base64"));
   const decrypted = Buffer.concat([
     decipher.update(Buffer.from(encryptedBase64, "base64")),
@@ -168,7 +164,10 @@ export async function loadCRConfig(): Promise<Partial<CRConfig>> {
     openaiModel: section.openai_model ?? "",
     useCustomStreaming: (section.use_custom_streaming ?? "false").toLowerCase() === "true",
     defaultReviewAgents: section.default_review_agents
-      ? section.default_review_agents.split(",").map((value) => value.trim()).filter(Boolean)
+      ? section.default_review_agents
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
       : undefined,
     gitlabUrl: section.gitlab_url ?? "",
     gitlabKey: await maybeDecryptConfigSecret(section.gitlab_key_enc ?? section.gitlab_key ?? ""),
