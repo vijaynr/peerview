@@ -19,7 +19,7 @@ import {
   promptWithFrame,
   runLiveChatLoop,
   runLiveTask,
-} from "@cr/ui";
+} from "@cr/tui";
 import {
   answerReviewChatQuestion,
   maybePostGitHubReviewComment,

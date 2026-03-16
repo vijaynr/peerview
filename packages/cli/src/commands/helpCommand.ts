@@ -1,4 +1,4 @@
-import { printHelpView } from "@cr/ui";
+import { printHelpView } from "@cr/tui";
 
 export async function runHelpCommand(): Promise<void> {
   printHelpView();

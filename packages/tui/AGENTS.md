@@ -1,4 +1,4 @@
-# @cr/ui — Agent Guidelines
+# @cr/tui — Agent Guidelines
 
 ## Package Role
 

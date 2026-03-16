@@ -1,12 +1,12 @@
 /**
- * Shared mock factories for @cr/ui and @cr/core.
+ * Shared mock factories for @cr/tui and @cr/core.
  *
  * Bun 1.3.x shares the module-mock registry within a test worker — when one
  * test file sets a partial mock for a package, subsequent test files cannot
  * add export names that were absent from the previous mock (Bun validates new
  * mocks against the currently-registered export list and throws a SyntaxError).
  *
- * Solution: every test that calls mock.module() for @cr/ui or @cr/core must
+ * Solution: every test that calls mock.module() for @cr/tui or @cr/core must
  * provide the FULL union of exports that any test may ever need. These factory
  * functions return that comprehensive base object, with the caller's overrides
  * applied on top so individual tests can still inject their own spy functions.
@@ -15,7 +15,7 @@
 import { mock } from "bun:test";
 
 // ---------------------------------------------------------------------------
-// @cr/ui
+// @cr/tui
 // ---------------------------------------------------------------------------
 
 export function makeUiMock(overrides: Record<string, unknown> = {}): Record<string, unknown> {

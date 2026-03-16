@@ -22,7 +22,7 @@ const runLiveTaskMock = mock(async (_title: string, run: (ui: any) => Promise<vo
   });
 });
 
-mock.module("@cr/ui", () =>
+mock.module("@cr/tui", () =>
   makeUiMock({
     abortOnCancel: { onCancel: () => false },
     askForOptionalFeedback: mock(async () => null),

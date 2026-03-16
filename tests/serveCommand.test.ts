@@ -4,7 +4,7 @@ import { makeUiMock } from "./mocks.ts";
 const printCommandHelpMock = mock(() => {});
 const printErrorMock = mock(() => {});
 
-mock.module("@cr/ui", () =>
+mock.module("@cr/tui", () =>
   makeUiMock({
     printCommandHelp: printCommandHelpMock,
     printError: printErrorMock,

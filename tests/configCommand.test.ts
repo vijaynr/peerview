@@ -15,7 +15,7 @@ const printWarningMock = mock(() => {});
 const spawnSyncMock = mock(() => ({ status: 0 }));
 const readCRConfigContentsMock = mock(async () => "[cr]\nopenai_model = gpt-4.1\n");
 
-mock.module("@cr/ui", () =>
+mock.module("@cr/tui", () =>
   makeUiMock({
     createSpinner: createSpinnerMock,
     printInfo: printInfoMock,

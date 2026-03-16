@@ -6,7 +6,7 @@ import {
   printCommandHelp,
   runLiveCreateReviewTask,
   runLiveTask,
-} from "@cr/ui";
+} from "@cr/tui";
 import { runCreateReviewWorkflow } from "@cr/workflows";
 import { getFlag, hasFlag } from "../cliHelpers.js";
 

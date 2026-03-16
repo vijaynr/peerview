@@ -2,7 +2,7 @@
 
 ## Package Role
 
-Pure business logic, shared types, and infrastructure utilities. Has no UI dependencies — never import from `@cr/ui`.
+Pure business logic, shared types, and infrastructure utilities. Has no UI dependencies — never import from `@cr/tui`.
 
 ## Structure
 
@@ -32,6 +32,6 @@ Pure business logic, shared types, and infrastructure utilities. Has no UI depen
 ## Key Rules
 
 - No `ora`, no ANSI codes, no `process.stdout` — this package must be UI-free.
-- Spinner logic was intentionally removed from this package; it lives in `@cr/ui`.
+- Spinner logic was intentionally removed from this package; it lives in `@cr/tui`.
 - All public exports must go through `src/index.ts`.
 - Validate with `bun run typecheck` and `bun run lint` after changes.

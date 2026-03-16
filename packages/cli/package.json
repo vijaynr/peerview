@@ -9,7 +9,7 @@
   "dependencies": {
     "@cr/core": "workspace:*",
     "@cr/workflows": "workspace:*",
-    "@cr/ui": "workspace:*",
+    "@cr/tui": "workspace:*",
     "@cr/webhook": "workspace:*"
   }
 }

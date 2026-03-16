@@ -40,7 +40,7 @@ const runCreateReviewWorkflowMock = mock((input: any) =>
   })()
 );
 
-mock.module("@cr/ui", () =>
+mock.module("@cr/tui", () =>
   makeUiMock({
     printCommandHelp: printCommandHelpMock,
     runLiveTask: runLiveTaskMock,

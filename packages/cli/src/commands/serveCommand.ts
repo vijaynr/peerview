@@ -1,4 +1,4 @@
-import { printCommandHelp, printError } from "@cr/ui";
+import { printCommandHelp, printError } from "@cr/tui";
 import { startWebhookServer } from "@cr/webhook";
 import { getFlag, hasFlag } from "../cliHelpers.js";
 

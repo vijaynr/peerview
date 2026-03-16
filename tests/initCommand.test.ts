@@ -13,7 +13,7 @@ const runLiveTaskMock = mock(
   }
 );
 
-mock.module("@cr/ui", () =>
+mock.module("@cr/tui", () =>
   makeUiMock({
     promptWithFrame: mock(async (questions: any) => {
       lastQuestions = questions;

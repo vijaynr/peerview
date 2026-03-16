@@ -27,7 +27,7 @@ import {
   printWorkflowOutput,
   promptWithFrame,
   runLiveTask,
-} from "@cr/ui";
+} from "@cr/tui";
 import { getFlag, hasFlag } from "../cliHelpers.js";
 
 type WebhookSetupAnswers = {

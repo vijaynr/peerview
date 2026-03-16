@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { formatKnownNetworkError } from "@cr/core";
-import { printAlert, printError, printWarning } from "@cr/ui";
+import { printAlert, printError, printWarning } from "@cr/tui";
 import { runCommand } from "./commands/index.js";
 
 async function main(): Promise<void> {

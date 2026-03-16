@@ -16,12 +16,12 @@ Entry point for the `cr` binary. Parses CLI arguments and delegates to the appro
 ## Dependencies
 
 - `@cr/core` — config, git helpers, bootstrap.
-- `@cr/ui` — all terminal output, prompts, spinners.
+- `@cr/tui` — all terminal output, prompts, spinners.
 - `@cr/workflows` — workflow implementations.
 
 ## Key Rules
 
 - No business logic here; all logic lives in `@cr/core` or `@cr/workflows`.
-- All terminal output must go through `@cr/ui` — never use `console.log` directly in commands.
-- Spinners must be created via `createSpinner` from `@cr/ui`, not `ora` directly.
+- All terminal output must go through `@cr/tui` — never use `console.log` directly in commands.
+- Spinners must be created via `createSpinner` from `@cr/tui`, not `ora` directly.
 - Validate with `bun run typecheck` and `bun run lint` after changes.

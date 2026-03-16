@@ -5,7 +5,7 @@
     "paths": {
       "@cr/core": ["../core/src/index.ts"],
       "@cr/workflows": ["../workflows/src/index.ts"],
-      "@cr/ui": ["../ui/src/index.ts"]
+      "@cr/tui": ["../tui/src/index.ts"]
     }
   },
   "include": ["src/**/*"]

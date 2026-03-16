@@ -8,12 +8,12 @@
 | ------------------ | ------------------------ | ------------------------------------------------------------------ |
 | `@cr/cli`          | `packages/cli/`          | Binary entrypoint and command handlers                             |
 | `@cr/core`         | `packages/core/`         | Shared business logic, types, resource loading, and integrations   |
-| `@cr/ui`           | `packages/ui/`           | Terminal rendering, prompts, spinners, banners, and help output    |
+| `@cr/tui`          | `packages/tui/`          | Terminal rendering, prompts, spinners, banners, and help output    |
 | `@cr/workflows`    | `packages/workflows/`    | Review, summarize, chat, MR creation, and Review Board workflows   |
 | `@cr/reviewboard`  | `packages/reviewboard/`  | Review Board client/types adapter used by `@cr/core`               |
 | `@cr/webhook`      | `packages/webhook/`      | Webhook server and work queue for automated review processing      |
 
-Package-specific `AGENTS.md` files exist in `packages/cli`, `packages/core`, `packages/ui`, and `packages/workflows`. If a package has no local guide, follow this root file.
+Package-specific `AGENTS.md` files exist in `packages/cli`, `packages/core`, `packages/tui`, and `packages/workflows`. If a package has no local guide, follow this root file.
 
 - `resources/prompts/` — bundled prompt templates (`review.txt`, `summarize.txt`, `chat.txt`, `mr.txt`).
 - `resources/specs/templates/` — bundled spec templates (`prd.md`, `design.md`, `threat-model.md`, `refine.md`, `plan.md`, `doit.md`).
