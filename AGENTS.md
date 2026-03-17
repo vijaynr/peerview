@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-`cr-cli` is a TypeScript monorepo running on Bun with eight packages under `packages/`:
+`cr-cli` is a TypeScript monorepo running on Bun with nine packages under `packages/`:
 
 | Package            | Path                     | Role                                                               |
 | ------------------ | ------------------------ | ------------------------------------------------------------------ |
@@ -14,8 +14,9 @@
 | `@cr/workflows`    | `packages/workflows/`    | Review, summarize, chat, MR/PR draft creation, and Review Board workflows |
 | `@cr/reviewboard`  | `packages/reviewboard/`  | Review Board client/types adapter used by `@cr/core`               |
 | `@cr/server`       | `packages/server/`       | Unified server for webhook endpoints, web shell, and API routes    |
+| `@cr/web`          | `packages/web/`          | Lit dashboard UI and route helpers served by `@cr/server`          |
 
-Package-specific `AGENTS.md` files exist in `packages/cli`, `packages/core`, `packages/tui`, and `packages/workflows`. If a package has no local guide, follow this root file.
+Package-specific `AGENTS.md` files exist in `packages/cli`, `packages/core`, `packages/tui`, `packages/workflows`, `packages/server`, and `packages/web`. If a package has no local guide, follow this root file.
 
 - `resources/prompts/` — bundled prompt templates for review, summarize, chat, MR drafting, aggregate review synthesis, and review agents.
 - `resources/specs/templates/` — bundled spec templates (`prd.md`, `design.md`, `threat-model.md`, `refine.md`, `plan.md`, `doit.md`).
@@ -50,6 +51,7 @@ Package-specific `AGENTS.md` files exist in `packages/cli`, `packages/core`, `pa
 - 2-space indentation; semicolons optional — stay consistent with the file you're editing.
 - Files and functions in `kebab-case` / `camelCase`; types/interfaces in `PascalCase`.
 - Prefer focused helpers over large monolithic functions.
+- Preserve package boundaries: CLI wiring in `@cr/cli`, terminal output in `@cr/tui`, shared logic in `@cr/core`, workflows in `@cr/workflows`, HTTP/server orchestration in `@cr/server`, and browser UI in `@cr/web`.
 
 ## Testing Guidelines
 

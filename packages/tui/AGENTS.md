@@ -13,16 +13,18 @@ All terminal rendering: colors, borders, spinners, prompts, banners, live workfl
 - `src/console.ts` — all `console.log` output helpers:
   - `printHeaderBox()` — renders `BANNER_LOGO` + title/desc/version inside a bordered box.
   - `printBanner()` — animated full ASCII art banner (`BANNER_TEXT`) with binary scramble effect.
-  - `printError`, `printSuccess`, `printWarning`, `printDivider`, `printReviewSummary`, `printChatAnswer`.
+  - `printCommandHelp()`, `printHelpView()`, `printWorkflowOutput()`, `printReviewSummary()`, `printChatAnswer()`, and status/error helpers.
 - `src/prompt.ts` — `promptWithFrame` (wraps `prompts` library), `askForOptionalFeedback`.
+- `src/markdown.ts` — terminal markdown rendering built on `marked` + `marked-terminal`.
 - `src/main.ts` — live workflow rendering:
   - `LiveController` — event emitter for streaming workflow status events.
   - `createWorkflowStatusController` — ties spinner lifecycle to workflow phase events.
-  - `runLiveTask`, `runLiveChatLoop`, `runLiveCreateMrTask` — top-level task runners used by commands.
+  - `runLiveTask`, `runLiveChatLoop`, `runLiveCreateReviewTask`, `runLiveCreateMrTask` — top-level task runners used by commands.
 
 ## Key Rules
 
 - `ora` must only be imported in `spinner.ts`. Everywhere else use `createSpinner` / `OraSpinner`.
 - Colors must always come from `COLORS` / `BANNER_COLOR` in `constants.ts` — no raw ANSI strings elsewhere.
 - `BANNER_TEXT` and `BANNER_LOGO` must always be sourced from `banner.ts` — not re-loaded from disk or `bundledAssets` elsewhere.
-- Validate with `bun run typecheck` and `bun run lint` after changes.
+- Keep markdown rendering and prompt framing centralized here instead of reimplementing terminal formatting in callers.
+- Validate with `bun run typecheck` and `bun run lint`; run `bun run test` when help output or interactive terminal behavior changes.

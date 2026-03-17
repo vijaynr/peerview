@@ -2,18 +2,18 @@
 
 ## Package Role
 
-Stateless workflow implementations. Each workflow takes structured input and returns structured output; all UI interaction is injected via callbacks.
+Stateless workflow implementations. Each workflow takes structured input and returns structured output; UI and transport side effects are injected via callbacks or delegated to `@cr/core`.
 
 ## Structure
 
 - `src/index.ts` — public barrel export.
-- `src/reviewWorkflow.ts` — full review workflow for GitLab/GitHub/Review Board contexts, including multi-agent review generation support.
+- `src/reviewWorkflow.ts` — primary review workflow for GitLab and GitHub contexts, including multi-agent review generation support.
 - `src/reviewSummarizeWorkflow.ts` — summarises a review context into a short paragraph.
 - `src/reviewChatWorkflow.ts` — interactive Q&A over a review context using chat history.
 - `src/reviewSession.ts` — shared interactive review state machine used by review, summarize, and chat command flows.
 - `src/createReviewWorkflow.ts` — creates or updates a GitLab merge request draft or publishes a Review Board review request from local changes.
 - `src/createMrWorkflow.ts` — create-MR compatibility workflow exports/types.
-- `src/reviewBoardWorkflow.ts` — Review Board-specific review execution helpers.
+- `src/reviewBoardWorkflow.ts` — Review Board-specific review execution and posting helpers.
 - `src/reviewWorkflowComments.ts` / `src/reviewWorkflowInlineHelper.ts` / `src/reviewWorkflowHelper.ts` — comment formatting, inline resolution, and provider-specific review helpers.
 - `src/diffUtils.ts` — diff normalization utilities shared across workflows.
 - `src/workflowEvents.ts` — workflow event helpers for live status reporting.
@@ -28,4 +28,5 @@ Stateless workflow implementations. Each workflow takes structured input and ret
 - Workflows must be deterministic given the same inputs (side effects only through injected clients).
 - All public exports must go through `src/index.ts`.
 - Keep provider branching localized and explicit; prefer shared helpers for diff parsing, inline mapping, and comment shaping instead of duplicating workflow logic.
-- Validate with `bun run typecheck` and `bun run lint` after changes.
+- Keep outputs structured and serializable so the CLI, server, and tests can consume them without extra parsing.
+- Validate with `bun run typecheck` and `bun run lint`; run `bun run test` when workflow behavior or provider routing changes.
