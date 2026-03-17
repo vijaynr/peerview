@@ -1,5 +1,4 @@
 import { Hono, type Context } from "hono";
-import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const WEB_APP_ROOT_ROUTE = "/";
@@ -11,9 +10,12 @@ export type WebRoutesOptions = {
   loadDashboard: () => Promise<unknown>;
 };
 
-const packageDir = path.dirname(fileURLToPath(import.meta.url));
-const appEntryPath = path.join(packageDir, "app.ts");
+const appEntryUrl = new URL("./app.ts", import.meta.url);
 let webAppScriptPromise: Promise<string> | null = null;
+
+function isBundledRuntime(): boolean {
+  return import.meta.url.includes("$bunfs");
+}
 
 export function getWebAppHtml(): string {
   return `<!doctype html>
@@ -66,8 +68,13 @@ async function bundleWebAppScript(): Promise<string> {
     throw new Error("CR web bundling requires Bun runtime.");
   }
 
+  if (isBundledRuntime()) {
+    const bundledModule = await import("./generated/app-bundle.generated.js");
+    return bundledModule.default;
+  }
+
   const result = await Bun.build({
-    entrypoints: [appEntryPath],
+    entrypoints: [fileURLToPath(appEntryUrl)],
     target: "browser",
     format: "esm",
     minify: false,

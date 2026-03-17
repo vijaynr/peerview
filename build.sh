@@ -43,6 +43,7 @@ else
   exit 1
 fi
 
+bun run build:web-bundle
 bun build --compile --minify "$CLI_ENTRYPOINT" --outfile "dist/$EXE_NAME"
 
 cp USAGE.txt dist/
