@@ -346,7 +346,7 @@ export function printHelpView(): void {
       cmd: "cr create-review",
       desc: "Generate or update a merge request or review request draft.",
     },
-    { cmd: "cr serve", desc: "Start the web app and/or webhook server." },
+    { cmd: "cr serve", desc: "Start the unified web and API server." },
     { cmd: "cr help", desc: "Show this help screen." },
   ]);
 

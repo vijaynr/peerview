@@ -195,10 +195,10 @@ This creates a platform bundle `cr-cli-<platform>.tar.gz` with binary + usage/in
 Build the image:
 
 ```bash
-docker build -t cr-webhook .
+docker build -t cr-server .
 ```
 
-The image starts the webhook server by default via `cr serve --webhook`.
+The image starts the unified server by default via `cr serve --webhook`.
 
 Run with Docker Compose:
 
@@ -215,7 +215,7 @@ docker run --rm -p 3000:3000 \
   -e CR_WEBHOOK_TLS_MODE=http \
   -e GITLAB_URL=https://gitlab.example.com \
   -e GITLAB_KEY=your-token \
-  cr-webhook
+  cr-server
 ```
 
 Run over HTTPS:
@@ -228,14 +228,14 @@ docker run --rm -p 3443:3000 \
   -e GITLAB_URL=https://gitlab.example.com \
   -e GITLAB_KEY=your-token \
   -v "$PWD/certs:/certs:ro" \
-  cr-webhook
+  cr-server
 ```
 
 Supported container env vars:
 
 - `CR_WEBHOOK_TLS_MODE=http|https|auto` chooses plain HTTP, strict HTTPS, or HTTPS when certs are present.
 - `CR_WEBHOOK_PORT` sets the internal listen port. Default is `3000`.
-- `CR_WEBHOOK_CONCURRENCY`, `CR_WEBHOOK_QUEUE_LIMIT`, `CR_WEBHOOK_TIMEOUT_MS` map to the webhook server flags.
+- `CR_WEBHOOK_CONCURRENCY`, `CR_WEBHOOK_QUEUE_LIMIT`, `CR_WEBHOOK_TIMEOUT_MS` map to the server queue flags.
 - `SSL_CERT_PATH`, `SSL_KEY_PATH`, `SSL_CA_PATH` control TLS certificate loading.
 - `GITLAB_URL`, `GITLAB_KEY` for GitLab integration.
 - `GITHUB_TOKEN` for GitHub integration.

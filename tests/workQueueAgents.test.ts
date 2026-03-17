@@ -39,7 +39,7 @@ mock.module("@cr/core", () =>
   })
 );
 
-const { WorkQueue } = await import("../packages/webhook/src/workQueue.js");
+const { WorkQueue } = await import("../packages/server/src/workQueue.js");
 
 describe("WorkQueue default review agents", () => {
   it("passes configured default agents into GitLab review jobs", async () => {

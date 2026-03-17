@@ -13,7 +13,7 @@
 | `@cr/tui`          | `packages/tui/`          | Terminal rendering, prompts, spinners, banners, and help output    |
 | `@cr/workflows`    | `packages/workflows/`    | Review, summarize, chat, MR/PR draft creation, and Review Board workflows |
 | `@cr/reviewboard`  | `packages/reviewboard/`  | Review Board client/types adapter used by `@cr/core`               |
-| `@cr/webhook`      | `packages/webhook/`      | Webhook server and work queue for automated review processing      |
+| `@cr/server`       | `packages/server/`       | Unified server for webhook endpoints, web shell, and API routes    |
 
 Package-specific `AGENTS.md` files exist in `packages/cli`, `packages/core`, `packages/tui`, and `packages/workflows`. If a package has no local guide, follow this root file.
 
@@ -32,7 +32,7 @@ Package-specific `AGENTS.md` files exist in `packages/cli`, `packages/core`, `pa
 - `bun run create-review -- [flags]`: Generate or update a GitLab merge request draft or Review Board review request from local changes.
 - `bun run create-mr`: Run create MR workflow.
 - `bun run dev -- config [--edit]`: Print the saved config or open it in `$CR_EDITOR` / `$VISUAL` / `$EDITOR`.
-- `bun run dev -- serve --webhook [flags]`: Start the webhook server for GitLab and Review Board events.
+- `bun run dev -- serve --webhook [flags]`: Start the unified server with webhook endpoints enabled.
 - `bun run test`: Run the Bun test suite in `tests/`.
 - `bun run typecheck`: Run TypeScript typecheck (primary correctness guardrail).
 - `bun run lint`: Run Biome lint across `packages/` and `tests/`.

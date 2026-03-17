@@ -1,5 +1,5 @@
 /**
- * Manual test script to trigger the cr webhook server.
+ * Manual test script to trigger the CR server webhook endpoints.
  * Usage: bun run scripts/trigger-webhook.ts [port]
  */
 
@@ -48,4 +48,3 @@ try {
 } catch (error) {
   console.error("Error sending request:", error instanceof Error ? error.message : String(error));
 }
-

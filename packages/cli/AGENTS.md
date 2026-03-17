@@ -13,7 +13,7 @@ Entry point for the `cr` binary. Parses CLI arguments and delegates to the appro
 - `src/commands/reviewCommand.ts` — routes review, summarize, and chat workflows across supported providers.
 - `src/commands/createReviewCommand.ts` — generates GitLab merge request drafts or Review Board review requests.
 - `src/commands/createMrCommand.ts` — compatibility wrapper that forwards to `create-review --gl`.
-- `src/commands/serveCommand.ts` — starts the webhook server for GitLab and Review Board events.
+- `src/commands/serveCommand.ts` — starts the unified server for web and webhook routes.
 - `src/commands/helpCommand.ts` — prints usage information.
 
 ## Dependencies

@@ -1,5 +1,5 @@
 import { printCommandHelp, printError } from "@cr/tui";
-import { startWebhookServer } from "@cr/webhook";
+import { startServer } from "@cr/server";
 import { getFlag, hasFlag } from "../cliHelpers.js";
 
 export async function runServeCommand(args: string[]): Promise<void> {
@@ -13,7 +13,7 @@ export async function runServeCommand(args: string[]): Promise<void> {
         title: "OPTIONS",
         lines: [
           "--web                 Start the SPA web app for config and review request visibility",
-          "--webhook             Start one webhook server for GitLab and Review Board events",
+          "--webhook             Enable webhook endpoints for GitLab and Review Board events",
           "--port, -p <number>   Port to listen on (default: 3000)",
           "--ssl-cert <path>     Path to SSL certificate for HTTPS (optional)",
           "--ssl-key <path>      Path to SSL private key for HTTPS (optional)",
@@ -27,7 +27,7 @@ export async function runServeCommand(args: string[]): Promise<void> {
         title: "EXAMPLES",
         lines: [
           "cr serve --web",
-          "cr server --web --port 4173",
+          "cr serve --web --port 4173",
           "cr serve --web --webhook",
           "cr serve --webhook",
           "cr serve --webhook --concurrency 5 --timeout 300000",
@@ -61,7 +61,7 @@ export async function runServeCommand(args: string[]): Promise<void> {
   }
 
   try {
-    await startWebhookServer(port, {
+    await startServer(port, {
       enableWeb: isWeb,
       enableWebhook: isWebhook,
       repoPath: process.cwd(),
@@ -73,9 +73,7 @@ export async function runServeCommand(args: string[]): Promise<void> {
       webhookJobTimeoutMs: timeoutMs ? Number.parseInt(timeoutMs, 10) : undefined,
     });
   } catch (err) {
-    printError(
-      `Failed to start webhook server: ${err instanceof Error ? err.message : String(err)}`
-    );
+    printError(`Failed to start server: ${err instanceof Error ? err.message : String(err)}`);
     process.exitCode = 1;
   }
 }

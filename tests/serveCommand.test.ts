@@ -3,7 +3,7 @@ import { makeUiMock } from "./mocks.ts";
 
 const printCommandHelpMock = mock(() => {});
 const printErrorMock = mock(() => {});
-const startWebhookServerMock = mock(async () => ({}));
+const startServerMock = mock(async () => ({}));
 
 mock.module("@cr/tui", () =>
   makeUiMock({
@@ -12,8 +12,8 @@ mock.module("@cr/tui", () =>
   })
 );
 
-mock.module("@cr/webhook", () => ({
-  startWebhookServer: startWebhookServerMock,
+mock.module("@cr/server", () => ({
+  startServer: startServerMock,
 }));
 
 const { runServeCommand } = await import("../packages/cli/src/commands/serveCommand.js");
@@ -31,7 +31,7 @@ describe("serveCommand help", () => {
     const examples =
       sections.find((section) => section.title === "EXAMPLES")?.lines.join("\n") ?? "";
 
-    expect(options).toContain("one webhook server");
+    expect(options).toContain("Enable webhook endpoints");
     expect(options).toContain("--web");
     expect(examples).toContain("/gitlab");
     expect(examples).toContain("/reviewboard");
@@ -43,9 +43,9 @@ describe("serveCommand help", () => {
   it("starts the server in web mode without requiring webhooks", async () => {
     await runServeCommand(["--web", "--port", "4173"]);
 
-    expect(startWebhookServerMock).toHaveBeenCalledTimes(1);
-    expect(startWebhookServerMock.mock.calls[0]?.[0]).toBe(4173);
-    expect(startWebhookServerMock.mock.calls[0]?.[1]).toMatchObject({
+    expect(startServerMock).toHaveBeenCalledTimes(1);
+    expect(startServerMock.mock.calls[0]?.[0]).toBe(4173);
+    expect(startServerMock.mock.calls[0]?.[1]).toMatchObject({
       enableWeb: true,
       enableWebhook: false,
       repoPath: process.cwd(),

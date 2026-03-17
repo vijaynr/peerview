@@ -1,5 +1,5 @@
 {
-  "name": "@cr/webhook",
+  "name": "@cr/server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,6 +9,7 @@
   "dependencies": {
     "@cr/core": "workspace:*",
     "@cr/web": "workspace:*",
-    "@cr/workflows": "workspace:*"
+    "@cr/workflows": "workspace:*",
+    "hono": "^4.9.8"
   }
 }

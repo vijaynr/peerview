@@ -15,7 +15,7 @@
       "@cr/workflows": ["./packages/workflows/src/index.ts"],
       "@cr/tui": ["./packages/tui/src/index.ts"],
       "@cr/web": ["./packages/web/src/index.ts"],
-      "@cr/webhook": ["./packages/webhook/src/index.ts"],
+      "@cr/server": ["./packages/server/src/index.ts"],
       "@cr/reviewboard": ["./packages/reviewboard/src/index.ts"],
       "@cr/gitlab": ["./packages/gitlab/src/index.ts"],
       "@cr/github": ["./packages/github/src/index.ts"]

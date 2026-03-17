@@ -1,4 +1,4 @@
-export { startWebhookServer } from "./server.js";
+export { startServer, startServer as startWebhookServer } from "./server.js";
 
 export type ReviewJobStatus = "queued" | "processing" | "completed" | "failed";
 

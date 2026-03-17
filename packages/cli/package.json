@@ -10,6 +10,6 @@
     "@cr/core": "workspace:*",
     "@cr/workflows": "workspace:*",
     "@cr/tui": "workspace:*",
-    "@cr/webhook": "workspace:*"
+    "@cr/server": "workspace:*"
   }
 }

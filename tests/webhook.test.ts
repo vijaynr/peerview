@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, mock } from "bun:test";
 import { createHmac } from "node:crypto";
 import { createServer } from "node:net";
 import type { AddressInfo } from "node:net";
-import { startWebhookServer } from "../packages/webhook/src/server.js";
+import { startServer } from "../packages/server/src/server.js";
 import { makeCoreMock, makeWorkflowsMock } from "./mocks.ts";
 
 const REVIEW_BOARD_WEBHOOK_SECRET = "rb-webhook-secret";
@@ -86,7 +86,15 @@ const loadDashboardDataMock = mock(async () => ({
     reviewboard: {
       provider: "reviewboard",
       configured: true,
-      items: [{ provider: "reviewboard", id: 42, title: "Demo review", url: "https://reviews.example.com/r/42/", state: "pending" }],
+      items: [
+        {
+          provider: "reviewboard",
+          id: 42,
+          title: "Demo review",
+          url: "https://reviews.example.com/r/42/",
+          state: "pending",
+        },
+      ],
     },
   },
 }));
@@ -176,9 +184,9 @@ async function findAvailablePort(): Promise<number> {
   });
 }
 
-async function startTestServer(options?: Parameters<typeof startWebhookServer>[1]) {
+async function startTestServer(options?: Parameters<typeof startServer>[1]) {
   const port = await findAvailablePort();
-  const server = await startWebhookServer(port, options);
+  const server = await startServer(port, options);
   servers.push(server);
   return { server, port };
 }

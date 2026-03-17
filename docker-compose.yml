@@ -1,9 +1,9 @@
 services:
-  webhook:
+  server:
     build:
       context: .
-    image: cr-webhook
-    container_name: cr-webhook
+    image: cr-server
+    container_name: cr-server
     restart: unless-stopped
     ports:
       - "${WEBHOOK_HOST_PORT:-3000}:${CR_WEBHOOK_PORT:-3000}"
@@ -27,4 +27,3 @@ services:
       SSL_CA_PATH: ${SSL_CA_PATH:-}
     volumes:
       - ./docker/certs:/certs:ro
-

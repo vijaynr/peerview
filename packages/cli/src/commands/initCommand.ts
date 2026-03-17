@@ -93,7 +93,7 @@ export async function runInitCommand(args: string[] = []): Promise<void> {
           "--github               Configure GitHub settings",
           "--reviewboard          Configure Review Board settings",
           "--subversion, --svn    Configure Subversion settings",
-          "--webhook              Configure webhook server settings",
+          "--webhook              Configure server webhook settings",
           "--sdd                  Install GitHub Copilot SDD prompt files",
           "--rpi                  Install GitHub Copilot RPI prompt files",
           "--path, -p <path>      Target workspace path for template installs",
@@ -329,7 +329,7 @@ async function runWebhookSetup(_args: string[] = []): Promise<void> {
 
       printEmptyLine();
       printInfo(
-        "This sets up one webhook server for both providers. Use /gitlab for GitLab and /reviewboard for Review Board."
+        "This sets up one shared server for both providers. Use /gitlab for GitLab and /reviewboard for Review Board."
       );
       printWarning(
         "Review Board webhook support is summary-only today. Configure only the review_request_published event and use the same HMAC secret in Review Board and CR."

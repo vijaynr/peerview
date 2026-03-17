@@ -19,14 +19,14 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY --from=build /app/dist/cr /usr/local/bin/cr
-COPY docker/entrypoint.sh /usr/local/bin/cr-webhook-entrypoint
+COPY docker/entrypoint.sh /usr/local/bin/cr-server-entrypoint
 
-RUN sed -i 's/\r$//' /usr/local/bin/cr-webhook-entrypoint \
-  && chmod +x /usr/local/bin/cr /usr/local/bin/cr-webhook-entrypoint
+RUN sed -i 's/\r$//' /usr/local/bin/cr-server-entrypoint \
+  && chmod +x /usr/local/bin/cr /usr/local/bin/cr-server-entrypoint
 
 ENV CR_WEBHOOK_PORT=3000
 ENV CR_WEBHOOK_TLS_MODE=auto
 
 EXPOSE 3000
 
-ENTRYPOINT ["sh", "/usr/local/bin/cr-webhook-entrypoint"]
+ENTRYPOINT ["sh", "/usr/local/bin/cr-server-entrypoint"]
