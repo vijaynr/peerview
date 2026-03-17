@@ -24,20 +24,58 @@ import {
   listRepositories,
   listReviewRequests,
   loadCRConfig,
+  listBundledReviewAgentNames,
+  normalizeReviewAgentNames,
   publishReview,
   publishReviewRequest,
+  repoRootFromModule,
   remoteToGitHubRepoPath,
   remoteToProjectPath,
   saveCRConfig,
   updateReviewRequestDraft,
   uploadReviewRequestDiff,
 } from "@cr/core";
-import type { CRConfig } from "@cr/core";
+import type {
+  CRConfig,
+  MergeRequestState,
+  ReviewChatContext,
+  ReviewChatHistoryEntry,
+  ReviewWorkflowResult,
+} from "@cr/core";
+import {
+  answerReviewChatQuestion,
+  maybePostGitHubReviewComment,
+  maybePostReviewBoardComment,
+  maybePostReviewComment,
+  runReviewChatWorkflow,
+  runReviewSummarizeWorkflow,
+  runReviewWorkflow,
+} from "@cr/workflows";
 import type { ServerContext } from "../types.js";
 
 const API_PREFIX = "/api";
 
 type ProviderName = "gitlab" | "github" | "reviewboard";
+type ReviewWorkflowBody = {
+  provider?: ProviderName;
+  targetId?: number;
+  state?: MergeRequestState;
+  url?: string;
+  projectPath?: string;
+  repoPath?: string;
+  fromUser?: string;
+  agentNames?: string[];
+  inlineComments?: boolean;
+  userFeedback?: string;
+};
+
+const REVIEW_AGENT_DESCRIPTIONS: Record<string, string> = {
+  general: "Checks correctness, reliability, tests, and overall code quality.",
+  security: "Focuses on auth, secrets, permissions, validation, and exploit risks.",
+  "clean-code": "Looks for readability, maintainability, duplication, and refactor opportunities.",
+  performance: "Checks hot paths, query patterns, rendering churn, and likely runtime regressions.",
+  "test-quality": "Looks for missing coverage, weak assertions, flaky tests, and untested edge cases.",
+};
 
 function getBaseConfig(existing: Partial<CRConfig>): CRConfig {
   return {
@@ -133,12 +171,110 @@ function parseInteger(value: string | undefined, name: string): number {
   return parsed;
 }
 
+function formatReviewAgentTitle(name: string): string {
+  return name
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function getReviewAgentDescription(name: string): string {
+  return REVIEW_AGENT_DESCRIPTIONS[name] || "Runs a specialized review prompt for this agent.";
+}
+
+function ensureProvider(value: ProviderName | undefined): ProviderName {
+  if (!value) {
+    throw new Error("Missing provider.");
+  }
+  return value;
+}
+
+function ensureTargetId(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) {
+    throw new Error("Missing targetId.");
+  }
+  return value;
+}
+
+function buildReviewWarnings(body: ReviewWorkflowBody): string[] {
+  const warnings: string[] = [];
+  const selectedAgents = normalizeReviewAgentNames(body.agentNames);
+
+  if (body.provider === "reviewboard" && body.inlineComments) {
+    warnings.push("Review Board supports summary comments only; inline comments will not be posted.");
+  }
+
+  if (body.inlineComments && selectedAgents.length > 1) {
+    warnings.push(
+      "Multi-agent review does not support inline comments yet. This run will produce a summary comment only."
+    );
+  }
+
+  return warnings;
+}
+
+function createWorkflowInput(
+  context: ServerContext,
+  body: ReviewWorkflowBody,
+  workflow: "review" | "summarize" | "chat"
+) {
+  const provider = ensureProvider(body.provider);
+  const targetId = ensureTargetId(body.targetId);
+  const repoRoot = repoRootFromModule(import.meta.url);
+  const selectedAgents = normalizeReviewAgentNames(body.agentNames);
+
+  return {
+    repoPath: context.repoPath,
+    repoRoot,
+    mode: "interactive" as const,
+    workflow,
+    local: false,
+    provider,
+    agentNames: workflow === "review" ? selectedAgents : undefined,
+    agentMode: selectedAgents.length > 1 ? ("multi" as const) : ("single" as const),
+    url: body.url,
+    fromUser: body.fromUser,
+    state: body.state ?? "opened",
+    mrIid: provider === "github" ? undefined : targetId,
+    prNumber: provider === "github" ? targetId : undefined,
+    inlineComments: provider === "reviewboard" ? false : Boolean(body.inlineComments),
+    userFeedback: body.userFeedback,
+  };
+}
+
 const operations = [
   {
     group: "config",
     operations: [
       { method: "GET", path: "/api/config", description: "Read persisted CR configuration." },
       { method: "PUT", path: "/api/config", description: "Update persisted CR configuration." },
+    ],
+  },
+  {
+    group: "review",
+    operations: [
+      { method: "GET", path: "/api/review/agents", description: "List available review agents." },
+      { method: "POST", path: "/api/review/run", description: "Run AI review for a selected target." },
+      {
+        method: "POST",
+        path: "/api/review/summarize",
+        description: "Generate a summary for a selected target.",
+      },
+      {
+        method: "POST",
+        path: "/api/review/chat/context",
+        description: "Prepare review chat context for a selected target.",
+      },
+      {
+        method: "POST",
+        path: "/api/review/chat/answer",
+        description: "Answer a question about the active review context.",
+      },
+      {
+        method: "POST",
+        path: "/api/review/post",
+        description: "Post a generated review result back to the provider.",
+      },
     ],
   },
   {
@@ -292,6 +428,118 @@ export function createApiRoutes(context: ServerContext): Hono {
     return c.json(nextConfig);
   });
 
+  app.get(`${API_PREFIX}/review/agents`, async (c) => {
+    try {
+      const config = await loadCRConfig();
+      const defaultAgents = normalizeReviewAgentNames(config.defaultReviewAgents);
+      const availableAgents = Array.from(
+        new Set([...listBundledReviewAgentNames(), ...defaultAgents])
+      ).sort();
+
+      return c.json({
+        options: availableAgents.map((name) => ({
+          title: formatReviewAgentTitle(name),
+          value: name,
+          description: getReviewAgentDescription(name),
+          selected: defaultAgents.includes(name),
+        })),
+      });
+    } catch (error) {
+      return serverError(error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  app.post(`${API_PREFIX}/review/run`, async (c) => {
+    try {
+      const body = (await c.req.json()) as ReviewWorkflowBody;
+      const result = await runReviewWorkflow(createWorkflowInput(context, body, "review"));
+      return c.json({
+        result,
+        warnings: buildReviewWarnings(body),
+      });
+    } catch (error) {
+      return serverError(error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  app.post(`${API_PREFIX}/review/summarize`, async (c) => {
+    try {
+      const body = (await c.req.json()) as ReviewWorkflowBody;
+      const result = await runReviewSummarizeWorkflow(createWorkflowInput(context, body, "summarize"));
+      return c.json({ result });
+    } catch (error) {
+      return serverError(error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  app.post(`${API_PREFIX}/review/chat/context`, async (c) => {
+    try {
+      const body = (await c.req.json()) as ReviewWorkflowBody;
+      const contextResult = await runReviewChatWorkflow(createWorkflowInput(context, body, "chat"));
+      return c.json({ context: contextResult });
+    } catch (error) {
+      return serverError(error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  app.post(`${API_PREFIX}/review/chat/answer`, async (c) => {
+    try {
+      const body = (await c.req.json()) as {
+        context?: ReviewChatContext;
+        question?: string;
+        history?: ReviewChatHistoryEntry[];
+      };
+      if (!body.context || !body.question) {
+        return badRequest("Missing chat context or question.");
+      }
+
+      const answer = await answerReviewChatQuestion({
+        repoRoot: repoRootFromModule(import.meta.url),
+        context: body.context,
+        question: body.question,
+        history: Array.isArray(body.history) ? body.history : [],
+      });
+      return c.json(answer);
+    } catch (error) {
+      return serverError(error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  app.post(`${API_PREFIX}/review/post`, async (c) => {
+    try {
+      const body = (await c.req.json()) as {
+        provider?: ProviderName;
+        result?: ReviewWorkflowResult;
+      };
+
+      if (!body.result) {
+        return badRequest("Missing review result.");
+      }
+
+      const provider = ensureProvider(body.provider);
+      let posted: { summaryNoteId?: string; inlineNoteIds: string[] } | null = null;
+
+      if (provider === "github") {
+        const { token } = await requireGitHubConfig();
+        posted = await maybePostGitHubReviewComment(body.result, "interactive", true, token);
+      } else if (provider === "reviewboard") {
+        const { token } = await requireReviewBoardConfig();
+        posted = await maybePostReviewBoardComment(body.result, "interactive", true, token);
+      } else {
+        const { token } = await requireGitLabConfig();
+        posted = await maybePostReviewComment(body.result, "interactive", true, token);
+      }
+
+      if (!posted) {
+        return badRequest("Review result is missing provider metadata required for posting.");
+      }
+
+      return c.json({ posted });
+    } catch (error) {
+      return serverError(error instanceof Error ? error.message : String(error));
+    }
+  });
+
   app.get(`${API_PREFIX}/gitlab/merge-requests`, async (c) => {
     try {
       const { baseUrl, token } = await requireGitLabConfig();
@@ -402,8 +650,23 @@ export function createApiRoutes(context: ServerContext): Hono {
         context.repoPath,
         c.req.query("repoPath") ?? undefined
       );
-      const state = (c.req.query("state") as "open" | "closed" | "all") || "open";
-      return c.json(await listGitHubPullRequests(token, repoPath, state));
+      const requestedState =
+        (c.req.query("state") as "open" | "closed" | "merged" | "all") || "open";
+      const state = requestedState === "merged" ? "closed" : requestedState;
+      const pullRequests = await listGitHubPullRequests(token, repoPath, state);
+      return c.json(
+        requestedState === "merged"
+          ? pullRequests.filter(
+              (pr) => {
+                if (typeof pr !== "object" || pr === null) {
+                  return false;
+                }
+                const review = pr as { merged_at?: unknown; merged?: unknown };
+                return Boolean(review.merged_at) || Boolean(review.merged);
+              }
+            )
+          : pullRequests
+      );
     } catch (error) {
       return serverError(error instanceof Error ? error.message : String(error));
     }

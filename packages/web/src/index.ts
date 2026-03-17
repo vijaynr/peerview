@@ -21,21 +21,28 @@ export function getWebAppHtml(): string {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CR Web</title>
+    <title>CR Review Command Center</title>
     <meta name="color-scheme" content="light" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
     <style>
       :root {
-        color: #1f2923;
-        background: #f4f0e8;
-        font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+        color: #201a16;
+        background: #f4ede2;
+        font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
       }
 
       body {
         margin: 0;
         min-height: 100vh;
         background:
-          radial-gradient(circle at top left, rgba(118, 142, 123, 0.18), transparent 28rem),
-          linear-gradient(180deg, #f9f6ef 0%, #efe7d7 100%);
+          radial-gradient(circle at top left, rgba(217, 118, 18, 0.1), transparent 28rem),
+          radial-gradient(circle at top right, rgba(44, 106, 83, 0.08), transparent 26rem),
+          linear-gradient(180deg, #f7f1e7 0%, #efe5d5 100%);
       }
     </style>
   </head>

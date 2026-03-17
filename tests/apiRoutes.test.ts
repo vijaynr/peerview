@@ -47,8 +47,51 @@ const publishReviewMock = mock(async () => {});
 const getOriginRemoteUrlMock = mock(async () => "https://gitlab.example.com/group/project.git");
 const remoteToProjectPathMock = mock(() => "group/project");
 const remoteToGitHubRepoPathMock = mock(() => "org/repo");
+const listBundledReviewAgentNamesMock = mock(() => ["general", "security", "clean-code"]);
+const runReviewWorkflowMock = mock(async () => ({
+  output: "Generated review",
+  contextLabel: "MR !7 (group/project)",
+  overallSummary: "Overall review summary",
+  inlineComments: [{ filePath: "src/app.ts", line: 12, positionType: "new", comment: "Tighten this branch." }],
+  selectedAgents: ["general", "security"],
+  aggregated: true,
+  agentResults: [{ name: "general", output: "Agent output" }],
+  mrIid: 7,
+  projectPath: "group/project",
+  gitlabUrl: "https://gitlab.example.com",
+}));
+const runReviewSummarizeWorkflowMock = mock(async () => ({
+  output: "Summary output",
+  contextLabel: "MR !7 (group/project)",
+  inlineComments: [],
+  selectedAgents: [],
+  aggregated: false,
+}));
+const runReviewChatWorkflowMock = mock(async () => ({
+  contextLabel: "MR !7 (group/project)",
+  mrContent: "{}",
+  mrChanges: "[]",
+  mrCommits: "[]",
+  summary: "Chat context summary",
+}));
+const answerReviewChatQuestionMock = mock(async () => ({
+  answer: "This change looks safe.",
+  history: [{ question: "Any risk?", answer: "This change looks safe." }],
+}));
+const maybePostReviewCommentMock = mock(async () => ({
+  summaryNoteId: "note-9",
+  inlineNoteIds: ["inline-1"],
+}));
 
-mock.module("@cr/workflows", () => makeWorkflowsMock());
+mock.module("@cr/workflows", () =>
+  makeWorkflowsMock({
+    runReviewWorkflow: runReviewWorkflowMock,
+    runReviewSummarizeWorkflow: runReviewSummarizeWorkflowMock,
+    runReviewChatWorkflow: runReviewChatWorkflowMock,
+    answerReviewChatQuestion: answerReviewChatQuestionMock,
+    maybePostReviewComment: maybePostReviewCommentMock,
+  })
+);
 
 mock.module("@cr/core", () =>
   makeCoreMock({
@@ -67,6 +110,7 @@ mock.module("@cr/core", () =>
     getOriginRemoteUrl: getOriginRemoteUrlMock,
     remoteToProjectPath: remoteToProjectPathMock,
     remoteToGitHubRepoPath: remoteToGitHubRepoPathMock,
+    listBundledReviewAgentNames: listBundledReviewAgentNamesMock,
     listMergeRequests: listMergeRequestsMock,
     getMergeRequest: getMergeRequestMock,
     getMergeRequestChanges: getMergeRequestChangesMock,
@@ -127,6 +171,12 @@ afterEach(() => {
   getOriginRemoteUrlMock.mockClear();
   remoteToProjectPathMock.mockClear();
   remoteToGitHubRepoPathMock.mockClear();
+  listBundledReviewAgentNamesMock.mockClear();
+  runReviewWorkflowMock.mockClear();
+  runReviewSummarizeWorkflowMock.mockClear();
+  runReviewChatWorkflowMock.mockClear();
+  answerReviewChatQuestionMock.mockClear();
+  maybePostReviewCommentMock.mockClear();
 });
 
 async function findAvailablePort(): Promise<number> {
@@ -168,6 +218,7 @@ describe("API routes", () => {
     const json = await response.json();
     expect(json.groups.map((group: { group: string }) => group.group)).toEqual([
       "config",
+      "review",
       "gitlab",
       "github",
       "reviewboard",
@@ -262,6 +313,118 @@ describe("API routes", () => {
       url: "https://github.com/org/repo/pull/12#issuecomment-1",
     });
     expect(remoteToGitHubRepoPathMock).toHaveBeenCalled();
+  });
+
+  it("filters merged GitHub pull requests correctly", async () => {
+    listGitHubPullRequestsMock.mockImplementationOnce(async () => [
+      { number: 12, title: "PR 12", state: "closed", merged_at: "2025-01-01T00:00:00Z" },
+      { number: 13, title: "PR 13", state: "closed", merged_at: null, merged: false },
+    ]);
+    const port = await startApiServer();
+
+    const response = await fetch(`http://localhost:${port}/api/github/pull-requests?state=merged`);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject([{ number: 12 }]);
+  });
+
+  it("serves review workflow APIs", async () => {
+    const port = await startApiServer();
+
+    const [
+      agentsResponse,
+      reviewResponse,
+      summaryResponse,
+      chatContextResponse,
+      chatAnswerResponse,
+      postResponse,
+    ] = await Promise.all([
+      fetch(`http://localhost:${port}/api/review/agents`),
+      fetch(`http://localhost:${port}/api/review/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: "gitlab",
+          targetId: 7,
+          agentNames: ["general", "security"],
+          inlineComments: true,
+        }),
+      }),
+      fetch(`http://localhost:${port}/api/review/summarize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "gitlab", targetId: 7 }),
+      }),
+      fetch(`http://localhost:${port}/api/review/chat/context`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "gitlab", targetId: 7 }),
+      }),
+      fetch(`http://localhost:${port}/api/review/chat/answer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          context: {
+            contextLabel: "MR !7 (group/project)",
+            mrContent: "{}",
+            mrChanges: "[]",
+            mrCommits: "[]",
+            summary: "Chat context summary",
+          },
+          question: "Any risk?",
+          history: [],
+        }),
+      }),
+      fetch(`http://localhost:${port}/api/review/post`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: "gitlab",
+          result: {
+            output: "Generated review",
+            contextLabel: "MR !7 (group/project)",
+            inlineComments: [],
+            selectedAgents: ["general"],
+            aggregated: false,
+            mrIid: 7,
+            projectPath: "group/project",
+            gitlabUrl: "https://gitlab.example.com",
+          },
+        }),
+      }),
+    ]);
+
+    expect(agentsResponse.status).toBe(200);
+    const agentsJson = await agentsResponse.json();
+    expect(agentsJson.options).toEqual(
+      expect.arrayContaining([expect.objectContaining({ value: "general", selected: true })])
+    );
+
+    expect(reviewResponse.status).toBe(200);
+    expect(await reviewResponse.json()).toMatchObject({
+      result: { contextLabel: "MR !7 (group/project)" },
+      warnings: ["Multi-agent review does not support inline comments yet. This run will produce a summary comment only."],
+    });
+
+    expect(summaryResponse.status).toBe(200);
+    expect(await summaryResponse.json()).toMatchObject({
+      result: { output: "Summary output" },
+    });
+
+    expect(chatContextResponse.status).toBe(200);
+    expect(await chatContextResponse.json()).toMatchObject({
+      context: { summary: "Chat context summary" },
+    });
+
+    expect(chatAnswerResponse.status).toBe(200);
+    expect(await chatAnswerResponse.json()).toMatchObject({
+      answer: "This change looks safe.",
+    });
+
+    expect(postResponse.status).toBe(200);
+    expect(await postResponse.json()).toMatchObject({
+      posted: { summaryNoteId: "note-9", inlineNoteIds: ["inline-1"] },
+    });
   });
 
   it("serves Review Board APIs", async () => {

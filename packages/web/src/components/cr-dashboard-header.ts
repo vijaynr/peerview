@@ -5,6 +5,9 @@ export class CrDashboardHeader extends LitElement {
   static properties = {
     generatedAt: {},
     loading: { type: Boolean },
+    repositoryLabel: {},
+    repositoryPath: {},
+    remoteUrl: {},
   };
 
   static styles = [
@@ -15,47 +18,55 @@ export class CrDashboardHeader extends LitElement {
       }
 
       header {
-        display: flex;
-        align-items: end;
-        justify-content: space-between;
-        gap: 16px;
-        margin-bottom: 24px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 20px;
+        padding: 24px 28px;
+        border-radius: 24px;
+        background:
+          linear-gradient(135deg, rgba(255, 249, 242, 0.94), rgba(247, 240, 228, 0.9)),
+          var(--panel);
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .title {
+        display: grid;
+        gap: 10px;
       }
 
       h1 {
-        font-size: clamp(2.5rem, 7vw, 4.4rem);
-        line-height: 0.94;
-        letter-spacing: -0.06em;
-        font-weight: 700;
-        text-transform: lowercase;
+        font-size: clamp(2.1rem, 5vw, 3.9rem);
+        line-height: 0.95;
+        text-wrap: balance;
       }
 
-      button {
-        border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.72);
-        color: var(--ink);
-        border-radius: 999px;
-        padding: 10px 16px;
-        font: inherit;
-        cursor: pointer;
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
       }
 
-      button:hover {
-        background: white;
+      .actions {
+        display: grid;
+        justify-items: end;
+        gap: 10px;
       }
 
-      button:disabled {
-        cursor: progress;
-        opacity: 0.7;
+      .repo {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
-      @media (max-width: 700px) {
+      @media (max-width: 920px) {
         header {
-          display: grid;
+          grid-template-columns: 1fr;
         }
 
-        button {
-          width: fit-content;
+        .actions {
+          justify-items: start;
         }
       }
     `,
@@ -63,11 +74,17 @@ export class CrDashboardHeader extends LitElement {
 
   declare generatedAt: string;
   declare loading: boolean;
+  declare repositoryLabel: string;
+  declare repositoryPath: string;
+  declare remoteUrl: string;
 
   constructor() {
     super();
     this.generatedAt = "";
     this.loading = false;
+    this.repositoryLabel = "";
+    this.repositoryPath = "";
+    this.remoteUrl = "";
   }
 
   private handleRefresh() {
@@ -77,13 +94,23 @@ export class CrDashboardHeader extends LitElement {
   render() {
     return html`
       <header>
-        <div>
-          <p class="muted">configuration and open review requests</p>
-          <h1>cr web</h1>
+        <div class="title">
+          <div class="eyebrow">CR review command center</div>
+          <h1>Inbox, detail surfaces, and AI review in one calm workspace.</h1>
+          <div class="meta">
+            ${this.repositoryLabel
+              ? html`<div class="badge">${this.repositoryLabel}</div>`
+              : ""}
+            ${this.repositoryPath
+              ? html`<div class="badge repo">${this.repositoryPath}</div>`
+              : ""}
+            ${this.remoteUrl ? html`<div class="badge">remote detected</div>` : ""}
+          </div>
         </div>
-        <div>
-          <button type="button" ?disabled=${this.loading} @click=${this.handleRefresh}>
-            ${this.loading ? "Refreshing..." : "Refresh"}
+
+        <div class="actions">
+          <button class="button" data-tone="primary" type="button" ?disabled=${this.loading} @click=${this.handleRefresh}>
+            ${this.loading ? "Refreshing…" : "Refresh queue"}
           </button>
           ${this.generatedAt ? html`<p class="muted">Updated ${this.generatedAt}</p>` : ""}
         </div>
