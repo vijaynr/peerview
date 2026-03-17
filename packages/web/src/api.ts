@@ -1,4 +1,5 @@
 import type {
+  CRConfigRecord,
   DashboardData,
   ProviderId,
   ReviewAgentOption,
@@ -137,10 +138,7 @@ function normalizeCommit(item: unknown): ReviewCommit {
     id:
       stringValue(record, "id", "sha", "commit_id", "revision") ??
       String(numberValue(record, "id") ?? ""),
-    title:
-      stringValue(record, "title", "message") ??
-      stringValue(record, "summary") ??
-      "Commit",
+    title: stringValue(record, "title", "message") ?? stringValue(record, "summary") ?? "Commit",
     author:
       stringValue(authorRecord, "name", "username", "login") ??
       stringValue(record, "author_name", "author"),
@@ -151,15 +149,28 @@ function normalizeCommit(item: unknown): ReviewCommit {
   };
 }
 
-function normalizeDiffFile(provider: ProviderId, item: unknown, diffSetId?: number): ReviewDiffFile {
+function normalizeDiffFile(
+  provider: ProviderId,
+  item: unknown,
+  diffSetId?: number
+): ReviewDiffFile {
   const record = asRecord(item);
   const path =
-    stringValue(record, "new_path", "filename", "dest_file", "destFile", "source_file", "sourceFile") ??
-    "Unknown file";
+    stringValue(
+      record,
+      "new_path",
+      "filename",
+      "dest_file",
+      "destFile",
+      "source_file",
+      "sourceFile"
+    ) ?? "Unknown file";
 
   return {
     id: String(
-      numberValue(record, "id", "fileDiffId") ?? stringValue(record, "filename", "new_path", "dest_file") ?? path
+      numberValue(record, "id", "fileDiffId") ??
+        stringValue(record, "filename", "new_path", "dest_file") ??
+        path
     ),
     path,
     oldPath: stringValue(record, "old_path", "previous_filename", "source_file", "sourceFile"),
@@ -172,10 +183,7 @@ function normalizeDiffFile(provider: ProviderId, item: unknown, diffSetId?: numb
     deletions: numberValue(record, "deletions", "deleted"),
     patch: stringValue(record, "diff", "patch"),
     diffSetId,
-    fileDiffId:
-      provider === "reviewboard"
-        ? numberValue(record, "id", "fileDiffId")
-        : undefined,
+    fileDiffId: provider === "reviewboard" ? numberValue(record, "id", "fileDiffId") : undefined,
     raw: record,
   };
 }
@@ -187,8 +195,6 @@ function providerListState(provider: ProviderId, state: ReviewState): string {
         return "pending";
       case "merged":
         return "submitted";
-      case "closed":
-      case "all":
       default:
         return "all";
     }
@@ -202,7 +208,6 @@ function providerListState(provider: ProviderId, state: ReviewState): string {
         return "merged";
       case "closed":
         return "closed";
-      case "all":
       default:
         return "all";
     }
@@ -213,6 +218,17 @@ function providerListState(provider: ProviderId, state: ReviewState): string {
 
 export async function loadDashboard(): Promise<DashboardData> {
   return fetchJson<DashboardData>("/api/dashboard");
+}
+
+export async function loadConfig(): Promise<CRConfigRecord> {
+  return fetchJson<CRConfigRecord>("/api/config");
+}
+
+export async function saveConfig(config: CRConfigRecord): Promise<CRConfigRecord> {
+  return fetchJson<CRConfigRecord>("/api/config", {
+    method: "PUT",
+    body: JSON.stringify(config),
+  });
 }
 
 export async function loadReviewAgents(): Promise<ReviewAgentOption[]> {
@@ -244,7 +260,10 @@ export async function loadReviewTargets(
   return data.map((item) => normalizeReviewTarget(provider, item));
 }
 
-export async function loadReviewDetail(provider: ProviderId, targetId: number): Promise<ReviewTarget> {
+export async function loadReviewDetail(
+  provider: ProviderId,
+  targetId: number
+): Promise<ReviewTarget> {
   if (provider === "gitlab") {
     const data = await fetchJson(`/api/gitlab/merge-requests/${targetId}`);
     return normalizeReviewTarget(provider, data);
@@ -387,13 +406,19 @@ export async function postSummaryComment(args: {
     return;
   }
 
-  const review = await fetchJson<{ id: number }>(`/api/reviewboard/review-requests/${args.targetId}/reviews`, {
-    method: "POST",
-    body: JSON.stringify({ bodyTop: args.body }),
-  });
-  await fetchJson(`/api/reviewboard/review-requests/${args.targetId}/reviews/${review.id}/publish`, {
-    method: "POST",
-  });
+  const review = await fetchJson<{ id: number }>(
+    `/api/reviewboard/review-requests/${args.targetId}/reviews`,
+    {
+      method: "POST",
+      body: JSON.stringify({ bodyTop: args.body }),
+    }
+  );
+  await fetchJson(
+    `/api/reviewboard/review-requests/${args.targetId}/reviews/${review.id}/publish`,
+    {
+      method: "POST",
+    }
+  );
 }
 
 export async function postInlineComment(args: {

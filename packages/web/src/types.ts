@@ -1,5 +1,7 @@
 export type ProviderId = "gitlab" | "github" | "reviewboard";
 export type ReviewState = "opened" | "closed" | "merged" | "all";
+export type DashboardSection = "overview" | ProviderId | "settings";
+export type TerminalTheme = "auto" | "dark" | "light";
 
 export type DashboardRequest = {
   id: number | string;
@@ -163,6 +165,29 @@ export type ReviewDiffFile = {
   raw?: Record<string, unknown>;
 };
 
+export type CRConfigRecord = {
+  openaiApiUrl?: string;
+  openaiApiKey?: string;
+  openaiModel?: string;
+  useCustomStreaming?: boolean;
+  defaultReviewAgents?: string[];
+  gitlabUrl?: string;
+  gitlabKey?: string;
+  githubToken?: string;
+  rbUrl?: string;
+  rbToken?: string;
+  gitlabWebhookSecret?: string;
+  githubWebhookSecret?: string;
+  rbWebhookSecret?: string;
+  sslCertPath?: string;
+  sslKeyPath?: string;
+  sslCaPath?: string;
+  webhookConcurrency?: number;
+  webhookQueueLimit?: number;
+  webhookJobTimeoutMs?: number;
+  terminalTheme?: TerminalTheme;
+};
+
 export type ParsedDiffLine = {
   kind: "header" | "context" | "add" | "remove";
   text: string;
@@ -174,3 +199,8 @@ export type ParsedDiffLine = {
 
 export const providerOrder: ProviderId[] = ["gitlab", "github", "reviewboard"];
 export const reviewStates: ReviewState[] = ["opened", "closed", "merged", "all"];
+export const providerLabels: Record<ProviderId, string> = {
+  gitlab: "GitLab",
+  github: "GitHub",
+  reviewboard: "Review Board",
+};

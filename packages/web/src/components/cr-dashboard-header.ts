@@ -96,14 +96,10 @@ export class CrDashboardHeader extends LitElement {
       <header>
         <div class="title">
           <div class="eyebrow">CR review command center</div>
-          <h1>Inbox, detail surfaces, and AI review in one calm workspace.</h1>
+          <h1>Provider inboxes, focused workflows, and configuration in one calm workspace.</h1>
           <div class="meta">
-            ${this.repositoryLabel
-              ? html`<div class="badge">${this.repositoryLabel}</div>`
-              : ""}
-            ${this.repositoryPath
-              ? html`<div class="badge repo">${this.repositoryPath}</div>`
-              : ""}
+            ${this.repositoryLabel ? html`<div class="badge">${this.repositoryLabel}</div>` : ""}
+            ${this.repositoryPath ? html`<div class="badge repo">${this.repositoryPath}</div>` : ""}
             ${this.remoteUrl ? html`<div class="badge">remote detected</div>` : ""}
           </div>
         </div>
