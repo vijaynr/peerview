@@ -468,6 +468,7 @@ export class CrDashboardApp extends LitElement {
         provider: this.selectedTarget.provider,
         targetId: this.selectedTarget.id,
         repoPath: this.activeRepositoryPath || undefined,
+        url: this.activeRepositoryUrl || undefined,
         agentNames: this.selectedAgents,
         inlineComments: this.inlineCommentsEnabled,
         userFeedback: this.feedbackDraft.trim() || undefined,
@@ -495,6 +496,7 @@ export class CrDashboardApp extends LitElement {
         provider: this.selectedTarget.provider,
         targetId: this.selectedTarget.id,
         repoPath: this.activeRepositoryPath || undefined,
+        url: this.activeRepositoryUrl || undefined,
       });
       this.summaryResult = response.result;
       this.setNotice("Summary generated for the active review target.", "success");
@@ -516,6 +518,7 @@ export class CrDashboardApp extends LitElement {
         provider: this.selectedTarget.provider,
         targetId: this.selectedTarget.id,
         repoPath: this.activeRepositoryPath || undefined,
+        url: this.activeRepositoryUrl || undefined,
       });
     } catch (error) {
       this.setNotice(this.toMessage(error), "error");
@@ -884,7 +887,7 @@ export class CrDashboardApp extends LitElement {
   }
 
   private get canRunLocalWorkflows() {
-    return Boolean(this.activeRepositoryPath);
+    return Boolean(this.activeRepositoryPath || this.activeRepositoryUrl);
   }
 
   private get repositorySelectionMessage() {

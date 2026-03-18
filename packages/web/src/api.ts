@@ -384,6 +384,7 @@ export async function runReview(args: {
   inlineComments: boolean;
   userFeedback?: string;
   repoPath?: string;
+  url?: string;
 }): Promise<ReviewRunResponse> {
   return fetchJson<ReviewRunResponse>("/api/review/run", {
     method: "POST",
@@ -395,6 +396,7 @@ export async function runSummary(args: {
   provider: ProviderId;
   targetId: number;
   repoPath?: string;
+  url?: string;
 }): Promise<ReviewSummaryResponse> {
   return fetchJson<ReviewSummaryResponse>("/api/review/summarize", {
     method: "POST",
@@ -406,6 +408,7 @@ export async function loadChatContext(args: {
   provider: ProviderId;
   targetId: number;
   repoPath?: string;
+  url?: string;
 }): Promise<ReviewChatContext> {
   const data = await fetchJson<{ context: ReviewChatContext }>("/api/review/chat/context", {
     method: "POST",
