@@ -23,6 +23,9 @@ export type CRConfig = {
   webhookQueueLimit?: number;
   webhookJobTimeoutMs?: number;
   terminalTheme?: "auto" | "dark" | "light"; // Optional theme override
+  gitlabEnabled?: boolean;
+  githubEnabled?: boolean;
+  reviewboardEnabled?: boolean;
 };
 
 export const defaultConfig: Pick<CRConfig, "openaiApiUrl" | "openaiModel" | "gitlabUrl" | "rbUrl"> =

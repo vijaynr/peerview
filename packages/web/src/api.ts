@@ -524,3 +524,17 @@ export async function postInlineComment(args: {
 
   throw new Error("Inline comments are not supported for Review Board in the web workspace.");
 }
+
+export type TestConnectionResult = { ok: boolean; message: string };
+
+export async function testConnection(
+  provider: "gitlab" | "github" | "reviewboard" | "openai",
+  overrides?: { url?: string; token?: string }
+): Promise<TestConnectionResult> {
+  const res = await fetch(`/api/test/${provider}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(overrides ?? {}),
+  });
+  return res.json() as Promise<TestConnectionResult>;
+}

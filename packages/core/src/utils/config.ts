@@ -30,6 +30,9 @@ const configSchema = z.object({
   webhookQueueLimit: z.number().int().min(1).optional(),
   webhookJobTimeoutMs: z.number().int().min(1000).optional(),
   terminalTheme: z.enum(["auto", "dark", "light"]).optional(),
+  gitlabEnabled: z.boolean().optional(),
+  githubEnabled: z.boolean().optional(),
+  reviewboardEnabled: z.boolean().optional(),
 });
 
 const crSection = "cr";
@@ -203,6 +206,9 @@ export async function loadCRConfig(): Promise<Partial<CRConfig>> {
       ? Number.parseInt(section.webhook_job_timeout_ms, 10)
       : undefined,
     terminalTheme: section.terminal_theme as "auto" | "dark" | "light" | undefined,
+    gitlabEnabled: section.gitlab_enabled !== undefined ? section.gitlab_enabled.toLowerCase() !== "false" : undefined,
+    githubEnabled: section.github_enabled !== undefined ? section.github_enabled.toLowerCase() !== "false" : undefined,
+    reviewboardEnabled: section.reviewboard_enabled !== undefined ? section.reviewboard_enabled.toLowerCase() !== "false" : undefined,
   };
 
   return configSchema.partial().parse(parsed);
@@ -266,6 +272,9 @@ export async function saveCRConfig(config: CRConfig): Promise<void> {
         webhook_job_timeout_ms: String(parsed.webhookJobTimeoutMs),
       }),
       ...(parsed.terminalTheme && { terminal_theme: parsed.terminalTheme }),
+      ...(parsed.gitlabEnabled !== undefined && { gitlab_enabled: String(parsed.gitlabEnabled) }),
+      ...(parsed.githubEnabled !== undefined && { github_enabled: String(parsed.githubEnabled) }),
+      ...(parsed.reviewboardEnabled !== undefined && { reviewboard_enabled: String(parsed.reviewboardEnabled) }),
     },
   });
 

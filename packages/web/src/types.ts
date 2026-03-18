@@ -195,6 +195,9 @@ export type CRConfigRecord = {
   webhookQueueLimit?: number;
   webhookJobTimeoutMs?: number;
   terminalTheme?: TerminalTheme;
+  gitlabEnabled?: boolean;
+  githubEnabled?: boolean;
+  reviewboardEnabled?: boolean;
 };
 
 export type ParsedDiffLine = {

@@ -283,20 +283,26 @@ export async function loadDashboardData(
   );
 
   const [gitlab, github, reviewboard] = await Promise.all([
-    loadGitLabDashboardProvider({
-      remoteUrl: repository.remoteUrl,
-      gitlabUrl,
-      gitlabKey,
-    }),
-    loadGitHubDashboardProvider({
-      remoteUrl: repository.remoteUrl,
-      githubUrl,
-      githubToken,
-    }),
-    loadReviewBoardDashboardProvider({
-      rbUrl,
-      rbToken,
-    }),
+    config.gitlabEnabled === false
+      ? Promise.resolve<DashboardProviderData>({ provider: "gitlab", configured: false, items: [], error: "GitLab is disabled." })
+      : loadGitLabDashboardProvider({
+          remoteUrl: repository.remoteUrl,
+          gitlabUrl,
+          gitlabKey,
+        }),
+    config.githubEnabled === false
+      ? Promise.resolve<DashboardProviderData>({ provider: "github", configured: false, items: [], error: "GitHub is disabled." })
+      : loadGitHubDashboardProvider({
+          remoteUrl: repository.remoteUrl,
+          githubUrl,
+          githubToken,
+        }),
+    config.reviewboardEnabled === false
+      ? Promise.resolve<DashboardProviderData>({ provider: "reviewboard", configured: false, items: [], error: "Review Board is disabled." })
+      : loadReviewBoardDashboardProvider({
+          rbUrl,
+          rbToken,
+        }),
   ]);
 
   return {
