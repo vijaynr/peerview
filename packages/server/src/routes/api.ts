@@ -105,6 +105,9 @@ function getBaseConfig(existing: Partial<CRConfig>): CRConfig {
     webhookQueueLimit: existing.webhookQueueLimit,
     webhookJobTimeoutMs: existing.webhookJobTimeoutMs,
     terminalTheme: existing.terminalTheme,
+    gitlabEnabled: existing.gitlabEnabled,
+    githubEnabled: existing.githubEnabled,
+    reviewboardEnabled: existing.reviewboardEnabled,
   };
 }
 
@@ -474,6 +477,15 @@ const operations = [
       },
     ],
   },
+  {
+    group: "test",
+    operations: [
+      { method: "POST", path: "/api/test/gitlab", description: "Test GitLab connection with current or provided credentials." },
+      { method: "POST", path: "/api/test/github", description: "Test GitHub connection with current or provided credentials." },
+      { method: "POST", path: "/api/test/reviewboard", description: "Test Review Board connection with current or provided credentials." },
+      { method: "POST", path: "/api/test/openai", description: "Test OpenAI/LLM connection with current or provided credentials." },
+    ],
+  },
 ];
 
 export function createApiRoutes(context: ServerContext): Hono {
@@ -511,6 +523,110 @@ export function createApiRoutes(context: ServerContext): Hono {
     };
     await saveCRConfig(nextConfig);
     return c.json(nextConfig);
+  });
+
+  // Test connection endpoints — each accepts optional {url?, token?} overrides,
+  // falling back to saved config when not provided.
+  app.post(`${API_PREFIX}/test/gitlab`, async (c) => {
+    try {
+      const body = (await c.req.json().catch(() => ({}))) as { url?: string; token?: string };
+      const config = await loadCRConfig();
+      const baseUrl = (body.url || config.gitlabUrl || "").replace(/\/+$/, "");
+      const token = body.token || config.gitlabKey || "";
+      if (!baseUrl || !token) {
+        return c.json({ ok: false, message: "GitLab URL and token are required." });
+      }
+      const res = await fetch(`${baseUrl}/api/v4/user`, {
+        headers: { "PRIVATE-TOKEN": token },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => res.statusText);
+        return c.json({ ok: false, message: `GitLab responded with ${res.status}: ${text}` });
+      }
+      const user = (await res.json()) as { username?: string; name?: string };
+      return c.json({ ok: true, message: `Connected as ${user.username ?? user.name ?? "unknown"}` });
+    } catch (error) {
+      return c.json({ ok: false, message: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.post(`${API_PREFIX}/test/github`, async (c) => {
+    try {
+      const body = (await c.req.json().catch(() => ({}))) as { url?: string; token?: string };
+      const config = await loadCRConfig();
+      const token = body.token || config.githubToken || "";
+      if (!token) {
+        return c.json({ ok: false, message: "GitHub token is required." });
+      }
+      // Support GitHub Enterprise Server: use /api/v3 prefix when a custom URL is set
+      const configuredUrl = (body.url || config.githubUrl || "").replace(/\/+$/, "");
+      const apiBase = configuredUrl && !configuredUrl.includes("github.com")
+        ? `${configuredUrl}/api/v3`
+        : "https://api.github.com";
+      const res = await fetch(`${apiBase}/user`, {
+        headers: { Authorization: `token ${token}`, Accept: "application/vnd.github+json" },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => res.statusText);
+        return c.json({ ok: false, message: `GitHub responded with ${res.status}: ${text}` });
+      }
+      const user = (await res.json()) as { login?: string; name?: string };
+      return c.json({ ok: true, message: `Connected as ${user.login ?? user.name ?? "unknown"}` });
+    } catch (error) {
+      return c.json({ ok: false, message: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.post(`${API_PREFIX}/test/reviewboard`, async (c) => {
+    try {
+      const body = (await c.req.json().catch(() => ({}))) as { url?: string; token?: string };
+      const config = await loadCRConfig();
+      const baseUrl = (body.url || config.rbUrl || "").replace(/\/+$/, "");
+      const token = body.token || config.rbToken || "";
+      if (!baseUrl || !token) {
+        return c.json({ ok: false, message: "Review Board URL and token are required." });
+      }
+      const res = await fetch(`${baseUrl}/api/users/me/`, {
+        headers: { Authorization: `token ${token}`, Accept: "application/json" },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => res.statusText);
+        return c.json({ ok: false, message: `Review Board responded with ${res.status}: ${text}` });
+      }
+      const data = (await res.json()) as { user?: { username?: string } };
+      const username = data.user?.username ?? "unknown";
+      return c.json({ ok: true, message: `Connected as ${username}` });
+    } catch (error) {
+      return c.json({ ok: false, message: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.post(`${API_PREFIX}/test/openai`, async (c) => {
+    try {
+      const body = (await c.req.json().catch(() => ({}))) as { url?: string; token?: string };
+      const config = await loadCRConfig();
+      const apiUrl = (body.url || config.openaiApiUrl || "").replace(/\/+$/, "");
+      const apiKey = body.token || config.openaiApiKey || "";
+      if (!apiUrl || !apiKey) {
+        return c.json({ ok: false, message: "OpenAI API URL and key are required." });
+      }
+      const res = await fetch(`${apiUrl}/models`, {
+        headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => res.statusText);
+        return c.json({ ok: false, message: `LLM API responded with ${res.status}: ${text}` });
+      }
+      const data = (await res.json()) as { data?: { id: string }[] };
+      const modelCount = data.data?.length ?? 0;
+      return c.json({ ok: true, message: `Connected — ${modelCount} model${modelCount !== 1 ? "s" : ""} available` });
+    } catch (error) {
+      return c.json({ ok: false, message: error instanceof Error ? error.message : String(error) });
+    }
   });
 
   app.get(`${API_PREFIX}/review/agents`, async (c) => {

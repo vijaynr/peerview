@@ -35,6 +35,8 @@ import {
   runReview,
   runSummary,
   saveConfig,
+  testConnection,
+  type TestConnectionResult,
 } from "../api.js";
 import {
   providerLabels,
@@ -96,6 +98,9 @@ type ConfigDraft = {
   webhookQueueLimit: string;
   webhookJobTimeoutMs: string;
   terminalTheme: TerminalTheme | "";
+  gitlabEnabled: boolean;
+  githubEnabled: boolean;
+  reviewboardEnabled: boolean;
 };
 
 function isProviderSection(value: DashboardSection): value is ProviderId {
@@ -146,6 +151,7 @@ export class CrDashboardApp extends LitElement {
     loadingDiffPatch: { state: true },
     loadingConfig: { state: true },
     savingConfig: { state: true },
+    testResults: { state: true },
     runningReview: { state: true },
     runningSummary: { state: true },
     loadingChat: { state: true },
@@ -201,6 +207,7 @@ export class CrDashboardApp extends LitElement {
   declare loadingDiffPatch: boolean;
   declare loadingConfig: boolean;
   declare savingConfig: boolean;
+  declare testResults: Partial<Record<"gitlab" | "github" | "reviewboard" | "openai", TestConnectionResult & { testing?: boolean }>>;
   declare runningReview: boolean;
   declare runningSummary: boolean;
   declare loadingChat: boolean;
@@ -647,6 +654,30 @@ export class CrDashboardApp extends LitElement {
     this.handleConfigField("defaultReviewAgents", Array.from(next));
   }
 
+  private async handleTestConnection(provider: "gitlab" | "github" | "reviewboard" | "openai") {
+    this.testResults = { ...this.testResults, [provider]: { testing: true, ok: false, message: "Testing…" } };
+    try {
+      const overrides: { url?: string; token?: string } = {};
+      if (provider === "gitlab") {
+        overrides.url = this.configDraft.gitlabUrl.trim() || undefined;
+        overrides.token = this.configDraft.gitlabKey.trim() || undefined;
+      } else if (provider === "github") {
+        overrides.url = this.configDraft.githubUrl.trim() || undefined;
+        overrides.token = this.configDraft.githubToken.trim() || undefined;
+      } else if (provider === "reviewboard") {
+        overrides.url = this.configDraft.rbUrl.trim() || undefined;
+        overrides.token = this.configDraft.rbToken.trim() || undefined;
+      } else if (provider === "openai") {
+        overrides.url = this.configDraft.openaiApiUrl.trim() || undefined;
+        overrides.token = this.configDraft.openaiApiKey.trim() || undefined;
+      }
+      const result = await testConnection(provider, overrides);
+      this.testResults = { ...this.testResults, [provider]: result };
+    } catch (error) {
+      this.testResults = { ...this.testResults, [provider]: { ok: false, message: error instanceof Error ? error.message : String(error) } };
+    }
+  }
+
   private handleConfigReset() {
     this.configDraft = this.cloneDraft(this.configBaseline);
   }
@@ -688,6 +719,9 @@ export class CrDashboardApp extends LitElement {
           "Webhook job timeout"
         ),
         terminalTheme: this.configDraft.terminalTheme || undefined,
+        gitlabEnabled: this.configDraft.gitlabEnabled,
+        githubEnabled: this.configDraft.githubEnabled,
+        reviewboardEnabled: this.configDraft.reviewboardEnabled,
       };
 
       const saved = await saveConfig(payload);
@@ -767,6 +801,9 @@ export class CrDashboardApp extends LitElement {
       webhookQueueLimit: "50",
       webhookJobTimeoutMs: "600000",
       terminalTheme: "",
+      gitlabEnabled: true,
+      githubEnabled: true,
+      reviewboardEnabled: true,
     };
   }
 
@@ -827,6 +864,9 @@ export class CrDashboardApp extends LitElement {
         config.webhookJobTimeoutMs ?? dashboard?.config.webhook.jobTimeoutMs ?? 600000
       ),
       terminalTheme: config.terminalTheme ?? "",
+      gitlabEnabled: config.gitlabEnabled !== false,
+      githubEnabled: config.githubEnabled !== false,
+      reviewboardEnabled: config.reviewboardEnabled !== false,
     };
   }
 
@@ -1688,6 +1728,22 @@ export class CrDashboardApp extends LitElement {
                 </select>
               </div>
             </div>
+            <div class="flex items-center justify-between gap-2 mt-1">
+              <div></div>
+              <button
+                class="btn btn-outline btn-xs gap-1.5"
+                type="button"
+                ?disabled=${this.testResults["openai"]?.testing}
+                @click=${() => this.handleTestConnection("openai")}
+              >
+                ${this.testResults["openai"]?.testing ? html`<span class="loading loading-spinner loading-xs"></span>` : ""}
+                Test connection
+              </button>
+            </div>
+            ${this.testResults["openai"] && !this.testResults["openai"].testing ? html`
+              <div class="alert ${this.testResults["openai"].ok ? "alert-success" : "alert-error"} py-2 text-sm">
+                ${this.testResults["openai"].ok ? "✓" : "✗"} ${this.testResults["openai"].message}
+              </div>` : ""}
             <div class="form-control gap-1">
               <label class="label py-0 cursor-pointer justify-start gap-3">
                 <input
@@ -1735,17 +1791,95 @@ export class CrDashboardApp extends LitElement {
                 <span class="badge ${reviewBoardConfigured ? "badge-success" : "badge-error"} badge-sm">Review Board</span>
               </div>
             </div>
+
+            <!-- GitLab -->
             <div class="divider my-0 text-xs">GitLab</div>
+            <div class="flex items-center justify-between gap-2">
+              <label class="label cursor-pointer gap-3 py-0">
+                <input
+                  type="checkbox"
+                  class="toggle toggle-sm toggle-primary"
+                  .checked=${this.configDraft.gitlabEnabled}
+                  @change=${(e: Event) => this.handleConfigField("gitlabEnabled", (e.target as HTMLInputElement).checked)}
+                />
+                <span class="label-text font-medium">Enable GitLab</span>
+              </label>
+              <button
+                class="btn btn-outline btn-xs gap-1.5"
+                type="button"
+                ?disabled=${this.testResults["gitlab"]?.testing}
+                @click=${() => this.handleTestConnection("gitlab")}
+              >
+                ${this.testResults["gitlab"]?.testing ? html`<span class="loading loading-spinner loading-xs"></span>` : ""}
+                Test connection
+              </button>
+            </div>
+            ${this.testResults["gitlab"] && !this.testResults["gitlab"].testing ? html`
+              <div class="alert ${this.testResults["gitlab"].ok ? "alert-success" : "alert-error"} py-2 text-sm">
+                ${this.testResults["gitlab"].ok ? "✓" : "✗"} ${this.testResults["gitlab"].message}
+              </div>` : ""}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               ${this.renderConfigInput({ label: "GitLab URL", note: "Base URL for merge request and inline comment APIs.", value: this.configDraft.gitlabUrl, onInput: (v) => this.handleConfigField("gitlabUrl", v) })}
               ${this.renderConfigInput({ label: "GitLab token", note: "Private token for CR GitLab workflows.", value: this.configDraft.gitlabKey, type: "password", onInput: (v) => this.handleConfigField("gitlabKey", v) })}
             </div>
+
+            <!-- GitHub -->
             <div class="divider my-0 text-xs">GitHub</div>
+            <div class="flex items-center justify-between gap-2">
+              <label class="label cursor-pointer gap-3 py-0">
+                <input
+                  type="checkbox"
+                  class="toggle toggle-sm toggle-primary"
+                  .checked=${this.configDraft.githubEnabled}
+                  @change=${(e: Event) => this.handleConfigField("githubEnabled", (e.target as HTMLInputElement).checked)}
+                />
+                <span class="label-text font-medium">Enable GitHub</span>
+              </label>
+              <button
+                class="btn btn-outline btn-xs gap-1.5"
+                type="button"
+                ?disabled=${this.testResults["github"]?.testing}
+                @click=${() => this.handleTestConnection("github")}
+              >
+                ${this.testResults["github"]?.testing ? html`<span class="loading loading-spinner loading-xs"></span>` : ""}
+                Test connection
+              </button>
+            </div>
+            ${this.testResults["github"] && !this.testResults["github"].testing ? html`
+              <div class="alert ${this.testResults["github"].ok ? "alert-success" : "alert-error"} py-2 text-sm">
+                ${this.testResults["github"].ok ? "✓" : "✗"} ${this.testResults["github"].message}
+              </div>` : ""}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              ${this.renderConfigInput({ label: "GitHub URL", note: "Leave blank for github.com. Set to your GitHub Enterprise Server base URL (e.g. https://github.mycompany.com).", value: this.configDraft.githubUrl, onInput: (v) => this.handleConfigField("githubUrl", v) })}
+              ${this.renderConfigInput({ label: "GitHub URL", note: "Leave blank for github.com. Set to your GitHub Enterprise Server base URL.", value: this.configDraft.githubUrl, onInput: (v) => this.handleConfigField("githubUrl", v) })}
               ${this.renderConfigInput({ label: "GitHub token", note: "PAT to list pull requests and post review comments.", value: this.configDraft.githubToken, type: "password", onInput: (v) => this.handleConfigField("githubToken", v) })}
             </div>
+
+            <!-- Review Board -->
             <div class="divider my-0 text-xs">Review Board</div>
+            <div class="flex items-center justify-between gap-2">
+              <label class="label cursor-pointer gap-3 py-0">
+                <input
+                  type="checkbox"
+                  class="toggle toggle-sm toggle-primary"
+                  .checked=${this.configDraft.reviewboardEnabled}
+                  @change=${(e: Event) => this.handleConfigField("reviewboardEnabled", (e.target as HTMLInputElement).checked)}
+                />
+                <span class="label-text font-medium">Enable Review Board</span>
+              </label>
+              <button
+                class="btn btn-outline btn-xs gap-1.5"
+                type="button"
+                ?disabled=${this.testResults["reviewboard"]?.testing}
+                @click=${() => this.handleTestConnection("reviewboard")}
+              >
+                ${this.testResults["reviewboard"]?.testing ? html`<span class="loading loading-spinner loading-xs"></span>` : ""}
+                Test connection
+              </button>
+            </div>
+            ${this.testResults["reviewboard"] && !this.testResults["reviewboard"].testing ? html`
+              <div class="alert ${this.testResults["reviewboard"].ok ? "alert-success" : "alert-error"} py-2 text-sm">
+                ${this.testResults["reviewboard"].ok ? "✓" : "✗"} ${this.testResults["reviewboard"].message}
+              </div>` : ""}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               ${this.renderConfigInput({ label: "Review Board URL", note: "Base URL for review request and diff APIs.", value: this.configDraft.rbUrl, onInput: (v) => this.handleConfigField("rbUrl", v) })}
               ${this.renderConfigInput({ label: "Review Board token", note: "Token for review publishing and queue access.", value: this.configDraft.rbToken, type: "password", onInput: (v) => this.handleConfigField("rbToken", v) })}
