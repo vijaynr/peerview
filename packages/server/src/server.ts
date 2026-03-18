@@ -45,7 +45,11 @@ async function createServerApp(context: ServerContext): Promise<Hono> {
 
   if (context.enableWeb) {
     const webRoutes = await createWebRoutes({
-      loadDashboard: () => loadDashboardData({ repoPath: context.repoPath }),
+      loadDashboard: (args) =>
+        loadDashboardData({
+          repoPath: args?.repoPath ?? context.repoPath,
+          remoteUrl: args?.remoteUrl,
+        }),
     });
     app.route("/", webRoutes);
   }
