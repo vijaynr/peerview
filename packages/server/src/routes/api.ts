@@ -15,6 +15,9 @@ import {
   getGitHubPullRequest,
   getGitHubPullRequestCommits,
   getGitHubPullRequestFiles,
+  listGitHubIssueComments,
+  listGitHubRepositories,
+  listGitHubReviewComments,
   getLatestDiffSet,
   getMergeRequest,
   getMergeRequestChanges,
@@ -22,7 +25,9 @@ import {
   getOriginRemoteUrl,
   getReviewRequest,
   listGitHubPullRequests,
+  listGitLabProjects,
   listMergeRequests,
+  listMergeRequestDiscussions,
   listRepositories,
   listReviewRequests,
   loadCRConfig,
@@ -31,6 +36,8 @@ import {
   publishReview,
   publishReviewRequest,
   repoRootFromModule,
+  replyToGitHubReviewComment,
+  replyToMergeRequestDiscussion,
   remoteToGitHubRepoPath,
   remoteToProjectPath,
   saveCRConfig,
@@ -358,6 +365,7 @@ const operations = [
     group: "gitlab",
     operations: [
       { method: "GET", path: "/api/gitlab/merge-requests", description: "List merge requests." },
+      { method: "GET", path: "/api/gitlab/repositories", description: "List accessible GitLab repositories." },
       {
         method: "GET",
         path: "/api/gitlab/merge-requests/:iid",
@@ -374,9 +382,19 @@ const operations = [
         description: "Get merge request commits.",
       },
       {
+        method: "GET",
+        path: "/api/gitlab/merge-requests/:iid/discussions",
+        description: "Get merge request discussions and comments.",
+      },
+      {
         method: "POST",
         path: "/api/gitlab/merge-requests/:iid/comments",
         description: "Add a merge request comment.",
+      },
+      {
+        method: "POST",
+        path: "/api/gitlab/merge-requests/:iid/discussions/:discussionId/replies",
+        description: "Reply to a merge request discussion thread.",
       },
       {
         method: "POST",
@@ -389,6 +407,7 @@ const operations = [
     group: "github",
     operations: [
       { method: "GET", path: "/api/github/pull-requests", description: "List pull requests." },
+      { method: "GET", path: "/api/github/repositories", description: "List accessible GitHub repositories." },
       {
         method: "GET",
         path: "/api/github/pull-requests/:number",
@@ -405,9 +424,19 @@ const operations = [
         description: "Get pull request commits.",
       },
       {
+        method: "GET",
+        path: "/api/github/pull-requests/:number/discussions",
+        description: "Get pull request comments and review threads.",
+      },
+      {
         method: "POST",
         path: "/api/github/pull-requests/:number/comments",
         description: "Add a pull request comment.",
+      },
+      {
+        method: "POST",
+        path: "/api/github/pull-requests/:number/review-comments/:commentId/replies",
+        description: "Reply to an inline review comment thread.",
       },
       {
         method: "POST",
@@ -759,6 +788,15 @@ export function createApiRoutes(context: ServerContext): Hono {
     }
   });
 
+  app.get(`${API_PREFIX}/gitlab/repositories`, async (c) => {
+    try {
+      const { baseUrl, token } = await requireGitLabConfig();
+      return c.json(await listGitLabProjects(baseUrl, token));
+    } catch (error) {
+      return serverError(error instanceof Error ? error.message : String(error));
+    }
+  });
+
   app.get(`${API_PREFIX}/gitlab/merge-requests/:iid`, async (c) => {
     try {
       const { baseUrl, token } = await requireGitLabConfig();
@@ -807,6 +845,22 @@ export function createApiRoutes(context: ServerContext): Hono {
     }
   });
 
+  app.get(`${API_PREFIX}/gitlab/merge-requests/:iid/discussions`, async (c) => {
+    try {
+      const { baseUrl, token } = await requireGitLabConfig();
+      const projectPath = await resolveGitLabProjectPath({
+        defaultRepoPath: context.repoPath,
+        repoPath: c.req.query("repoPath") ?? undefined,
+        explicitProjectPath: c.req.query("projectPath") ?? undefined,
+        remoteUrl: c.req.query("remoteUrl") ?? undefined,
+      });
+      const iid = parseInteger(c.req.param("iid"), "merge request iid");
+      return c.json(await listMergeRequestDiscussions(baseUrl, token, projectPath, iid));
+    } catch (error) {
+      return serverError(error instanceof Error ? error.message : String(error));
+    }
+  });
+
   app.post(`${API_PREFIX}/gitlab/merge-requests/:iid/comments`, async (c) => {
     try {
       const body = (await c.req.json()) as {
@@ -828,6 +882,40 @@ export function createApiRoutes(context: ServerContext): Hono {
       const iid = parseInteger(c.req.param("iid"), "merge request iid");
       const url = await addMergeRequestComment(baseUrl, token, projectPath, iid, body.body);
       return c.json({ url });
+    } catch (error) {
+      return serverError(error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  app.post(`${API_PREFIX}/gitlab/merge-requests/:iid/discussions/:discussionId/replies`, async (c) => {
+    try {
+      const body = (await c.req.json()) as {
+        repoPath?: string;
+        projectPath?: string;
+        url?: string;
+        body?: string;
+      };
+      if (!body.body) {
+        return badRequest("Missing reply body.");
+      }
+      const { baseUrl, token } = await requireGitLabConfig();
+      const projectPath = await resolveGitLabProjectPath({
+        defaultRepoPath: context.repoPath,
+        repoPath: body.repoPath,
+        explicitProjectPath: body.projectPath,
+        remoteUrl: body.url,
+      });
+      const iid = parseInteger(c.req.param("iid"), "merge request iid");
+      const discussionId = c.req.param("discussionId");
+      const note = await replyToMergeRequestDiscussion(
+        baseUrl,
+        token,
+        projectPath,
+        iid,
+        discussionId,
+        body.body
+      );
+      return c.json({ note });
     } catch (error) {
       return serverError(error instanceof Error ? error.message : String(error));
     }
@@ -899,6 +987,20 @@ export function createApiRoutes(context: ServerContext): Hono {
     }
   });
 
+  app.get(`${API_PREFIX}/github/repositories`, async (c) => {
+    try {
+      const { config, token } = await requireGitHubConfig();
+      const configuredUrl = (config.githubUrl || "").replace(/\/+$/, "");
+      const apiBaseUrl =
+        configuredUrl && !configuredUrl.includes("github.com")
+          ? `${configuredUrl}/api/v3`
+          : undefined;
+      return c.json(await listGitHubRepositories(token, apiBaseUrl));
+    } catch (error) {
+      return serverError(error instanceof Error ? error.message : String(error));
+    }
+  });
+
   app.get(`${API_PREFIX}/github/pull-requests/:number`, async (c) => {
     try {
       const { token } = await requireGitHubConfig();
@@ -944,6 +1046,25 @@ export function createApiRoutes(context: ServerContext): Hono {
     }
   });
 
+  app.get(`${API_PREFIX}/github/pull-requests/:number/discussions`, async (c) => {
+    try {
+      const { token } = await requireGitHubConfig();
+      const repoPath = await resolveGitHubRepoPath({
+        defaultRepoPath: context.repoPath,
+        repoPath: c.req.query("repoPath") ?? undefined,
+        remoteUrl: c.req.query("remoteUrl") ?? undefined,
+      });
+      const prNumber = parseInteger(c.req.param("number"), "pull request number");
+      const [issueComments, reviewComments] = await Promise.all([
+        listGitHubIssueComments(token, repoPath, prNumber),
+        listGitHubReviewComments(token, repoPath, prNumber),
+      ]);
+      return c.json({ issueComments, reviewComments });
+    } catch (error) {
+      return serverError(error instanceof Error ? error.message : String(error));
+    }
+  });
+
   app.post(`${API_PREFIX}/github/pull-requests/:number/comments`, async (c) => {
     try {
       const body = (await c.req.json()) as { repoPath?: string; remoteUrl?: string; body?: string };
@@ -958,6 +1079,37 @@ export function createApiRoutes(context: ServerContext): Hono {
       });
       const prNumber = parseInteger(c.req.param("number"), "pull request number");
       const url = await addGitHubPullRequestComment(token, repoPath, prNumber, body.body);
+      return c.json({ url });
+    } catch (error) {
+      return serverError(error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  app.post(`${API_PREFIX}/github/pull-requests/:number/review-comments/:commentId/replies`, async (c) => {
+    try {
+      const body = (await c.req.json()) as {
+        repoPath?: string;
+        remoteUrl?: string;
+        body?: string;
+      };
+      if (!body.body) {
+        return badRequest("Missing reply body.");
+      }
+      const { token } = await requireGitHubConfig();
+      const repoPath = await resolveGitHubRepoPath({
+        defaultRepoPath: context.repoPath,
+        repoPath: body.repoPath,
+        remoteUrl: body.remoteUrl,
+      });
+      const prNumber = parseInteger(c.req.param("number"), "pull request number");
+      const commentId = parseInteger(c.req.param("commentId"), "review comment id");
+      const url = await replyToGitHubReviewComment(
+        token,
+        repoPath,
+        prNumber,
+        commentId,
+        body.body
+      );
       return c.json({ url });
     } catch (error) {
       return serverError(error instanceof Error ? error.message : String(error));
@@ -1013,7 +1165,16 @@ export function createApiRoutes(context: ServerContext): Hono {
       const { baseUrl, token } = await requireReviewBoardConfig();
       const status = (c.req.query("status") as "pending" | "submitted" | "all") || "pending";
       const fromUser = c.req.query("fromUser") ?? undefined;
-      return c.json(await listReviewRequests(baseUrl, token, status, fromUser));
+      const repositoryId = c.req.query("repositoryId");
+      return c.json(
+        await listReviewRequests(
+          baseUrl,
+          token,
+          status,
+          fromUser,
+          repositoryId ? parseInteger(repositoryId, "repository id") : undefined
+        )
+      );
     } catch (error) {
       return serverError(error instanceof Error ? error.message : String(error));
     }

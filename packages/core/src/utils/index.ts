@@ -23,14 +23,18 @@ export {
   findOpenGitHubPullRequestByHead,
   getGitHubDefaultBranch,
   getGitHubFileContent,
+  listGitHubIssueComments,
   getGitHubPullRequest,
   getGitHubPullRequestCommits,
   getGitHubPullRequestFiles,
+  listGitHubReviewComments,
   githubBranchExists,
   isGitHubRemote,
   listGitHubBranches,
+  listGitHubRepositories,
   listGitHubPullRequests,
   remoteToGitHubRepoPath,
+  replyToGitHubReviewComment,
   updateGitHubPullRequest,
 } from "./github.js";
 // GitLab exports
@@ -44,6 +48,7 @@ export {
   getMergeRequestChanges,
   getMergeRequestCommits,
   listBranches,
+  listGitLabProjects,
   listMergeRequests,
   remoteToProjectPath,
   updateMergeRequest,
@@ -52,6 +57,8 @@ export {
   addInlineMergeRequestComment,
   addMergeRequestComment,
   getMergeRequestInlineComments,
+  listMergeRequestDiscussions,
+  replyToMergeRequestDiscussion,
 } from "./gitlabComments.js";
 // LLM exports
 export { generateTextWithLlm } from "./llm.js";

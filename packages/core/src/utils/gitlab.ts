@@ -82,6 +82,10 @@ export function listMergeRequests(
   return client(baseUrl, token).listMergeRequests(projectPath, state);
 }
 
+export function listGitLabProjects(baseUrl: string, token: string) {
+  return client(baseUrl, token).listProjects();
+}
+
 export function findOpenMergeRequestBySourceBranch(
   baseUrl: string,
   token: string,

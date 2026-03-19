@@ -5,7 +5,7 @@
  */
 import { GitHubClient } from "@cr/github";
 
-export type { GitHubInlineComment } from "@cr/github";
+export type { GitHubInlineComment, GitHubIssueComment } from "@cr/github";
 export { isGitHubRemote, looksLikeConfiguredGitHub } from "@cr/github";
 
 function client(token: string, baseUrl?: string): GitHubClient {
@@ -38,6 +38,10 @@ export function listGitHubPullRequests(
   baseUrl?: string
 ) {
   return client(token, baseUrl).listPullRequests(repoPath, state);
+}
+
+export function listGitHubRepositories(token: string, baseUrl?: string) {
+  return client(token, baseUrl).listRepositories();
 }
 
 export function findOpenGitHubPullRequestByHead(
@@ -78,6 +82,22 @@ export function addGitHubPullRequestComment(
   return client(token).addPullRequestComment(repoPath, prNumber, body);
 }
 
+export function listGitHubIssueComments(
+  token: string,
+  repoPath: string,
+  prNumber: number
+): Promise<import("@cr/github").GitHubIssueComment[]> {
+  return client(token).listIssueComments(repoPath, prNumber);
+}
+
+export function listGitHubReviewComments(
+  token: string,
+  repoPath: string,
+  prNumber: number
+): Promise<import("@cr/github").GitHubInlineComment[]> {
+  return client(token).listReviewComments(repoPath, prNumber);
+}
+
 export function addGitHubInlinePullRequestComment(
   token: string,
   repoPath: string,
@@ -88,6 +108,16 @@ export function addGitHubInlinePullRequestComment(
   side: "LEFT" | "RIGHT"
 ): Promise<string> {
   return client(token).addInlineComment(repoPath, prNumber, body, filePath, line, undefined, side);
+}
+
+export function replyToGitHubReviewComment(
+  token: string,
+  repoPath: string,
+  prNumber: number,
+  commentId: number,
+  body: string
+): Promise<string> {
+  return client(token).replyToReviewComment(repoPath, prNumber, commentId, body);
 }
 
 export function compareGitHubBranches(

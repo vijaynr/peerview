@@ -1,4 +1,5 @@
 import { Hono, type Context } from "hono";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const WEB_APP_ROOT_ROUTE = "/";
@@ -10,33 +11,51 @@ export type WebRoutesOptions = {
   loadDashboard: (args?: { repoPath?: string; remoteUrl?: string }) => Promise<unknown>;
 };
 
-const appEntryUrl = new URL("./app.ts", import.meta.url);
-let webAppScriptPromise: Promise<string> | null = null;
+type WebAppAssets = {
+  script: string;
+  styles: string;
+};
+
+const srcDir = path.dirname(fileURLToPath(import.meta.url));
+const webPackageDir = path.resolve(srcDir, "..");
+const viteConfigFile = path.join(webPackageDir, "vite.config.ts");
+const builtScriptFile = path.join(webPackageDir, "build", "app.js");
+const builtStylesFile = path.join(webPackageDir, "build", "app.css");
+const DEV_ASSET_CACHE_MS = 250;
+
+let bundledAssetsPromise: Promise<WebAppAssets> | null = null;
+let devAssetsPromise: Promise<WebAppAssets> | null = null;
+let devAssetsBuiltAt = 0;
 
 function isBundledRuntime(): boolean {
   return import.meta.url.includes("$bunfs");
 }
 
-export function getWebAppHtml(): string {
+export function getWebAppHtml(styles: string): string {
   return `<!doctype html>
-<html lang="en" data-theme="dim">
+<html lang="en" data-theme="cr-black">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CR Review Command Center</title>
-    <meta name="color-scheme" content="dark" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#000000" />
+    <script>
+(() => {
+  try {
+    const storedTheme = window.localStorage.getItem("cr:web-theme");
+    if (storedTheme === "light") {
+      document.documentElement.setAttribute("data-theme", "cr-light");
+      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#f3f7fc");
+    }
+  } catch {}
+})();
+    </script>
     <style>
-      body { margin: 0; }
-      cr-dashboard-app { display: block; min-height: 100vh; }
-      cr-stat-card, cr-review-list, cr-request-item, cr-provider-card, cr-config-card, cr-diff-viewer, cr-dashboard-header, cr-repository-selector { display: contents; }
+${styles}
+body { margin: 0; }
+cr-dashboard-app { display: block; min-height: 100vh; }
+cr-stat-card, cr-review-list, cr-request-item, cr-provider-card, cr-config-card, cr-diff-viewer, cr-dashboard-header { display: contents; }
     </style>
   </head>
   <body>
@@ -46,52 +65,77 @@ export function getWebAppHtml(): string {
 </html>`;
 }
 
-export async function readWebAppScript(): Promise<string> {
-  if (isBundledRuntime()) {
-    if (!webAppScriptPromise) {
-      webAppScriptPromise = bundleWebAppScript();
-    }
-    return webAppScriptPromise;
-  }
-  
-  // In development, always re-bundle to pick up changes
-  return bundleWebAppScript();
+async function readGeneratedWebAppAssets(): Promise<WebAppAssets> {
+  const [scriptModule, stylesModule] = await Promise.all([
+    import("./generated/app-bundle.generated.js"),
+    import("./generated/app-styles.generated.js"),
+  ]);
+
+  return {
+    script: scriptModule.default,
+    styles: stylesModule.default,
+  };
 }
 
-async function bundleWebAppScript(): Promise<string> {
+async function buildWebAppAssets(): Promise<WebAppAssets> {
   if (typeof Bun === "undefined") {
     throw new Error("CR web bundling requires Bun runtime.");
   }
 
-  if (isBundledRuntime()) {
-    const bundledModule = await import("./generated/app-bundle.generated.js");
-    return bundledModule.default;
-  }
-
-  const result = await Bun.build({
-    entrypoints: [fileURLToPath(appEntryUrl)],
-    target: "browser",
-    format: "esm",
-    minify: false,
-    splitting: false,
+  const { build } = await import("vite");
+  await build({
+    configFile: viteConfigFile,
+    logLevel: "error",
   });
 
-  if (!result.success) {
-    const buildLog = result.logs.map((log: { message: string }) => log.message).join("\n");
-    throw new Error(`Failed to bundle CR web app.\n${buildLog}`);
+  const scriptFile = Bun.file(builtScriptFile);
+  const stylesFile = Bun.file(builtStylesFile);
+
+  if (!(await scriptFile.exists())) {
+    throw new Error(`Expected Vite output at ${builtScriptFile}.`);
   }
 
-  const output = result.outputs[0];
-  if (!output) {
-    throw new Error("Failed to bundle CR web app: no output generated.");
+  if (!(await stylesFile.exists())) {
+    throw new Error(`Expected Vite output at ${builtStylesFile}.`);
   }
 
-  return output.text();
+  return {
+    script: await scriptFile.text(),
+    styles: await stylesFile.text(),
+  };
+}
+
+async function readWebAppAssets(): Promise<WebAppAssets> {
+  if (isBundledRuntime()) {
+    if (!bundledAssetsPromise) {
+      bundledAssetsPromise = readGeneratedWebAppAssets();
+    }
+
+    return bundledAssetsPromise;
+  }
+
+  const now = Date.now();
+  if (!devAssetsPromise || now - devAssetsBuiltAt > DEV_ASSET_CACHE_MS) {
+    devAssetsBuiltAt = now;
+    devAssetsPromise = buildWebAppAssets().catch((error) => {
+      devAssetsPromise = null;
+      throw error;
+    });
+  }
+
+  return devAssetsPromise;
+}
+
+export async function readWebAppScript(): Promise<string> {
+  return (await readWebAppAssets()).script;
+}
+
+export async function readWebAppStyles(): Promise<string> {
+  return (await readWebAppAssets()).styles;
 }
 
 export async function createWebRoutes(options: WebRoutesOptions): Promise<Hono> {
   const app = new Hono();
-  const webAppHtml = getWebAppHtml();
 
   app.get(WEB_APP_DASHBOARD_ROUTE, async (c) => {
     try {
@@ -126,10 +170,12 @@ export async function createWebRoutes(options: WebRoutesOptions): Promise<Hono> 
     });
   });
 
-  const renderHtml = (c: Context) =>
-    c.html(webAppHtml, 200, {
+  const renderHtml = async (c: Context) => {
+    const styles = await readWebAppStyles();
+    return c.html(getWebAppHtml(styles), 200, {
       "Cache-Control": "no-store",
     });
+  };
 
   app.get(WEB_APP_ROOT_ROUTE, renderHtml);
   app.get(WEB_APP_ALT_ROUTE, renderHtml);

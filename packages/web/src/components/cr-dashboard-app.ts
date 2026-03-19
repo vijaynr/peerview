@@ -1,17 +1,23 @@
 import { LitElement, html } from "lit";
 import {
+  ArrowUpRight,
   Bot,
   BrainCircuit,
+  CircleHelp,
+  ChevronLeft,
+  ChevronRight,
   FileDiff,
   FolderSearch,
   GitBranch,
   LayoutDashboard,
   Menu,
   MessageSquare,
+  MoonStar,
   ScrollText,
   Search,
   Settings2,
   ShieldCheck,
+  SunMedium,
   Waypoints,
   Webhook,
   Workflow,
@@ -22,7 +28,8 @@ import {
   loadChatContext,
   loadConfig,
   loadDashboard,
-  loadLocalRepositories,
+  loadProviderRepositories,
+  loadReviewDiscussions,
   loadReviewAgents,
   loadReviewBoardFilePatch,
   loadReviewCommits,
@@ -32,6 +39,7 @@ import {
   postGeneratedReview,
   postInlineComment,
   postSummaryComment,
+  replyToReviewDiscussion,
   runReview,
   runSummary,
   saveConfig,
@@ -46,29 +54,34 @@ import {
   type DashboardData,
   type DashboardSection,
   type ProviderId,
+  type ProviderRepositoryOption,
   type RepositoryContext,
   type ReviewAgentOption,
   type ReviewChatContext,
   type ReviewChatHistoryEntry,
   type ReviewCommit,
+  type ReviewDiscussionMessage,
+  type ReviewDiscussionThread,
   type ReviewDiffFile,
   type ReviewState,
   type ReviewTarget,
   type ReviewWorkflowResult,
   type TerminalTheme,
+  type UITheme,
 } from "../types.js";
-import { RepositoryContextController } from "../controllers/repository-context-controller.js";
 import "./cr-config-card.js";
 import "./cr-dashboard-header.js";
 import "./cr-diff-viewer.js";
 import "./cr-icon.js";
-import "./cr-repository-selector.js";
+import "./cr-provider-repository-picker.js";
 import "./cr-review-list.js";
 import "./cr-stat-card.js";
+import { renderCollapsibleCard } from "./render-collapsible-card.js";
+import { renderMarkdown } from "./render-markdown.js";
 
 type NoticeTone = "success" | "warning" | "error";
-type WorkspaceTab = "overview" | "diff" | "commits";
-type AnalysisTab = "review" | "summary" | "chat" | "comment";
+type WorkspaceTab = "overview" | "diff" | "commits" | "comments";
+type AnalysisTab = "review" | "summary" | "chat";
 
 type SelectedInlineTarget = {
   filePath: string;
@@ -77,6 +90,9 @@ type SelectedInlineTarget = {
   text: string;
   key: string;
 };
+
+const sectionEyebrowClass =
+  "text-[0.72rem] font-semibold tracking-[0.08em] text-base-content/40";
 
 type ConfigDraft = {
   openaiApiUrl: string;
@@ -109,6 +125,14 @@ function isProviderSection(value: DashboardSection): value is ProviderId {
   return providerOrder.includes(value as ProviderId);
 }
 
+function createProviderRecord<T>(createValue: () => T): Record<ProviderId, T> {
+  return {
+    gitlab: createValue(),
+    github: createValue(),
+    reviewboard: createValue(),
+  };
+}
+
 export class CrDashboardApp extends LitElement {
   static properties = {
     dashboard: { state: true },
@@ -137,6 +161,11 @@ export class CrDashboardApp extends LitElement {
     chatContext: { state: true },
     chatHistory: { state: true },
     chatQuestion: { state: true },
+    discussions: { state: true },
+    loadingDiscussions: { state: true },
+    discussionsError: { state: true },
+    replyingToThreadId: { state: true },
+    discussionReplyDraft: { state: true },
     configDraft: { state: true },
     configBaseline: { state: true },
     noticeMessage: { state: true },
@@ -154,9 +183,17 @@ export class CrDashboardApp extends LitElement {
     postingGeneratedReview: { state: true },
     postingSummary: { state: true },
     postingInline: { state: true },
+    postingDiscussionReply: { state: true },
     targetsError: { state: true },
     detailError: { state: true },
     reviewWarnings: { state: true },
+    queueRailCollapsed: { state: true },
+    analysisRailCollapsed: { state: true },
+    providerRepositories: { state: true },
+    selectedRepositories: { state: true },
+    loadingProviderRepositories: { state: true },
+    providerRepositoriesError: { state: true },
+    uiTheme: { state: true },
   };
 
   override createRenderRoot() { return this; }
@@ -187,6 +224,11 @@ export class CrDashboardApp extends LitElement {
   declare chatContext: ReviewChatContext | null;
   declare chatHistory: ReviewChatHistoryEntry[];
   declare chatQuestion: string;
+  declare discussions: ReviewDiscussionThread[];
+  declare loadingDiscussions: boolean;
+  declare discussionsError: string;
+  declare replyingToThreadId: string;
+  declare discussionReplyDraft: string;
   declare configDraft: ConfigDraft;
   declare configBaseline: ConfigDraft;
   declare noticeMessage: string;
@@ -204,32 +246,20 @@ export class CrDashboardApp extends LitElement {
   declare postingGeneratedReview: boolean;
   declare postingSummary: boolean;
   declare postingInline: boolean;
+  declare postingDiscussionReply: boolean;
   declare targetsError: string;
   declare detailError: string;
   declare reviewWarnings: string[];
-  private readonly repositoryContext: RepositoryContextController;
+  declare queueRailCollapsed: boolean;
+  declare analysisRailCollapsed: boolean;
+  declare providerRepositories: Record<ProviderId, ProviderRepositoryOption[]>;
+  declare selectedRepositories: Record<ProviderId, ProviderRepositoryOption | null>;
+  declare loadingProviderRepositories: Record<ProviderId, boolean>;
+  declare providerRepositoriesError: Record<ProviderId, string>;
+  declare uiTheme: UITheme;
 
   constructor() {
     super();
-    this.repositoryContext = new RepositoryContextController(this, {
-      detectProviderFromUrl: (url) => this.detectProviderFromUrl(url),
-      loadLocalRepositories,
-      onSelectionApplied: async (args) => {
-        if (args.detectedProvider) {
-          this.provider = args.detectedProvider;
-        }
-
-        await this.loadInitialData({ preserveProvider: true });
-        this.activeSection = this.provider;
-      },
-      onSelectionCleared: async () => {
-        this.targets = [];
-        this.selectedTarget = null;
-        this.detailTarget = null;
-        this.resetWorkspaceState();
-        await this.loadInitialData({ preserveProvider: true });
-      },
-    });
     this.dashboard = null;
     this.agentOptions = [];
     this.activeSection = "overview";
@@ -256,6 +286,11 @@ export class CrDashboardApp extends LitElement {
     this.chatContext = null;
     this.chatHistory = [];
     this.chatQuestion = "";
+    this.discussions = [];
+    this.loadingDiscussions = false;
+    this.discussionsError = "";
+    this.replyingToThreadId = "";
+    this.discussionReplyDraft = "";
     this.configDraft = this.emptyConfigDraft();
     this.configBaseline = this.emptyConfigDraft();
     this.noticeMessage = "";
@@ -272,14 +307,23 @@ export class CrDashboardApp extends LitElement {
     this.postingGeneratedReview = false;
     this.postingSummary = false;
     this.postingInline = false;
+    this.postingDiscussionReply = false;
     this.targetsError = "";
     this.detailError = "";
     this.reviewWarnings = [];
+    this.queueRailCollapsed = false;
+    this.analysisRailCollapsed = false;
     this.testResults = {};
+    this.providerRepositories = createProviderRecord(() => []);
+    this.selectedRepositories = createProviderRecord(() => null);
+    this.loadingProviderRepositories = createProviderRecord(() => false);
+    this.providerRepositoriesError = createProviderRecord(() => "");
+    this.uiTheme = this.readStoredTheme();
   }
 
   connectedCallback() {
     super.connectedCallback();
+    this.syncTheme();
     void this.loadInitialData();
   }
 
@@ -290,7 +334,7 @@ export class CrDashboardApp extends LitElement {
 
     try {
       const [dashboard, agentOptions, config] = await Promise.all([
-        loadDashboard(this.activeRepositoryContext),
+        loadDashboard(),
         loadReviewAgents(),
         loadConfig(),
       ]);
@@ -309,17 +353,100 @@ export class CrDashboardApp extends LitElement {
           this.provider;
       }
 
+      await this.ensureProviderRepositoriesLoaded(this.provider);
+
       if (this.canLoadProviderQueue(this.provider)) {
         await this.loadTargets();
       } else {
         this.targets = [];
-        this.targetsError = this.repositorySelectionMessage;
+        this.targetsError = "";
       }
     } catch (error) {
       this.targetsError = this.toMessage(error);
     } finally {
       this.loadingDashboard = false;
       this.loadingConfig = false;
+    }
+  }
+
+  private readStoredTheme(): UITheme {
+    try {
+      return window.localStorage.getItem("cr:web-theme") === "light" ? "light" : "dark";
+    } catch {
+      return "dark";
+    }
+  }
+
+  private persistTheme(theme: UITheme) {
+    try {
+      window.localStorage.setItem("cr:web-theme", theme);
+    } catch {
+      // Ignore storage errors in restricted environments.
+    }
+  }
+
+  private syncTheme() {
+    const themeName = this.themeName;
+    document.documentElement.setAttribute("data-theme", themeName);
+    const themeColor = this.uiTheme === "light" ? "#f3f7fc" : "#050608";
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", themeColor);
+  }
+
+  private toggleUiTheme() {
+    this.uiTheme = this.uiTheme === "dark" ? "light" : "dark";
+    this.persistTheme(this.uiTheme);
+    this.syncTheme();
+  }
+
+  private async ensureProviderRepositoriesLoaded(
+    provider: ProviderId,
+    options: { force?: boolean } = {}
+  ) {
+    if (!this.dashboard?.providers?.[provider]?.configured) {
+      return;
+    }
+
+    if (!options.force && this.providerRepositories[provider].length > 0) {
+      return;
+    }
+
+    this.loadingProviderRepositories = {
+      ...this.loadingProviderRepositories,
+      [provider]: true,
+    };
+    this.providerRepositoriesError = {
+      ...this.providerRepositoriesError,
+      [provider]: "",
+    };
+
+    try {
+      const repositories = await loadProviderRepositories(provider);
+      this.providerRepositories = {
+        ...this.providerRepositories,
+        [provider]: repositories,
+      };
+
+      const selected = this.selectedRepositories[provider];
+      const nextSelected = selected
+        ? repositories.find((repository) => repository.id === selected.id) ?? null
+        : null;
+
+      this.selectedRepositories = {
+        ...this.selectedRepositories,
+        [provider]: nextSelected,
+      };
+    } catch (error) {
+      this.providerRepositoriesError = {
+        ...this.providerRepositoriesError,
+        [provider]: this.toMessage(error),
+      };
+    } finally {
+      this.loadingProviderRepositories = {
+        ...this.loadingProviderRepositories,
+        [provider]: false,
+      };
     }
   }
 
@@ -333,7 +460,7 @@ export class CrDashboardApp extends LitElement {
 
     const providerError = this.providerAvailabilityError;
     if (providerError) {
-      this.targetsError = providerError;
+      this.targetsError = this.selectedRepositories[this.provider] ? providerError : "";
       this.loadingTargets = false;
       return;
     }
@@ -387,6 +514,10 @@ export class CrDashboardApp extends LitElement {
       if (firstFile) {
         await this.selectFile(firstFile);
       }
+
+      if (this.workspaceTab === "comments") {
+        await this.loadDiscussions();
+      }
     } catch (error) {
       this.detailError = this.toMessage(error);
     } finally {
@@ -396,7 +527,6 @@ export class CrDashboardApp extends LitElement {
 
   private async selectFile(file: ReviewDiffFile) {
     this.selectedFileId = file.id;
-    this.selectedLine = null;
 
     if (file.patch) {
       this.selectedFilePatch = file.patch;
@@ -439,7 +569,17 @@ export class CrDashboardApp extends LitElement {
     }
 
     this.provider = section;
-    await this.loadTargets();
+    await this.ensureProviderRepositoriesLoaded(section);
+
+    if (this.canLoadProviderQueue(section)) {
+      await this.loadTargets();
+    } else {
+      this.targets = [];
+      this.targetsError = "";
+      this.selectedTarget = null;
+      this.detailTarget = null;
+      this.resetWorkspaceState();
+    }
   }
 
   private async handleStateChange(state: ReviewState) {
@@ -462,8 +602,8 @@ export class CrDashboardApp extends LitElement {
       const response = await runReview({
         provider: this.selectedTarget.provider,
         targetId: this.selectedTarget.id,
-        repoPath: this.activeRepositoryPath || undefined,
-        url: this.activeRepositoryUrl || undefined,
+        repoPath: this.activeRepositoryContext?.repoPath || undefined,
+        url: this.activeRepositoryContext?.remoteUrl || undefined,
         agentNames: this.selectedAgents,
         inlineComments: this.inlineCommentsEnabled,
         userFeedback: this.feedbackDraft.trim() || undefined,
@@ -490,8 +630,8 @@ export class CrDashboardApp extends LitElement {
       const response = await runSummary({
         provider: this.selectedTarget.provider,
         targetId: this.selectedTarget.id,
-        repoPath: this.activeRepositoryPath || undefined,
-        url: this.activeRepositoryUrl || undefined,
+        repoPath: this.activeRepositoryContext?.repoPath || undefined,
+        url: this.activeRepositoryContext?.remoteUrl || undefined,
       });
       this.summaryResult = response.result;
       this.setNotice("Summary generated for the active review target.", "success");
@@ -512,8 +652,8 @@ export class CrDashboardApp extends LitElement {
       this.chatContext = await loadChatContext({
         provider: this.selectedTarget.provider,
         targetId: this.selectedTarget.id,
-        repoPath: this.activeRepositoryPath || undefined,
-        url: this.activeRepositoryUrl || undefined,
+        repoPath: this.activeRepositoryContext?.repoPath || undefined,
+        url: this.activeRepositoryContext?.remoteUrl || undefined,
       });
     } catch (error) {
       this.setNotice(this.toMessage(error), "error");
@@ -579,6 +719,7 @@ export class CrDashboardApp extends LitElement {
         repositoryContext: this.activeRepositoryContext,
       });
       this.summaryDraft = "";
+      await this.loadDiscussions();
       this.setNotice("Summary comment posted to the provider.", "success");
     } catch (error) {
       this.setNotice(this.toMessage(error), "error");
@@ -604,11 +745,81 @@ export class CrDashboardApp extends LitElement {
         repositoryContext: this.activeRepositoryContext,
       });
       this.inlineDraft = "";
+      this.selectedLine = null;
+      await this.loadDiscussions();
       this.setNotice("Inline comment posted.", "success");
     } catch (error) {
       this.setNotice(this.toMessage(error), "error");
     } finally {
       this.postingInline = false;
+    }
+  }
+
+  private async loadDiscussions() {
+    if (!this.selectedTarget) {
+      this.discussions = [];
+      this.discussionsError = "";
+      return;
+    }
+
+    if (this.selectedTarget.provider === "reviewboard") {
+      this.discussions = [];
+      this.discussionsError = "";
+      return;
+    }
+
+    this.loadingDiscussions = true;
+    this.discussionsError = "";
+
+    try {
+      this.discussions = await loadReviewDiscussions(
+        this.selectedTarget.provider,
+        this.selectedTarget.id,
+        this.activeRepositoryContext
+      );
+    } catch (error) {
+      this.discussionsError = this.toMessage(error);
+    } finally {
+      this.loadingDiscussions = false;
+    }
+  }
+
+  private startReplyToThread(thread: ReviewDiscussionThread) {
+    if (!thread.replyable) {
+      return;
+    }
+
+    this.replyingToThreadId = thread.id;
+    this.discussionReplyDraft = "";
+  }
+
+  private cancelReplyToThread() {
+    this.replyingToThreadId = "";
+    this.discussionReplyDraft = "";
+  }
+
+  private async handlePostDiscussionReply(thread: ReviewDiscussionThread) {
+    if (!this.selectedTarget || !thread.replyable || !this.discussionReplyDraft.trim()) {
+      return;
+    }
+
+    this.postingDiscussionReply = true;
+    try {
+      await replyToReviewDiscussion({
+        provider: this.selectedTarget.provider,
+        targetId: this.selectedTarget.id,
+        threadId: thread.id,
+        replyTargetId: thread.replyTargetId,
+        body: this.discussionReplyDraft.trim(),
+        repositoryContext: this.activeRepositoryContext,
+      });
+      this.cancelReplyToThread();
+      await this.loadDiscussions();
+      this.setNotice("Reply posted to the discussion.", "success");
+    } catch (error) {
+      this.setNotice(this.toMessage(error), "error");
+    } finally {
+      this.postingDiscussionReply = false;
     }
   }
 
@@ -622,27 +833,50 @@ export class CrDashboardApp extends LitElement {
 
   private handleLineSelected(event: CustomEvent<SelectedInlineTarget>) {
     this.selectedLine = event.detail;
-    this.analysisTab = "comment";
   }
 
-  private handleRepositoryInput(event: CustomEvent<string>) {
-    this.repositoryContext.setInputValue(event.detail);
+  private async handleProviderRepositorySelected(
+    event: CustomEvent<ProviderRepositoryOption>
+  ) {
+    const repository = event.detail;
+    this.selectedRepositories = {
+      ...this.selectedRepositories,
+      [repository.provider]: repository,
+    };
+    this.searchTerm = "";
+    this.setNotice(
+      `${repository.label} is now active for ${providerLabels[repository.provider]}.`,
+      "success"
+    );
+    await this.loadTargets();
   }
 
-  private handleRepositoryEdit() {
-    this.repositoryContext.beginEditing();
+  private async refreshProviderRepositories(provider: ProviderId = this.provider) {
+    await this.ensureProviderRepositoriesLoaded(provider, { force: true });
+
+    if (this.canLoadProviderQueue(provider)) {
+      await this.loadTargets();
+      return;
+    }
+
+    this.targets = [];
+    this.selectedTarget = null;
+    this.detailTarget = null;
+    this.resetWorkspaceState();
+    this.targetsError = "";
   }
 
-  private handleRepositoryCancel() {
-    this.repositoryContext.cancelEditing();
-  }
-
-  private async handleRepositoryApply() {
-    await this.repositoryContext.applySelection();
-  }
-
-  private async handleRepositoryClear() {
-    await this.repositoryContext.clearSelection();
+  private clearSelectedRepository(provider: ProviderId = this.provider) {
+    this.selectedRepositories = {
+      ...this.selectedRepositories,
+      [provider]: null,
+    };
+    this.searchTerm = "";
+    this.targets = [];
+    this.selectedTarget = null;
+    this.detailTarget = null;
+    this.resetWorkspaceState();
+    this.targetsError = "";
   }
 
   private handleConfigField<K extends keyof ConfigDraft>(key: K, value: ConfigDraft[K]) {
@@ -760,6 +994,11 @@ export class CrDashboardApp extends LitElement {
     this.chatContext = null;
     this.chatHistory = [];
     this.chatQuestion = "";
+    this.discussions = [];
+    this.loadingDiscussions = false;
+    this.discussionsError = "";
+    this.replyingToThreadId = "";
+    this.discussionReplyDraft = "";
     this.feedbackDraft = "";
     this.reviewWarnings = [];
   }
@@ -913,60 +1152,77 @@ export class CrDashboardApp extends LitElement {
   }
 
   private get activeRepositoryContext(): RepositoryContext | undefined {
-    return this.repositoryContext.activeContext;
-  }
+    const repository = this.selectedRepository;
+    if (!repository) {
+      return undefined;
+    }
 
-  private get activeRepositoryPath() {
-    return this.repositoryContext.activeRepositoryPath;
-  }
-
-  private get activeRepositoryUrl() {
-    return this.repositoryContext.activeRepositoryUrl;
-  }
-
-  private get hasRepositorySelection() {
-    return this.repositoryContext.hasSelection;
+    return {
+      mode: "remote",
+      remoteUrl: repository.remoteUrl,
+      repositoryId: repository.repositoryId,
+    };
   }
 
   private get canRunRepositoryWorkflows() {
-    return this.repositoryContext.canRunRepositoryWorkflows;
+    if (!this.selectedRepository) {
+      return false;
+    }
+
+    if (this.provider === "reviewboard") {
+      return Boolean(this.selectedRepository.repositoryId);
+    }
+
+    return Boolean(this.selectedRepository.remoteUrl);
   }
 
-  private get repositorySelectionMessage() {
-    return this.repositoryContext.selectionMessage;
+  private get selectedRepository() {
+    return this.selectedRepositories[this.provider];
   }
 
-  private get repositoryUrlInput() {
-    return this.repositoryContext.inputValue;
+  private get providerRepositoryOptions() {
+    return this.providerRepositories[this.provider];
   }
 
-  private get repositoryFormExpanded() {
-    return this.repositoryContext.formExpanded;
+  private get providerRepositoryLoading() {
+    return this.loadingProviderRepositories[this.provider];
   }
 
-  private get localRepositories() {
-    return this.repositoryContext.localRepositories;
+  private get providerRepositoryError() {
+    return this.providerRepositoriesError[this.provider];
   }
 
-  private get loadingLocalRepositories() {
-    return this.repositoryContext.loadingLocalRepositories;
+  private get themeName() {
+    return this.uiTheme === "light" ? "cr-light" : "cr-black";
+  }
+
+  private providerRepositorySelectionMessage(provider: ProviderId) {
+    if (provider === "gitlab") {
+      return "Select a GitLab project to load merge requests.";
+    }
+
+    if (provider === "github") {
+      return "Select a GitHub repository to load pull requests.";
+    }
+
+    return "Select a Review Board repository to load review requests.";
   }
 
   private providerAvailabilityErrorFor(
     provider: ProviderId,
     dashboard: DashboardData | null = this.dashboard
   ) {
-    if ((provider === "gitlab" || provider === "github") && !this.hasRepositorySelection) {
-      return this.repositorySelectionMessage;
-    }
-
     const providerData = dashboard?.providers?.[provider];
     if (!providerData?.configured) {
       return `${providerLabels[provider]} is not configured yet.`;
     }
 
-    if (providerData.error && providerData.items.length === 0 && !providerData.repository) {
-      return providerData.error;
+    if (this.providerRepositoriesError[provider] && this.providerRepositories[provider].length === 0) {
+      return this.providerRepositoriesError[provider];
+    }
+
+    if (!this.selectedRepositories[provider]) {
+      return this.providerRepositorySelectionMessage(provider);
     }
 
     return "";
@@ -977,78 +1233,98 @@ export class CrDashboardApp extends LitElement {
   }
 
   private canLoadProviderQueue(provider: ProviderId) {
-    if (provider === "reviewboard") {
-      return true;
-    }
-
-    return this.hasRepositorySelection;
+    return Boolean(this.selectedRepositories[provider]);
   }
 
-  private detectProviderFromUrl(url: string): ProviderId | null {
-    const lower = url.toLowerCase();
-
-    // Check against configured GitHub URL (supports GitHub Enterprise)
-    const githubBaseUrl = this.configDraft.githubUrl || this.dashboard?.config?.github?.url || "";
-    if (githubBaseUrl) {
-      try {
-        const githubHost = new URL(githubBaseUrl).hostname.toLowerCase();
-        const inputHost = new URL(url).hostname.toLowerCase();
-        if (inputHost === githubHost) {
-          return "github";
-        }
-      } catch {
-        // fall through
-      }
+  private formatLabel(value: string) {
+    const normalized = value.replace(/[_-]+/g, " ").trim();
+    if (!normalized) {
+      return "";
     }
 
-    if (lower.includes("github.com")) {
-      return "github";
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  }
+
+  private workspaceTabLabel(tab: WorkspaceTab) {
+    return this.formatLabel(tab);
+  }
+
+  private analysisTabLabel(tab: AnalysisTab) {
+    return this.formatLabel(tab);
+  }
+
+  private reviewStateLabel(state: ReviewState) {
+    return this.formatLabel(state);
+  }
+
+  private discussionLocationLabel(inline?: ReviewDiscussionMessage["inline"]) {
+    if (!inline?.filePath) {
+      return "";
     }
 
-    // Check against configured GitLab URL (supports self-hosted GitLab)
-    const gitlabBaseUrl = this.configDraft.gitlabUrl || this.dashboard?.config?.gitlab?.url || "";
-    if (gitlabBaseUrl) {
-      try {
-        const gitlabHost = new URL(gitlabBaseUrl).hostname.toLowerCase();
-        const inputHost = new URL(url).hostname.toLowerCase();
-        if (inputHost === gitlabHost) {
-          return "gitlab";
-        }
-      } catch {
-        // fall through to string matching
-      }
+    const start = inline.line ? `:${inline.line}` : "";
+    const end = inline.endLine && inline.endLine !== inline.line ? `-${inline.endLine}` : "";
+
+    return `${inline.filePath}${start}${end}`;
+  }
+
+  private discussionThreadTimestamp(thread: ReviewDiscussionThread) {
+    const latestMessage = thread.messages[thread.messages.length - 1];
+    return latestMessage?.updatedAt || latestMessage?.createdAt || thread.messages[0]?.createdAt || "";
+  }
+
+  private async handleWorkspaceTabChange(tab: WorkspaceTab) {
+    this.workspaceTab = tab;
+
+    if (tab !== "diff") {
+      this.selectedLine = null;
     }
 
-    if (lower.includes("gitlab")) {
-      return "gitlab";
+    if (tab === "comments") {
+      await this.loadDiscussions();
+    }
+  }
+
+  private queueCountLabel(count: number) {
+    if (this.provider === "gitlab") {
+      return `${count} merge request${count === 1 ? "" : "s"}`;
     }
 
-    return null;
+    if (this.provider === "github") {
+      return `${count} pull request${count === 1 ? "" : "s"}`;
+    }
+
+    return `${count} review request${count === 1 ? "" : "s"}`;
+  }
+
+  private toggleQueueRail() {
+    this.queueRailCollapsed = !this.queueRailCollapsed;
+  }
+
+  private toggleAnalysisRail() {
+    this.analysisRailCollapsed = !this.analysisRailCollapsed;
   }
 
   render() {
-    const repositoryLabel =
-      this.dashboard?.repository.remoteUrl?.replace(/\.git$/, "") ??
-      this.dashboard?.repository.cwd ??
-      "";
-    const totalQueue = providerOrder.reduce(
-      (count, provider) => count + (this.dashboard?.providers?.[provider]?.items.length ?? 0),
-      0
-    );
+    const repositoryLabel = this.selectedRepositories[this.provider]?.label ?? "";
+    const configuredProviders = providerOrder.filter(
+      (provider) => this.dashboard?.providers?.[provider]?.configured
+    ).length;
     const isLoading = this.loadingDashboard || this.loadingTargets || this.loadingConfig;
 
     return html`
-      <div class="drawer lg:drawer-open min-h-screen" data-theme="dim">
+      <div class="drawer lg:drawer-open min-h-screen" data-theme=${this.themeName}>
         <input id="cr-drawer" type="checkbox" class="drawer-toggle" />
 
         <!-- Page content -->
         <div class="drawer-content flex flex-col min-h-screen bg-base-100">
           <!-- Top navbar -->
-          <nav class="navbar sticky top-0 z-30 bg-base-200/95 backdrop-blur-sm border-b border-base-300 min-h-14 px-4 gap-3 lg:hidden">
+          <nav class="navbar sticky top-0 z-30 border-b border-base-300/75 bg-base-200/92 px-3 backdrop-blur-md lg:hidden">
             <label for="cr-drawer" class="btn btn-ghost btn-sm btn-square">
               <cr-icon .icon=${Menu} .size=${18}></cr-icon>
             </label>
             <span class="font-bold tracking-tight flex-1">CR Platform</span>
+            ${this.renderThemeToggle(true)}
             ${isLoading ? html`<span class="loading loading-spinner loading-xs text-primary"></span>` : ""}
           </nav>
 
@@ -1056,7 +1332,7 @@ export class CrDashboardApp extends LitElement {
           ${this.noticeMessage ? this.renderNoticeBar() : ""}
 
           <!-- Main content -->
-          <main class="flex-1 p-4 lg:p-6 xl:p-8 max-w-screen-2xl mx-auto w-full">
+          <main class="cr-main-shell flex-1 min-h-0 w-full max-w-[min(100%,112rem)] mx-auto px-3 py-4 sm:px-4 lg:px-6 xl:px-8">
             ${
               this.activeSection === "overview"
                 ? this.renderOverviewPage()
@@ -1070,7 +1346,7 @@ export class CrDashboardApp extends LitElement {
         <!-- Sidebar drawer -->
         <div class="drawer-side z-40">
           <label for="cr-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
-          <aside class="bg-base-200 border-r border-base-300 w-72 min-h-full flex flex-col gap-4 p-4">
+          <aside class="border-r border-base-300/75 bg-base-200/96 w-72 min-h-full flex flex-col gap-4 p-4 backdrop-blur-md">
             <!-- Brand -->
             <div class="flex items-center gap-2 pt-1 pb-2 border-b border-base-300">
               <div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
@@ -1094,7 +1370,7 @@ export class CrDashboardApp extends LitElement {
             <div class="flex flex-col gap-2 text-xs text-base-content/50">
               <div class="flex items-center gap-2">
                 <cr-icon .icon=${Workflow} .size=${12}></cr-icon>
-                <span>${totalQueue} open items</span>
+                <span>${configuredProviders}/3 providers configured</span>
               </div>
               <div class="flex items-center gap-2">
                 <cr-icon .icon=${BrainCircuit} .size=${12}></cr-icon>
@@ -1112,9 +1388,14 @@ export class CrDashboardApp extends LitElement {
               }
             </div>
 
-            <!-- Repo selector at bottom -->
-            <div class="mt-auto flex flex-col gap-2 border-t border-base-300 pt-4">
-              ${this.renderRepositorySelector("sidebar")}
+            <div class="mt-auto flex flex-col gap-3 border-t border-base-300 pt-4">
+              <div class="flex items-center justify-between gap-2">
+                ${this.renderThemeToggle(false)}
+                ${this.renderInfoTooltip(
+                  "Repository selection is handled inside each provider workspace so GitLab, GitHub, and Review Board can keep separate active project context.",
+                  "Repository selection help"
+                )}
+              </div>
             </div>
           </aside>
         </div>
@@ -1134,22 +1415,33 @@ export class CrDashboardApp extends LitElement {
     `;
   }
 
-  private renderRepositorySelector(variant: "sidebar" | "inline") {
+  private renderThemeToggle(compact: boolean) {
     return html`
-      <cr-repository-selector
-        variant=${variant}
-        .activeLabel=${this.repositoryContext.activeLabel}
-        .connected=${this.hasRepositorySelection}
-        .expanded=${this.repositoryFormExpanded}
-        .loading=${this.loadingLocalRepositories}
-        .localRepositories=${this.localRepositories}
-        .value=${this.repositoryUrlInput}
-        @repository-input=${this.handleRepositoryInput}
-        @repository-apply=${this.handleRepositoryApply}
-        @repository-clear=${this.handleRepositoryClear}
-        @repository-edit=${this.handleRepositoryEdit}
-        @repository-cancel=${this.handleRepositoryCancel}
-      ></cr-repository-selector>
+      <button
+        type="button"
+        class="btn ${compact ? "btn-ghost btn-sm btn-square" : "btn-ghost btn-sm justify-start gap-2 rounded-[0.8rem] border border-base-100/10 bg-base-100/50"}"
+        @click=${() => this.toggleUiTheme()}
+        aria-label=${this.uiTheme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+        title=${this.uiTheme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+      >
+        <cr-icon .icon=${this.uiTheme === "dark" ? SunMedium : MoonStar} .size=${compact ? 16 : 15}></cr-icon>
+        ${compact ? "" : html`<span>${this.uiTheme === "dark" ? "Light theme" : "Dark theme"}</span>`}
+      </button>
+    `;
+  }
+
+  private renderInfoTooltip(message: string, label: string) {
+    return html`
+      <div class="tooltip tooltip-left" data-tip=${message}>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm btn-square rounded-[0.8rem] border border-base-100/10 bg-base-100/50 text-base-content/60 hover:text-base-content"
+          aria-label=${label}
+          title=${label}
+        >
+          <cr-icon .icon=${CircleHelp} .size=${15}></cr-icon>
+        </button>
+      </div>
     `;
   }
 
@@ -1195,6 +1487,8 @@ export class CrDashboardApp extends LitElement {
         return FileDiff;
       case "commits":
         return GitBranch;
+      case "comments":
+        return MessageSquare;
     }
   }
 
@@ -1202,13 +1496,8 @@ export class CrDashboardApp extends LitElement {
     const configuredProviders = providerOrder.filter(
       (provider) => this.dashboard?.providers?.[provider]?.configured
     ).length;
-    const queueSize = providerOrder.reduce(
-      (count, provider) => count + (this.dashboard?.providers?.[provider]?.items.length ?? 0),
-      0
-    );
     const defaultAgents =
       this.dashboard?.config?.defaultReviewAgents.length ?? this.selectedAgents.length ?? 0;
-    const hasActive = this.hasRepositorySelection;
 
     return html`
       <div class="flex flex-col gap-6">
@@ -1230,24 +1519,8 @@ export class CrDashboardApp extends LitElement {
           </div>
         </div>
 
-        <!-- Repo connect notice -->
-        ${this.renderRepositorySelector("inline")}
-
-        ${
-          hasActive ? html`
-            <div class="alert alert-success text-sm">
-              <span>
-                <strong>Repository connected.</strong> ${this.activeRepositoryUrl || this.activeRepositoryPath}
-              </span>
-              <button class="btn btn-sm btn-ghost" type="button" @click=${() => this.handleSectionChange(this.provider)}>
-                Open ${providerLabels[this.provider]} →
-              </button>
-            </div>
-          ` : ""
-        }
-
         <!-- Stats row -->
-        <div class="stats stats-horizontal shadow w-full bg-base-200 border border-base-300 overflow-x-auto">
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-4 items-stretch">
           <cr-stat-card
             .eyebrow=${"Configured providers"}
             .value=${`${configuredProviders}/3`}
@@ -1256,11 +1529,11 @@ export class CrDashboardApp extends LitElement {
             .icon=${ShieldCheck}
           ></cr-stat-card>
           <cr-stat-card
-            .eyebrow=${"Open review queue"}
-            .value=${String(queueSize)}
-            .note=${"Open items across all providers"}
-            .tone=${queueSize > 0 ? "accent" : "default"}
-            .icon=${Workflow}
+            .eyebrow=${"Workspace routing"}
+            .value=${String(providerOrder.filter((provider) => Boolean(this.selectedRepositories[provider])).length)}
+            .note=${"Providers with an active repository selection"}
+            .tone=${providerOrder.some((provider) => this.selectedRepositories[provider]) ? "accent" : "default"}
+            .icon=${FolderSearch}
           ></cr-stat-card>
           <cr-stat-card
             .eyebrow=${"Default agents"}
@@ -1288,7 +1561,7 @@ export class CrDashboardApp extends LitElement {
           ></cr-config-card>
           <cr-config-card
             .label=${"Default review agents"}
-            .value=${this.dashboard?.config?.defaultReviewAgents.join(", ") || "general"}
+            .value=${this.dashboard?.config?.defaultReviewAgents.join(", ") || "General"}
             .note=${"Review profiles enabled for new workflow runs"}
           ></cr-config-card>
           <cr-config-card
@@ -1306,33 +1579,35 @@ export class CrDashboardApp extends LitElement {
     const label = providerLabels[provider];
 
     return html`
-      <div class="card bg-base-200 border border-base-300 shadow-sm">
-        <div class="card-body gap-3">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <div class="text-xs font-bold uppercase tracking-widest text-base-content/40 mb-1 flex items-center gap-1.5">
-                <cr-icon .icon=${this.iconForSection(provider)} .size=${12}></cr-icon>
-                ${label}
-              </div>
-              <div class="text-3xl font-bold tracking-tight">${data?.items.length ?? 0}</div>
-            </div>
-            <div class="badge ${data?.configured ? "badge-success" : "badge-error"} badge-sm shrink-0">
-              ${data?.configured ? "✓ configured" : "✗ missing"}
-            </div>
-          </div>
-          <p class="text-sm text-base-content/50 line-clamp-2 min-h-[2.5rem]">
-            ${data?.repository || data?.error || "No repository context loaded for this provider."}
-          </p>
-          <div class="card-actions">
-            <button class="btn btn-ghost btn-xs gap-1.5" type="button" @click=${() => this.handleSectionChange(provider)}>
+      <div class="h-full rounded-[0.55rem] border border-base-300 bg-base-200 shadow-sm px-4 py-4 flex flex-col gap-3">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <div class="${sectionEyebrowClass} mb-1 flex items-center gap-1.5">
               <cr-icon .icon=${this.iconForSection(provider)} .size=${12}></cr-icon>
-              Open ${label}
-            </button>
-            <button class="btn btn-ghost btn-xs gap-1.5" type="button" @click=${() => this.handleSectionChange("settings")}>
-              <cr-icon .icon=${Settings2} .size=${12}></cr-icon>
-              Settings
-            </button>
+              ${label}
+            </div>
+            <div class="text-3xl font-bold tracking-tight">
+              ${this.selectedRepositories[provider] ? "Ready" : "Select"}
+            </div>
           </div>
+          <div class="badge ${data?.configured ? "badge-success" : "badge-error"} badge-sm shrink-0">
+            ${data?.configured ? "Configured" : "Missing"}
+          </div>
+        </div>
+        <p class="text-sm text-base-content/50 min-h-[2.5rem]">
+          ${this.selectedRepositories[provider]?.label ||
+          data?.error ||
+          "Repository selection happens inside the provider workspace."}
+        </p>
+        <div class="flex gap-2 flex-wrap mt-auto">
+          <button class="btn btn-ghost btn-xs gap-1.5" type="button" @click=${() => this.handleSectionChange(provider)}>
+            <cr-icon .icon=${this.iconForSection(provider)} .size=${12}></cr-icon>
+            Open ${label}
+          </button>
+          <button class="btn btn-ghost btn-xs gap-1.5" type="button" @click=${() => this.handleSectionChange("settings")}>
+            <cr-icon .icon=${Settings2} .size=${12}></cr-icon>
+            Settings
+          </button>
         </div>
       </div>
     `;
@@ -1341,8 +1616,6 @@ export class CrDashboardApp extends LitElement {
   private renderProviderPage() {
     const label = providerLabels[this.provider];
     const detail = this.detailTarget;
-    const hasRepo = this.hasRepositorySelection;
-    const providerError = this.providerAvailabilityError;
 
     if (!this.configured) {
       return html`
@@ -1364,214 +1637,665 @@ export class CrDashboardApp extends LitElement {
     }
 
     return html`
-      <div class="flex flex-col gap-4">
-        <!-- Repo connect notice (for gitlab/github without repo) -->
-        ${this.renderRepositorySelector("inline")}
+      <div class="cr-provider-page flex h-full min-h-0 flex-col gap-4">
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-4 items-stretch">
+          <cr-stat-card
+            .eyebrow=${`${label} repository`}
+            .value=${this.selectedRepository ? "Connected" : "Not selected"}
+            .note=${this.selectedRepository?.label || "Choose a repository below to load review items."}
+            .tone=${this.selectedRepository ? "success" : "default"}
+            .icon=${FolderSearch}
+          ></cr-stat-card>
+          <cr-stat-card
+            .eyebrow=${`${label} queue`}
+            .value=${String(this.targets.length)}
+            .note=${this.selectedRepository ? `${this.reviewStateLabel(this.stateFilter)} items loaded` : "Repository selection is required before the queue can load."}
+            .tone=${this.targets.length > 0 ? "accent" : "default"}
+            .icon=${Workflow}
+          ></cr-stat-card>
+          <cr-stat-card
+            .eyebrow=${"AI workspace"}
+            .value=${detail ? this.workspaceTabLabel(this.workspaceTab) : "Standby"}
+            .note=${detail ? detail.title : "Open a review request to unlock summary, chat, and review actions."}
+            .tone=${detail ? "success" : "default"}
+            .icon=${BrainCircuit}
+          ></cr-stat-card>
+        </div>
 
-        ${
-          hasRepo || this.provider === "reviewboard"
+        ${this.renderRepositorySelectionCard(label)}
+
+        <div
+          class="cr-provider-workspace"
+          style=${`--cr-left-rail:${this.queueRailCollapsed ? "4rem" : "23rem"}; --cr-right-rail:${this.analysisRailCollapsed ? "4rem" : "25rem"};`}
+        >
+          ${this.renderQueueRail(label)}
+          ${this.renderWorkspacePanel(label, detail)}
+          ${this.renderAnalysisRail(label, detail)}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderRepositorySelectionCard(label: string) {
+    return html`
+      <section class="rounded-[0.7rem] border border-base-300 bg-base-200 px-4 py-3 shadow-sm">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div class="min-w-0">
+            <div class=${sectionEyebrowClass}>${label}</div>
+            <h2 class="text-sm font-semibold">Repository</h2>
+          </div>
+
+          <div class="min-w-[18rem] flex-1">
+            <cr-provider-repository-picker
+              .provider=${this.provider}
+              .options=${this.providerRepositoryOptions}
+              .selectedId=${this.selectedRepository?.id || ""}
+              .loading=${this.providerRepositoryLoading}
+              .error=${this.providerRepositoryError}
+              @provider-repository-selected=${this.handleProviderRepositorySelected}
+              @provider-repository-refresh=${() => this.refreshProviderRepositories(this.provider)}
+            ></cr-provider-repository-picker>
+          </div>
+
+          ${this.selectedRepository
             ? html`
-              <!-- Stats row -->
-              <div class="stats stats-horizontal shadow w-full bg-base-200 border border-base-300 overflow-x-auto">
-                <cr-stat-card
-                  .eyebrow=${`${label} queue`}
-                  .value=${String(this.targets.length)}
-                  .note=${`${this.stateFilter} requests loaded`}
-                  .tone=${this.targets.length > 0 ? "accent" : "default"}
-                  .icon=${FolderSearch}
-                ></cr-stat-card>
-                <cr-stat-card
-                  .eyebrow=${"Selected agents"}
-                  .value=${String(this.selectedAgents.length || 1)}
-                  .note=${"Profiles ready for review"}
-                  .icon=${BrainCircuit}
-                ></cr-stat-card>
-                <cr-stat-card
-                  .eyebrow=${"Diff workspace"}
-                  .value=${String(detail ? this.diffFiles.length : 0)}
-                  .note=${detail ? detail.title : "Choose a request to inspect"}
-                  .tone=${detail ? "success" : "default"}
-                  .icon=${FileDiff}
-                ></cr-stat-card>
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm rounded-[0.7rem] border border-base-100/10 bg-base-100/38"
+                  @click=${() => this.clearSelectedRepository(this.provider)}
+                >
+                  Clear
+                </button>
+              `
+            : html``}
+        </div>
+      </section>
+    `;
+  }
+
+  private renderQueueRail(label: string) {
+    return html`
+      <section
+        class="cr-side-rail cr-side-rail--left rounded-[0.55rem] border border-base-300 bg-base-200 ${
+          this.queueRailCollapsed ? "cr-side-rail--collapsed" : ""
+        }"
+      >
+        <button
+          class="cr-side-rail__toggle cr-side-rail__toggle--left btn btn-ghost btn-sm"
+          type="button"
+          @click=${() => this.toggleQueueRail()}
+          aria-label=${this.queueRailCollapsed ? "Expand review queue" : "Collapse review queue"}
+          aria-expanded=${String(!this.queueRailCollapsed)}
+          title=${this.queueRailCollapsed ? "Expand review queue" : "Collapse review queue"}
+        >
+          <cr-icon
+            .icon=${this.queueRailCollapsed ? ChevronRight : ChevronLeft}
+            .size=${16}
+          ></cr-icon>
+        </button>
+
+        <div class="cr-side-rail__inner flex h-full min-h-0 flex-col gap-3 p-4">
+          <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <div class=${sectionEyebrowClass}>${label}</div>
+              <h2 class="text-base font-semibold">Review queue</h2>
+            </div>
+            <div class="badge badge-primary badge-sm">${this.reviewStateLabel(this.stateFilter)}</div>
+          </div>
+
+          <div class="tabs tabs-boxed cr-tab-strip cr-tab-strip--full">
+            ${reviewStates.map(
+              (state) => html`
+                <button
+                  type="button"
+                  class="tab tab-sm cr-tab ${this.stateFilter === state ? "tab-active" : ""}"
+                  ?disabled=${!this.selectedRepository}
+                  @click=${() => this.handleStateChange(state)}
+                >
+                  ${this.reviewStateLabel(state)}
+                </button>
+              `,
+            )}
+          </div>
+
+          <label class="input input-bordered input-sm flex items-center gap-2 w-full">
+            <cr-icon .icon=${Search} .size=${14}></cr-icon>
+            <input
+              type="search"
+              class="grow text-sm"
+              placeholder="Search ID, title, author, or branch"
+              ?disabled=${!this.selectedRepository}
+              .value=${this.searchTerm}
+              @input=${(e: Event) => {
+                this.searchTerm = (e.target as HTMLInputElement).value;
+              }}
+            />
+          </label>
+
+          <div class="flex items-center justify-between gap-2 text-xs text-base-content/50">
+            <span>${this.queueCountLabel(this.filteredTargets.length)}</span>
+            <span>${label}</span>
+          </div>
+
+          <cr-review-list
+            .provider=${this.provider}
+            .targets=${this.filteredTargets}
+            .selectedId=${this.selectedTarget?.id ?? 0}
+            .loading=${this.loadingTargets}
+            .error=${this.targetsError}
+            .configured=${this.configured}
+            .emptyTitle=${this.selectedRepository ? "" : `${providerLabels[this.provider]} repository required`}
+            .emptyDescription=${this.selectedRepository ? "" : this.providerRepositorySelectionMessage(this.provider)}
+            @review-selected=${this.handleTargetSelected}
+          ></cr-review-list>
+        </div>
+      </section>
+    `;
+  }
+
+  private renderWorkspacePanel(label: string, detail: ReviewTarget | null) {
+    return html`
+      <section class="cr-review-workspace-panel relative rounded-[0.55rem] border border-base-300 bg-base-200 p-4">
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <div class=${sectionEyebrowClass}>${label}</div>
+            <h2 class="text-base font-semibold">Review workspace</h2>
+          </div>
+          ${detail
+            ? html`<div class="badge badge-success badge-sm">Active</div>`
+            : html`<div class="badge badge-ghost badge-sm">Idle</div>`}
+        </div>
+
+        ${detail
+          ? html`
+              <div class="flex items-start justify-between gap-2 flex-wrap">
+                <div class="flex min-w-0 flex-col gap-1">
+                  <div class=${sectionEyebrowClass}>${label} review</div>
+                  <h2 class="text-base font-semibold leading-snug">
+                    <span class="font-mono text-primary text-sm">
+                      ${detail.provider === "gitlab" ? `!${detail.id}` : `#${detail.id}`}
+                    </span>
+                    ${detail.title}
+                  </h2>
+                  <div class="mt-1 flex flex-wrap gap-1.5">
+                    ${detail.state
+                      ? html`
+                          <span class="badge badge-sm badge-ghost">
+                            ${this.formatLabel(detail.state)}
+                          </span>
+                        `
+                      : ""}
+                    ${detail.author
+                      ? html`<span class="badge badge-sm badge-ghost">${detail.author}</span>`
+                      : ""}
+                    ${detail.sourceBranch
+                      ? html`
+                          <span class="badge badge-sm badge-ghost font-mono">
+                            ${detail.sourceBranch}${detail.targetBranch
+                              ? ` → ${detail.targetBranch}`
+                              : ""}
+                          </span>
+                        `
+                      : ""}
+                    ${detail.updatedAt
+                      ? html`<span class="badge badge-sm badge-ghost">${detail.updatedAt}</span>`
+                      : ""}
+                  </div>
+                </div>
+                ${detail.url
+                  ? html`
+                      <a
+                        class="btn btn-ghost btn-xs shrink-0 gap-1.5"
+                        href=${detail.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <cr-icon .icon=${ArrowUpRight} .size=${12}></cr-icon>
+                        Open
+                      </a>
+                    `
+                  : ""}
               </div>
 
-              ${providerError ? html`<div class="alert alert-warning text-sm">${providerError}</div>` : ""}
+              <div class="tabs tabs-boxed cr-tab-strip cr-tab-strip--inline self-start">
+                ${(["overview", "diff", "commits", "comments"] as WorkspaceTab[]).map(
+                  (tab) => html`
+                    <button
+                      type="button"
+                      class="tab tab-sm cr-tab ${this.workspaceTab === tab ? "tab-active" : ""} gap-1.5"
+                      @click=${async () => this.handleWorkspaceTabChange(tab)}
+                    >
+                      <cr-icon .icon=${this.iconForWorkspaceTab(tab)} .size=${13}></cr-icon>
+                      ${this.workspaceTabLabel(tab)}
+                    </button>
+                  `,
+                )}
+              </div>
 
-              <!-- 3-column workspace -->
-              <div class="grid grid-cols-1 xl:grid-cols-[320px_1fr_360px] gap-4">
-                <!-- Review queue rail -->
-                <div class="card bg-base-200 border border-base-300">
-                  <div class="card-body gap-3 p-4">
-                    <div class="flex items-center justify-between gap-2">
-                      <div>
-                        <div class="text-xs font-bold uppercase tracking-widest text-base-content/40 mb-0.5">${label}</div>
-                        <h2 class="text-base font-bold">Review queue</h2>
-                      </div>
-                      <div class="badge badge-primary badge-sm">${this.stateFilter}</div>
-                    </div>
-
-                    <!-- State filter tabs -->
-                    <div class="tabs tabs-boxed bg-base-300 p-0.5 gap-0">
-                      ${reviewStates.map(
-                        (state) => html`
-                          <button
-                            type="button"
-                            class="tab tab-sm ${this.stateFilter === state ? "tab-active" : ""}"
-                            @click=${() => this.handleStateChange(state)}
-                          >
-                            ${state}
-                          </button>
-                        `
-                      )}
-                    </div>
-
-                    <!-- Search -->
-                    <label class="input input-bordered input-sm flex items-center gap-2 w-full">
-                      <cr-icon .icon=${Search} .size=${14}></cr-icon>
-                      <input
-                        type="search"
-                        class="grow text-xs"
-                        placeholder="Search id, title, author, branch"
-                        .value=${this.searchTerm}
-                        @input=${(e: Event) => { this.searchTerm = (e.target as HTMLInputElement).value; }}
-                      />
-                    </label>
-
-                    <cr-review-list
-                      .provider=${this.provider}
-                      .targets=${this.filteredTargets}
-                      .selectedId=${this.selectedTarget?.id ?? 0}
-                      .loading=${this.loadingTargets}
-                      .error=${this.targetsError}
-                      .configured=${this.configured}
-                      @review-selected=${this.handleTargetSelected}
-                    ></cr-review-list>
-                  </div>
-                </div>
-
-                <!-- Diff / detail panel -->
-                <div class="card bg-base-200 border border-base-300 min-h-[60vh]">
-                  <div class="card-body gap-3 p-4 min-h-0">
-                    ${
-                      detail
-                        ? html`
-                          <!-- Detail header -->
-                          <div class="flex items-start justify-between gap-2 flex-wrap">
-                            <div class="flex flex-col gap-1 min-w-0">
-                              <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">${label} review</div>
-                              <h2 class="text-base font-bold leading-snug">
-                                <span class="font-mono text-primary text-sm">${detail.provider === "gitlab" ? `!${detail.id}` : `#${detail.id}`}</span>
-                                ${detail.title}
-                              </h2>
-                              <div class="flex flex-wrap gap-1.5 mt-1">
-                                ${detail.state ? html`<span class="badge badge-sm badge-ghost">${detail.state}</span>` : ""}
-                                ${detail.author ? html`<span class="badge badge-sm badge-ghost">${detail.author}</span>` : ""}
-                                ${detail.sourceBranch ? html`<span class="badge badge-sm badge-ghost font-mono">${detail.sourceBranch}${detail.targetBranch ? ` → ${detail.targetBranch}` : ""}</span>` : ""}
-                                ${detail.updatedAt ? html`<span class="badge badge-sm badge-ghost">${detail.updatedAt}</span>` : ""}
-                              </div>
-                            </div>
-                            ${detail.url ? html`<a class="btn btn-ghost btn-xs shrink-0" href=${detail.url} target="_blank" rel="noreferrer">↗ Open</a>` : ""}
-                          </div>
-
-                          <!-- Workspace tabs -->
-                          <div class="tabs tabs-boxed bg-base-300 p-0.5 gap-0 self-start">
-                            ${(["overview", "diff", "commits"] as WorkspaceTab[]).map(
-                              (tab) => html`
-                                <button
-                                  type="button"
-                                  class="tab tab-sm ${this.workspaceTab === tab ? "tab-active" : ""} gap-1.5"
-                                  @click=${() => { this.workspaceTab = tab; }}
-                                >
-                                  <cr-icon .icon=${this.iconForWorkspaceTab(tab)} .size=${13}></cr-icon>
-                                  ${tab}
-                                </button>
-                              `
-                            )}
-                          </div>
-
-                          <div class="flex-1 min-h-0 overflow-auto">
-                            ${
-                              this.detailError
-                                ? html`<div class="alert alert-error text-sm">${this.detailError}</div>`
-                                : this.loadingDetail
-                                  ? html`<div class="flex items-center gap-2 p-4 text-base-content/50 text-sm"><span class="loading loading-spinner loading-xs"></span> Loading…</div>`
-                                  : this.workspaceTab === "overview"
-                                    ? this.renderOverview(detail)
-                                    : this.workspaceTab === "commits"
-                                      ? this.renderCommits()
-                                      : html`
-                                        <cr-diff-viewer
-                                          .files=${this.diffFiles}
-                                          .selectedFileId=${this.selectedFileId}
-                                          .selectedPatch=${this.selectedFilePatch}
-                                          .selectedLineKey=${this.selectedLine?.key || ""}
-                                          .loading=${this.loadingDiffPatch}
-                                          .error=${this.detailError}
-                                          @file-selected=${this.handleFileSelected}
-                                          @line-selected=${this.handleLineSelected}
-                                        ></cr-diff-viewer>
-                                      `
-                            }
-                          </div>
-                        `
+              <div class="relative flex-1 min-h-0 overflow-hidden">
+                ${this.detailError
+                  ? html`<div class="alert alert-error text-sm">${this.detailError}</div>`
+                  : this.loadingDetail
+                    ? html`
+                        <div class="flex h-full items-center gap-2 p-4 text-base-content/50 text-sm">
+                          <span class="loading loading-spinner loading-xs"></span>
+                          Loading workspace…
+                        </div>
+                      `
+                    : this.workspaceTab === "overview"
+                      ? html`<div class="h-full overflow-auto pr-1">${this.renderOverview(detail)}</div>`
+                      : this.workspaceTab === "comments"
+                        ? this.renderCommentsWorkspace(detail)
+                      : this.workspaceTab === "commits"
+                        ? html`<div class="h-full overflow-auto pr-1">${this.renderCommits()}</div>`
                         : html`
-                          <div class="flex flex-col items-center justify-center h-full gap-3 text-base-content/40 py-12">
-                            <cr-icon .icon=${FolderSearch} .size=${32}></cr-icon>
-                            <p class="text-sm text-center max-w-xs">Select a review request from the queue to open this workspace.</p>
-                          </div>
-                        `
-                    }
-                  </div>
-                </div>
-
-                <!-- Analysis panel -->
-                <div class="card bg-base-200 border border-base-300">
-                  <div class="card-body gap-3 p-4">
-                    <div class="flex items-center justify-between gap-2">
-                      <div>
-                        <div class="text-xs font-bold uppercase tracking-widest text-base-content/40 mb-0.5">AI</div>
-                        <h2 class="text-base font-bold">Action rail</h2>
-                      </div>
-                      ${detail ? html`<div class="badge badge-primary badge-sm">${label}</div>` : ""}
-                    </div>
-
-                    <!-- Analysis tabs -->
-                    <div class="tabs tabs-boxed bg-base-300 p-0.5 gap-0">
-                      ${(["review", "summary", "chat", "comment"] as AnalysisTab[]).map(
-                        (tab) => html`
-                          <button
-                            type="button"
-                            class="tab tab-sm ${this.analysisTab === tab ? "tab-active" : ""}"
-                            @click=${async () => {
-                              this.analysisTab = tab;
-                              if (tab === "chat") await this.ensureChatContext();
-                            }}
-                          >
-                            ${tab}
-                          </button>
-                        `
-                      )}
-                    </div>
-
-                    <div class="flex-1 min-h-0 overflow-auto flex flex-col gap-3">
-                      ${
-                        !detail
-                          ? html`<div class="alert text-sm">Open a request before running AI workflows.</div>`
-                          : this.analysisTab === "review"
-                            ? this.renderReviewPanel()
-                            : this.analysisTab === "summary"
-                              ? this.renderSummaryPanel()
-                              : this.analysisTab === "chat"
-                                ? this.renderChatPanel()
-                                : this.renderCommentPanel()
-                      }
-                    </div>
-                  </div>
-                </div>
+                            <div class="relative h-full min-h-0">
+                              <cr-diff-viewer
+                                .files=${this.diffFiles}
+                                .selectedFileId=${this.selectedFileId}
+                                .selectedLineKey=${this.selectedLine?.key || ""}
+                                .loading=${this.loadingDiffPatch}
+                                .error=${this.detailError}
+                                @file-selected=${this.handleFileSelected}
+                                @line-selected=${this.handleLineSelected}
+                              ></cr-diff-viewer>
+                              ${this.renderInlineCommentPopover()}
+                            </div>
+                          `}
               </div>
             `
-            : ""
-        }
+          : this.selectedRepository
+            ? html`
+              <div class="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-base-content/40">
+                <cr-icon .icon=${FolderSearch} .size=${32}></cr-icon>
+                <p class="max-w-xs text-center text-sm">
+                  Select a review request from the queue to open this workspace.
+                </p>
+              </div>
+            `
+            : html`
+              <div class="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-base-content/40">
+                <cr-icon .icon=${FolderSearch} .size=${32}></cr-icon>
+                <p class="max-w-sm text-center text-sm">
+                  Choose a ${label} repository in the selector above to load review items and open the workspace.
+                </p>
+              </div>
+            `}
+      </section>
+    `;
+  }
+
+  private renderAnalysisRail(label: string, detail: ReviewTarget | null) {
+    return html`
+      <section
+        class="cr-side-rail cr-side-rail--right rounded-[0.55rem] border border-base-300 bg-base-200 ${
+          this.analysisRailCollapsed ? "cr-side-rail--collapsed" : ""
+        }"
+      >
+        <button
+          class="cr-side-rail__toggle cr-side-rail__toggle--right btn btn-ghost btn-sm"
+          type="button"
+          @click=${() => this.toggleAnalysisRail()}
+          aria-label=${this.analysisRailCollapsed ? "Expand AI action rail" : "Collapse AI action rail"}
+          aria-expanded=${String(!this.analysisRailCollapsed)}
+          title=${this.analysisRailCollapsed ? "Expand AI action rail" : "Collapse AI action rail"}
+        >
+          <cr-icon
+            .icon=${this.analysisRailCollapsed ? ChevronLeft : ChevronRight}
+            .size=${16}
+          ></cr-icon>
+        </button>
+
+        <div class="cr-side-rail__inner flex h-full min-h-0 flex-col gap-3 p-4">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <div class=${sectionEyebrowClass}>AI workspace</div>
+              <h2 class="text-base font-semibold">Action rail</h2>
+            </div>
+            ${detail
+              ? html`<div class="badge badge-primary badge-sm">${label}</div>`
+              : html`<div class="badge badge-ghost badge-sm">Standby</div>`}
+          </div>
+
+          <div class="tabs tabs-boxed cr-tab-strip cr-tab-strip--full">
+            ${(["review", "summary", "chat"] as AnalysisTab[]).map(
+              (tab) => html`
+                <button
+                  type="button"
+                  class="tab tab-sm cr-tab ${this.analysisTab === tab ? "tab-active" : ""}"
+                  @click=${async () => {
+                    this.analysisTab = tab;
+                    if (tab === "chat") {
+                      await this.ensureChatContext();
+                    }
+                  }}
+                >
+                  ${this.analysisTabLabel(tab)}
+                </button>
+              `,
+            )}
+          </div>
+
+          <div class="cr-side-rail__content flex-1 min-h-0 flex flex-col gap-3">
+            ${!detail
+              ? html`
+                  <div class="alert text-sm">
+                    ${this.selectedRepository
+                      ? "Open a review request before running AI workflows."
+                      : `Select a ${label} repository first, then choose a review request.`}
+                  </div>
+                `
+              : this.analysisTab === "review"
+                ? this.renderReviewPanel()
+                : this.analysisTab === "summary"
+                  ? this.renderSummaryPanel()
+                  : this.renderChatPanel()}
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  private renderCommentsWorkspace(detail: ReviewTarget) {
+    if (detail.provider === "reviewboard") {
+      return html`
+        <div class="flex h-full items-center justify-center">
+          <div class="max-w-md rounded-[0.75rem] border border-base-100/10 bg-base-300 px-5 py-5 text-center text-sm text-base-content/60">
+            Review Board discussion threading is not exposed in this workspace yet. Use the provider page to open the review request and post summary feedback.
+          </div>
+        </div>
+      `;
+    }
+
+    return html`
+      <div class="cr-comments-workspace flex h-full min-h-0 flex-col gap-3">
+        <section class="cr-discussion-composer">
+          <div class="cr-discussion-composer__header">
+            <div>
+              <h3 class="text-base font-semibold text-base-content/92">Comments</h3>
+            </div>
+            <div class="cr-discussion-composer__assist">
+              ${this.reviewResult
+                ? html`
+                    <button
+                      class="btn btn-ghost btn-xs gap-1.5 rounded-[0.7rem]"
+                      type="button"
+                      @click=${() => {
+                        this.summaryDraft = this.reviewResult?.overallSummary || this.reviewResult?.output || "";
+                      }}
+                    >
+                      <cr-icon .icon=${Bot} .size=${12}></cr-icon>
+                      Insert AI review
+                    </button>
+                  `
+                : ""}
+              ${this.summaryResult
+                ? html`
+                    <button
+                      class="btn btn-ghost btn-xs gap-1.5 rounded-[0.7rem]"
+                      type="button"
+                      @click=${() => {
+                        this.summaryDraft = this.summaryResult?.output || "";
+                      }}
+                    >
+                      <cr-icon .icon=${ScrollText} .size=${12}></cr-icon>
+                      Insert summary
+                    </button>
+                  `
+                : ""}
+            </div>
+          </div>
+
+          <form
+            class="cr-discussion-composer__form"
+            @submit=${async (event: Event) => {
+              event.preventDefault();
+              await this.handlePostSummaryComment();
+            }}
+          >
+            <textarea
+              class="textarea textarea-bordered textarea-sm min-h-28 text-sm cr-discussion-composer__textarea"
+              rows="5"
+              placeholder="Write a comment"
+              .value=${this.summaryDraft}
+              @input=${(e: Event) => {
+                this.summaryDraft = (e.target as HTMLTextAreaElement).value;
+              }}
+            ></textarea>
+            <div class="cr-discussion-composer__footer">
+              <div class="cr-discussion-composer__hint">Inline comments start in Diff.</div>
+              <button
+                class="btn btn-primary btn-sm gap-1.5"
+                type="submit"
+                ?disabled=${this.postingSummary || !this.summaryDraft.trim()}
+              >
+                ${this.postingSummary ? html`<span class="loading loading-spinner loading-xs"></span>` : ""}
+                Post comment
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="cr-discussion-feed">
+          <div class="cr-discussion-feed__body">
+            ${this.loadingDiscussions
+              ? html`
+                  <div class="flex min-h-[16rem] items-center justify-center gap-2 text-sm text-base-content/55">
+                    <span class="loading loading-spinner loading-sm"></span>
+                    Loading discussions…
+                  </div>
+                `
+              : this.discussionsError
+                ? html`<div class="alert alert-warning text-sm">${this.discussionsError}</div>`
+              : this.discussions.length === 0
+                  ? html`
+                      <div class="cr-discussion-feed__empty">
+                        <p class="text-sm text-base-content/58">
+                          No comments yet. Start the conversation here or add an inline note from Diff.
+                        </p>
+                      </div>
+                    `
+                  : html`
+                      <div class="flex flex-col gap-4">
+                        ${this.discussions.map((thread) => this.renderDiscussionThread(thread))}
+                      </div>
+                    `}
+          </div>
+        </section>
+      </div>
+    `;
+  }
+
+  private renderDiscussionThread(thread: ReviewDiscussionThread) {
+    const replying = this.replyingToThreadId === thread.id;
+    const starter = thread.messages[0]?.author || "Reviewer";
+    const lastUpdated = this.discussionThreadTimestamp(thread);
+    const location = this.discussionLocationLabel(
+      thread.messages.find((message) => message.inline)?.inline,
+    );
+
+    return html`
+      <section class="cr-discussion-thread">
+        <div class="cr-discussion-thread__header">
+          <div class="min-w-0">
+            <h4 class="cr-discussion-thread__title">${thread.title}</h4>
+            <div class="cr-discussion-thread__meta">
+              <span>${starter}</span>
+              ${lastUpdated ? html`<span>Updated ${lastUpdated}</span>` : ""}
+              ${location ? html`<span class="cr-discussion-thread__location">${location}</span>` : ""}
+              ${thread.resolved ? html`<span>Resolved</span>` : ""}
+            </div>
+          </div>
+          ${thread.replyable
+            ? html`
+                <button
+                  class="btn ${replying ? "btn-primary" : "btn-ghost"} btn-xs rounded-[0.7rem]"
+                  type="button"
+                  @click=${() => {
+                    if (replying) {
+                      this.cancelReplyToThread();
+                      return;
+                    }
+
+                    this.startReplyToThread(thread);
+                  }}
+                >
+                  ${replying ? "Close reply" : "Reply"}
+                </button>
+              `
+            : ""}
+        </div>
+
+        <div class="cr-discussion-thread__messages">
+          ${thread.messages.map((message, index) => this.renderDiscussionMessage(thread, message, index))}
+        </div>
+
+        ${replying
+          ? html`
+              <form
+                class="cr-discussion-reply"
+                @submit=${async (event: Event) => {
+                  event.preventDefault();
+                  await this.handlePostDiscussionReply(thread);
+                }}
+              >
+                <textarea
+                  class="textarea textarea-bordered textarea-sm min-h-24 text-sm"
+                  rows="4"
+                  placeholder="Write a reply"
+                  .value=${this.discussionReplyDraft}
+                  @input=${(e: Event) => {
+                    this.discussionReplyDraft = (e.target as HTMLTextAreaElement).value;
+                  }}
+                ></textarea>
+                <div class="cr-discussion-reply__footer">
+                  <button
+                    class="btn btn-ghost btn-sm"
+                    type="button"
+                    @click=${() => this.cancelReplyToThread()}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    class="btn btn-primary btn-sm gap-1.5"
+                    type="submit"
+                    ?disabled=${this.postingDiscussionReply || !this.discussionReplyDraft.trim()}
+                  >
+                    ${this.postingDiscussionReply ? html`<span class="loading loading-spinner loading-xs"></span>` : ""}
+                    Post reply
+                  </button>
+                </div>
+              </form>
+            `
+          : ""}
+      </section>
+    `;
+  }
+
+  private renderDiscussionMessage(
+    thread: ReviewDiscussionThread,
+    message: ReviewDiscussionMessage,
+    index: number,
+  ) {
+    const author = message.author || "Reviewer";
+    const timestamp = message.updatedAt || message.createdAt || "";
+    const showInlineLocation = Boolean(message.inline) && thread.kind !== "inline";
+    const inlineLocation = this.discussionLocationLabel(message.inline);
+
+    return html`
+      <article class="cr-discussion-message ${index === 0 ? "cr-discussion-message--root" : ""}">
+        <div class="cr-discussion-message__meta">
+          <div class="cr-discussion-message__author-line">
+            <span class="cr-discussion-message__author">${author}</span>
+            ${timestamp ? html`<span>${timestamp}</span>` : ""}
+            ${showInlineLocation && inlineLocation
+              ? html`<span class="cr-discussion-thread__location">${inlineLocation}</span>`
+              : ""}
+          </div>
+          ${message.url
+            ? html`
+                <a
+                  class="cr-discussion-message__link"
+                  href=${message.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open
+                </a>
+              `
+            : ""}
+        </div>
+        <div class="cr-discussion-message__bubble">
+          ${renderMarkdown(message.body, {
+            className: "cr-discussion-message__markdown",
+            compact: true,
+            emptyText: "No comment body.",
+          })}
+        </div>
+      </article>
+    `;
+  }
+
+  private renderInlineCommentPopover() {
+    if (!this.selectedLine || this.workspaceTab !== "diff") {
+      return html``;
+    }
+
+    const reviewBoardInlineDisabled = this.selectedTarget?.provider === "reviewboard";
+
+    return html`
+      <div class="cr-inline-comment-popover rounded-[0.8rem] border border-base-100/12 bg-base-100/96 p-4 shadow-2xl backdrop-blur-md">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class=${sectionEyebrowClass}>Inline comment</div>
+            <h3 class="text-sm font-semibold text-base-content/92">Comment on selected line</h3>
+          </div>
+          <button
+            class="btn btn-ghost btn-xs"
+            type="button"
+            @click=${() => {
+              this.selectedLine = null;
+              this.inlineDraft = "";
+            }}
+          >
+            Close
+          </button>
+        </div>
+
+        <div class="mt-3 rounded-[0.7rem] border border-primary/20 bg-primary/8 px-3 py-3 text-xs">
+          <div class="font-mono text-primary">
+            ${this.selectedLine.filePath}:${this.selectedLine.line} (${this.selectedLine.positionType})
+          </div>
+          <div class="mt-1 truncate font-mono text-base-content/55">${this.selectedLine.text}</div>
+        </div>
+
+        ${reviewBoardInlineDisabled
+          ? html`<div class="alert alert-warning mt-3 text-xs">Inline comments are not available for Review Board in this workspace.</div>`
+          : ""}
+
+        <div class="mt-3 flex flex-col gap-3">
+          <textarea
+            class="textarea textarea-bordered textarea-sm min-h-28 text-sm"
+            rows="5"
+            placeholder="Write a precise inline note"
+            .value=${this.inlineDraft}
+            @input=${(e: Event) => {
+              this.inlineDraft = (e.target as HTMLTextAreaElement).value;
+            }}
+          ></textarea>
+          <div class="flex items-center justify-between gap-2">
+            <div class="text-xs text-base-content/50">Inline feedback posts directly to the provider thread for this line.</div>
+            <button
+              class="btn btn-primary btn-sm gap-1.5"
+              type="button"
+              ?disabled=${this.postingInline || reviewBoardInlineDisabled || !this.inlineDraft.trim()}
+              @click=${async () => this.handlePostInlineComment()}
+            >
+              ${this.postingInline ? html`<span class="loading loading-spinner loading-xs"></span>` : ""}
+              Post inline
+            </button>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -1590,7 +2314,7 @@ export class CrDashboardApp extends LitElement {
         </div>
 
         <!-- Stats row -->
-        <div class="stats stats-horizontal shadow w-full bg-base-200 border border-base-300 overflow-x-auto">
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-4 items-stretch">
           <cr-stat-card
             .eyebrow=${"AI runtime"}
             .value=${this.dashboard?.config?.openai?.model || "Not configured"}
@@ -1606,24 +2330,30 @@ export class CrDashboardApp extends LitElement {
           ></cr-stat-card>
           <cr-stat-card
             .eyebrow=${"Terminal theme"}
-            .value=${this.configDraft.terminalTheme || "auto"}
+            .value=${this.formatLabel(this.configDraft.terminalTheme || "Auto")}
             .note=${"CLI and server terminal rendering"}
             .icon=${Waypoints}
           ></cr-stat-card>
         </div>
 
-        <!-- AI & Defaults card -->
-        <div class="card bg-base-200 border border-base-300">
-          <div class="card-body gap-4">
+        ${renderCollapsibleCard({
+          cardClass: "bg-base-200 border border-base-300",
+          bodyClass: "px-4 pb-4 pt-0 flex flex-col gap-4",
+          summary: html`
             <div class="flex items-center justify-between gap-2">
-              <h3 class="card-title text-base gap-2">
+              <div class="flex items-center gap-2">
                 <cr-icon .icon=${BrainCircuit} .size=${16}></cr-icon>
-                AI and defaults
-              </h3>
+                <div>
+                  <div class=${sectionEyebrowClass}>AI workspace</div>
+                  <h3 class="text-base font-semibold">AI and defaults</h3>
+                </div>
+              </div>
               <div class="badge ${this.dashboard?.config?.openai?.configured ? "badge-success" : "badge-error"} badge-sm">
-                ${this.dashboard?.config?.openai?.configured ? "ready" : "needs setup"}
+                ${this.dashboard?.config?.openai?.configured ? "Ready" : "Needs setup"}
               </div>
             </div>
+          `,
+          body: html`
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               ${this.renderConfigInput({ label: "OpenAI API URL", note: "Compatible base URL for review, summarize, and chat.", value: this.configDraft.openaiApiUrl, onInput: (v) => this.handleConfigField("openaiApiUrl", v) })}
               ${this.renderConfigInput({ label: "OpenAI API key", note: "Stored in CR config for all AI workflows.", value: this.configDraft.openaiApiKey, type: "password", onInput: (v) => this.handleConfigField("openaiApiKey", v) })}
@@ -1636,9 +2366,9 @@ export class CrDashboardApp extends LitElement {
                   .value=${this.configDraft.terminalTheme}
                   @change=${(e: Event) => this.handleConfigField("terminalTheme", (e.target as HTMLSelectElement).value as TerminalTheme | "")}
                 >
-                  <option value="">auto</option>
-                  <option value="light">light</option>
-                  <option value="dark">dark</option>
+                  <option value="">Auto</option>
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
                 </select>
               </div>
             </div>
@@ -1688,23 +2418,30 @@ export class CrDashboardApp extends LitElement {
                 `)}
               </div>
             </div>
-          </div>
-        </div>
+          `,
+        })}
 
         <!-- Provider connections -->
-        <div class="card bg-base-200 border border-base-300">
-          <div class="card-body gap-4">
+        ${renderCollapsibleCard({
+          cardClass: "bg-base-200 border border-base-300",
+          bodyClass: "px-4 pb-4 pt-0 flex flex-col gap-4",
+          summary: html`
             <div class="flex items-center justify-between gap-2 flex-wrap">
-              <h3 class="card-title text-base gap-2">
+              <div class="flex items-center gap-2">
                 <cr-icon .icon=${GitBranch} .size=${16}></cr-icon>
-                Source connections
-              </h3>
+                <div>
+                  <div class=${sectionEyebrowClass}>Sources</div>
+                  <h3 class="text-base font-semibold">Source connections</h3>
+                </div>
+              </div>
               <div class="flex gap-1.5 flex-wrap">
                 <span class="badge ${gitlabConfigured ? "badge-success" : "badge-error"} badge-sm">GitLab</span>
                 <span class="badge ${githubConfigured ? "badge-success" : "badge-error"} badge-sm">GitHub</span>
                 <span class="badge ${reviewBoardConfigured ? "badge-success" : "badge-error"} badge-sm">Review Board</span>
               </div>
             </div>
+          `,
+          body: html`
 
             <!-- GitLab -->
             <div class="divider my-0 text-xs">GitLab</div>
@@ -1798,21 +2535,28 @@ export class CrDashboardApp extends LitElement {
               ${this.renderConfigInput({ label: "Review Board URL", note: "Base URL for review request and diff APIs.", value: this.configDraft.rbUrl, onInput: (v) => this.handleConfigField("rbUrl", v) })}
               ${this.renderConfigInput({ label: "Review Board token", note: "Token for review publishing and queue access.", value: this.configDraft.rbToken, type: "password", onInput: (v) => this.handleConfigField("rbToken", v) })}
             </div>
-          </div>
-        </div>
+          `,
+        })}
 
         <!-- Webhooks -->
-        <div class="card bg-base-200 border border-base-300">
-          <div class="card-body gap-4">
+        ${renderCollapsibleCard({
+          cardClass: "bg-base-200 border border-base-300",
+          bodyClass: "px-4 pb-4 pt-0 flex flex-col gap-4",
+          summary: html`
             <div class="flex items-center justify-between gap-2">
-              <h3 class="card-title text-base gap-2">
+              <div class="flex items-center gap-2">
                 <cr-icon .icon=${Webhook} .size=${16}></cr-icon>
-                Webhooks &amp; queueing
-              </h3>
+                <div>
+                  <div class=${sectionEyebrowClass}>Automation</div>
+                  <h3 class="text-base font-semibold">Webhooks &amp; queueing</h3>
+                </div>
+              </div>
               <div class="badge ${this.dashboard?.config?.webhook?.sslEnabled ? "badge-success" : "badge-ghost"} badge-sm">
                 ${this.dashboard?.config?.webhook?.sslEnabled ? "SSL enabled" : "HTTP only"}
               </div>
             </div>
+          `,
+          body: html`
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               ${this.renderConfigInput({ label: "GitLab webhook secret", note: "Optional shared secret for GitLab webhooks.", value: this.configDraft.gitlabWebhookSecret, type: "password", onInput: (v) => this.handleConfigField("gitlabWebhookSecret", v) })}
               ${this.renderConfigInput({ label: "GitHub webhook secret", note: "Optional shared secret for GitHub webhooks.", value: this.configDraft.githubWebhookSecret, type: "password", onInput: (v) => this.handleConfigField("githubWebhookSecret", v) })}
@@ -1824,8 +2568,8 @@ export class CrDashboardApp extends LitElement {
               ${this.renderConfigInput({ label: "SSL key path", note: "Private key path for HTTPS.", value: this.configDraft.sslKeyPath, onInput: (v) => this.handleConfigField("sslKeyPath", v) })}
               ${this.renderConfigInput({ label: "SSL CA path", note: "CA path for custom trust chain.", value: this.configDraft.sslCaPath, onInput: (v) => this.handleConfigField("sslCaPath", v) })}
             </div>
-          </div>
-        </div>
+          `,
+        })}
       </div>
 
       <!-- Sticky footer with Save / Reset -->
@@ -1885,35 +2629,30 @@ export class CrDashboardApp extends LitElement {
 
   private renderOverview(detail: ReviewTarget) {
     return html`
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        <div class="card bg-base-300 border border-base-100/10">
-          <div class="card-body gap-2">
-            <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">Request summary</div>
-            <p class="text-sm text-base-content/60">
-              ${detail.description || detail.summary || "No rich description from the provider. Use the diff and commit tabs for full review context."}
-            </p>
+      <div class="flex flex-col gap-4 min-h-0">
+        <div class="rounded-[0.55rem] border border-base-100/10 bg-base-300 px-4 py-4 flex flex-col gap-3">
+          <div class=${sectionEyebrowClass}>Request summary</div>
+          ${renderMarkdown(detail.description || detail.summary, {
+            className: "text-sm text-base-content/70",
+            emptyText: "No rich description from the provider. Use the diff and commit tabs for full review context.",
+          })}
+        </div>
+        <div class="rounded-[0.55rem] border border-base-100/10 bg-base-300 px-4 py-4 flex flex-col gap-3">
+          <div class=${sectionEyebrowClass}>Workspace stats</div>
+          <div class="flex flex-wrap gap-2">
+            <span class="badge badge-ghost badge-sm">${this.diffFiles.length} changed files</span>
+            <span class="badge badge-ghost badge-sm">${this.commits.length} commits</span>
+            <span class="badge badge-ghost badge-sm">${this.reviewResult?.inlineComments.length ?? 0} AI inline notes</span>
           </div>
         </div>
-        <div class="card bg-base-300 border border-base-100/10">
-          <div class="card-body gap-3">
-            <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">Workspace stats</div>
-            <div class="flex flex-wrap gap-2">
-              <span class="badge badge-ghost badge-sm">${this.diffFiles.length} changed files</span>
-              <span class="badge badge-ghost badge-sm">${this.commits.length} commits</span>
-              <span class="badge badge-ghost badge-sm">${this.reviewResult?.inlineComments.length ?? 0} AI inline notes</span>
-            </div>
-          </div>
-        </div>
-        <div class="card bg-base-300 border border-base-100/10">
-          <div class="card-body gap-2">
-            <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">Workflow availability</div>
-            <div class="text-xs text-base-content/60">
-              ${
-                detail.provider === "reviewboard"
-                  ? "Review Board can receive summary review posts. Inline comments are disabled in this workspace."
-                  : "GitLab and GitHub support AI review posts plus manual inline comments from the diff viewer."
-              }
-            </div>
+        <div class="rounded-[0.55rem] border border-base-100/10 bg-base-300 px-4 py-4 flex flex-col gap-3">
+          <div class=${sectionEyebrowClass}>Workflow availability</div>
+          <div class="text-xs text-base-content/60">
+            ${
+              detail.provider === "reviewboard"
+                ? "Review Board can receive summary review posts. Inline comments are disabled in this workspace."
+                : "GitLab and GitHub support AI review posts plus manual inline comments from the diff viewer."
+            }
           </div>
         </div>
       </div>
@@ -1927,12 +2666,10 @@ export class CrDashboardApp extends LitElement {
     return html`
       <div class="flex flex-col gap-2">
         ${this.commits.map(commit => html`
-          <div class="card card-compact bg-base-300 border border-base-100/10">
-            <div class="card-body gap-1">
-              <div class="font-semibold text-sm">${commit.title}</div>
-              <div class="font-mono text-xs text-base-content/40">${commit.id}</div>
-              <div class="text-xs text-base-content/50">${commit.author || "Unknown author"}${commit.createdAt ? ` · ${commit.createdAt}` : ""}</div>
-            </div>
+          <div class="rounded-[0.55rem] border border-base-100/10 bg-base-300 px-4 py-3.5 flex flex-col gap-1">
+            <div class="font-semibold text-sm">${commit.title}</div>
+            <div class="font-mono text-xs text-base-content/40">${commit.id}</div>
+            <div class="text-xs text-base-content/50">${commit.author || "Unknown author"}${commit.createdAt ? ` · ${commit.createdAt}` : ""}</div>
           </div>
         `)}
       </div>
@@ -1941,170 +2678,249 @@ export class CrDashboardApp extends LitElement {
 
   private renderReviewPanel() {
     return html`
-      ${!this.canRunRepositoryWorkflows ? html`
-        <div class="alert alert-warning text-xs">AI review requires a connected repository source before the workflow can run.</div>
-      ` : ""}
+      <div class="flex min-h-0 flex-col gap-3 pb-2">
+        ${!this.canRunRepositoryWorkflows ? html`
+          <div class="alert alert-warning text-xs">AI review requires a connected repository source before the workflow can run.</div>
+        ` : ""}
 
-      <div class="card bg-base-300 border border-base-100/10">
-        <div class="card-body gap-4">
-          <div class="flex items-center justify-between gap-2">
-            <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">Agent selection</div>
-            <label class="cursor-pointer flex items-center gap-1.5 text-xs">
-              <input
-                type="checkbox"
-                class="checkbox checkbox-xs"
-                .checked=${this.inlineCommentsEnabled}
-                @change=${(e: Event) => { this.inlineCommentsEnabled = (e.target as HTMLInputElement).checked; }}
-              />
-              Inline candidates
-            </label>
-          </div>
-
-          <div class="flex flex-col gap-2">
-            ${this.agentOptions.map(option => html`
-              <label class="cursor-pointer flex items-start gap-2.5 p-2.5 rounded-lg border transition-colors
-                ${this.selectedAgents.includes(option.value) ? "border-primary/40 bg-primary/10" : "border-base-100/10 hover:border-base-content/20"}">
+        ${renderCollapsibleCard({
+          cardClass: "bg-base-300 border border-base-100/10",
+          summaryClass: "px-4 py-3.5",
+          bodyClass: "cr-review-control-card__body",
+          summary: html`
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <div class=${sectionEyebrowClass}>Review control</div>
+                <h3 class="text-sm font-semibold">Run AI review</h3>
+              </div>
+              <label class="cursor-pointer flex items-center gap-1.5 text-xs">
                 <input
                   type="checkbox"
-                  class="checkbox checkbox-sm mt-0.5"
-                  .checked=${this.selectedAgents.includes(option.value)}
-                  @change=${(e: Event) => this.toggleAgent(option.value, (e.target as HTMLInputElement).checked)}
+                  class="checkbox checkbox-xs"
+                  .checked=${this.inlineCommentsEnabled}
+                  @change=${(e: Event) => { this.inlineCommentsEnabled = (e.target as HTMLInputElement).checked; }}
                 />
-                <div class="flex flex-col gap-0.5">
-                  <span class="text-sm font-medium">${option.title}</span>
-                  ${option.description ? html`<span class="text-xs text-base-content/50">${option.description}</span>` : ""}
-                </div>
+                Inline candidates
               </label>
-            `)}
-          </div>
+            </div>
+          `,
+          body: html`
+            <div class="cr-review-control-card__content">
+              <div class="grid gap-2">
+                ${this.agentOptions.map(option => html`
+                  <label class="cursor-pointer flex items-start gap-2.5 rounded-[0.7rem] border px-3 py-3 transition-colors
+                    ${this.selectedAgents.includes(option.value) ? "border-primary/40 bg-primary/10" : "border-base-100/10 bg-base-100/38 hover:border-base-content/20"}">
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-sm mt-0.5"
+                      .checked=${this.selectedAgents.includes(option.value)}
+                      @change=${(e: Event) => this.toggleAgent(option.value, (e.target as HTMLInputElement).checked)}
+                    />
+                    <div class="flex flex-col gap-0.5">
+                      <span class="text-sm font-medium">${option.title}</span>
+                      ${option.description ? html`<span class="text-xs text-base-content/50">${option.description}</span>` : ""}
+                    </div>
+                  </label>
+                `)}
+              </div>
 
-          <div class="form-control gap-1">
-            <label class="label py-0"><span class="label-text text-xs">Regenerate with feedback</span></label>
-            <textarea
-              class="textarea textarea-bordered textarea-sm text-sm"
-              rows="3"
-              placeholder="Focus on performance, security, or a specific subsystem"
-              .value=${this.feedbackDraft}
-              @input=${(e: Event) => { this.feedbackDraft = (e.target as HTMLTextAreaElement).value; }}
-            ></textarea>
-          </div>
+              <div class="form-control gap-1">
+                <label class="label py-0"><span class="label-text text-xs">Focus the next run</span></label>
+                <textarea
+                  class="textarea textarea-bordered textarea-sm text-sm"
+                  rows="4"
+                  placeholder="Focus on performance, security, test coverage, or a specific subsystem"
+                  .value=${this.feedbackDraft}
+                  @input=${(e: Event) => { this.feedbackDraft = (e.target as HTMLTextAreaElement).value; }}
+                ></textarea>
+              </div>
+            </div>
 
-          <div class="flex gap-2 flex-wrap">
-            <button
-              class="btn btn-primary btn-sm flex-1 gap-1.5"
-              type="button"
-              ?disabled=${!this.canRunRepositoryWorkflows || this.runningReview || this.selectedAgents.length === 0}
-              @click=${async () => this.handleRunReview()}
-            >
-              ${this.runningReview ? html`<span class="loading loading-spinner loading-xs"></span>` : html`<cr-icon .icon=${Bot} .size=${14}></cr-icon>`}
-              ${this.runningReview ? "Running review…" : "Run review"}
-            </button>
-            <button
-              class="btn btn-ghost btn-sm gap-1.5"
-              type="button"
-              ?disabled=${!this.reviewResult || this.postingGeneratedReview}
-              @click=${() => this.handlePostGeneratedReview()}
-            >
-              ${this.postingGeneratedReview ? html`<span class="loading loading-spinner loading-xs"></span>` : ""}
-              Post review
-            </button>
-          </div>
-        </div>
-      </div>
+            <div class="cr-review-control-card__footer">
+              <div class="cr-review-control-card__footer-text">
+                Choose the agents above, then run the review when you are ready.
+              </div>
+              <div class="cr-review-control-card__footer-actions">
+                <button
+                  class="btn btn-primary btn-sm flex-1 gap-1.5"
+                  type="button"
+                  ?disabled=${!this.canRunRepositoryWorkflows || this.runningReview || this.selectedAgents.length === 0}
+                  @click=${async () => this.handleRunReview()}
+                >
+                  ${this.runningReview ? html`<span class="loading loading-spinner loading-xs"></span>` : html`<cr-icon .icon=${Bot} .size=${14}></cr-icon>`}
+                  ${this.runningReview ? "Running review…" : "Run review"}
+                </button>
+                <button
+                  class="btn btn-ghost btn-sm gap-1.5"
+                  type="button"
+                  ?disabled=${!this.reviewResult || this.postingGeneratedReview}
+                  @click=${() => this.handlePostGeneratedReview()}
+                >
+                  ${this.postingGeneratedReview ? html`<span class="loading loading-spinner loading-xs"></span>` : ""}
+                  Post review
+                </button>
+              </div>
+            </div>
+          `,
+        })}
 
-      ${this.reviewWarnings.map(w => html`<div class="alert alert-warning text-xs">${w}</div>`)}
+        ${this.reviewWarnings.map(w => html`<div class="alert alert-warning text-xs">${w}</div>`)}
 
-      ${this.reviewResult ? html`
-        <div class="card bg-base-300 border border-base-100/10">
-          <div class="card-body gap-3">
-            <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">Aggregated result</div>
-            <p class="text-sm text-base-content/70">${this.reviewResult.overallSummary || this.reviewResult.output}</p>
-          </div>
-        </div>
+        ${this.reviewResult ? html`
+          <section class="rounded-[0.75rem] border border-base-100/10 bg-base-300 px-4 py-4 shadow-sm">
+            <div class="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <div class=${sectionEyebrowClass}>Review digest</div>
+                <h3 class="text-base font-semibold">Aggregated review</h3>
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="badge badge-ghost badge-sm">${this.reviewResult.selectedAgents.length} agents</span>
+                <span class="badge badge-ghost badge-sm">${this.reviewResult.inlineComments.length} inline notes</span>
+                <span class="badge ${this.reviewResult.aggregated ? "badge-primary" : "badge-ghost"} badge-sm">
+                  ${this.reviewResult.aggregated ? "Aggregated" : "Single agent"}
+                </span>
+              </div>
+            </div>
+            <div class="mt-3 text-sm text-base-content/80">
+              ${renderMarkdown(this.reviewResult.overallSummary || this.reviewResult.output, {
+                className: "text-sm text-base-content/80",
+                emptyText: "No aggregate review output was generated.",
+              })}
+            </div>
+          </section>
 
-        ${this.reviewResult.inlineComments.length > 0 ? html`
-          <div class="card bg-base-300 border border-base-100/10">
-            <div class="card-body gap-3">
-              <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">Inline candidates (${this.reviewResult.inlineComments.length})</div>
-              <div class="flex flex-col gap-2">
+          ${this.reviewResult.inlineComments.length > 0 ? html`
+            <section class="rounded-[0.75rem] border border-base-100/10 bg-base-300 px-4 py-4 shadow-sm">
+              <div class="flex items-center justify-between gap-2">
+                <div>
+                  <div class=${sectionEyebrowClass}>Inline candidates</div>
+                  <h3 class="text-sm font-semibold">Suggested file comments</h3>
+                </div>
+                <span class="badge badge-ghost badge-sm">${this.reviewResult.inlineComments.length}</span>
+              </div>
+              <div class="mt-3 flex flex-col gap-2.5">
                 ${this.reviewResult.inlineComments.map(c => html`
-                  <div class="border border-base-100/10 rounded-lg p-2.5 flex flex-col gap-1">
+                  <div class="rounded-[0.7rem] border border-base-100/10 bg-base-100/42 px-3 py-3">
                     <div class="font-mono text-xs text-primary">${c.filePath}:${c.line}</div>
-                    <p class="text-xs text-base-content/60">${c.comment}</p>
+                    <div class="mt-2 text-xs text-base-content/70">
+                      ${renderMarkdown(c.comment, {
+                        className: "text-xs text-base-content/70",
+                        compact: true,
+                        emptyText: "No inline note content.",
+                      })}
+                    </div>
                   </div>
                 `)}
               </div>
-            </div>
-          </div>
-        ` : ""}
+            </section>
+          ` : ""}
 
-        ${this.reviewResult.agentResults?.length ? html`
-          <div class="card bg-base-300 border border-base-100/10">
-            <div class="card-body gap-3">
-              <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">Per-agent output</div>
-              <div class="flex flex-col gap-2">
-                ${this.reviewResult.agentResults.map(a => html`
-                  <div class="border border-base-100/10 rounded-lg p-2.5 flex flex-col gap-1">
-                    <div class="font-semibold text-xs">${a.name}</div>
-                    <p class="text-xs text-base-content/60">${a.failed ? a.error || "Agent failed." : a.output}</p>
+          ${this.reviewResult.agentResults?.length ? html`
+            ${renderCollapsibleCard({
+              cardClass: "bg-base-300 border border-base-100/10",
+              summaryClass: "px-4 py-3.5",
+              bodyClass: "flex flex-col gap-3",
+              summary: html`
+                <div class="flex items-center justify-between gap-2">
+                  <div>
+                    <div class=${sectionEyebrowClass}>Agent perspectives</div>
+                    <h3 class="text-sm font-semibold">Per-agent output</h3>
                   </div>
+                  <span class="badge badge-ghost badge-sm">${this.reviewResult.agentResults.length}</span>
+                </div>
+              `,
+              body: html`
+                ${this.reviewResult.agentResults.map(a => html`
+                  <article class="rounded-[0.7rem] border border-base-100/10 bg-base-100/42 px-3 py-3">
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="font-semibold text-sm">${a.name}</div>
+                      ${a.failed
+                        ? html`<span class="badge badge-error badge-xs">Failed</span>`
+                        : html`<span class="badge badge-ghost badge-xs">Ready</span>`}
+                    </div>
+                    <div class="mt-2 text-xs text-base-content/70">
+                      ${renderMarkdown(a.failed ? a.error || "Agent failed." : a.output, {
+                        className: "text-xs text-base-content/70",
+                        compact: true,
+                        emptyText: "No agent output.",
+                      })}
+                    </div>
+                  </article>
                 `)}
-              </div>
-            </div>
+              `,
+            })}
+          ` : ""}
+        ` : html`
+          <div class="rounded-[0.75rem] border border-dashed border-base-100/10 bg-base-300/55 px-5 py-6 text-sm text-base-content/55">
+            Run review to generate an aggregated summary, inline candidates, and per-agent detail in this rail.
           </div>
-        ` : ""}
-      ` : ""}
+        `}
+      </div>
     `;
   }
 
   private renderSummaryPanel() {
     return html`
-      ${!this.canRunRepositoryWorkflows ? html`
-        <div class="alert alert-warning text-xs">Summary generation needs a connected repository source.</div>
-      ` : ""}
-      <div class="card bg-base-300 border border-base-100/10">
-        <div class="card-body gap-3">
-          <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">Generate summary</div>
-          <button
-            class="btn btn-primary btn-sm gap-1.5"
-            type="button"
-            ?disabled=${!this.canRunRepositoryWorkflows || this.runningSummary}
-            @click=${async () => this.handleRunSummary()}
-          >
-            ${this.runningSummary ? html`<span class="loading loading-spinner loading-xs"></span>` : html`<cr-icon .icon=${ScrollText} .size=${14}></cr-icon>`}
-            ${this.runningSummary ? "Generating…" : "Generate summary"}
-          </button>
-        </div>
-      </div>
+      <div class="flex min-h-0 flex-col gap-3 pb-2">
+        ${!this.canRunRepositoryWorkflows ? html`
+          <div class="alert alert-warning text-xs">Summary generation needs a connected repository source.</div>
+        ` : ""}
 
-      ${this.summaryResult ? html`
-        <div class="card bg-base-300 border border-base-100/10">
-          <div class="card-body gap-2">
-            <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">Summary output</div>
-            <p class="text-sm text-base-content/70">${this.summaryResult.output}</p>
+        <section class="rounded-[0.75rem] border border-base-100/10 bg-base-300 px-4 py-4 shadow-sm">
+          <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <div class=${sectionEyebrowClass}>Summary workflow</div>
+              <h3 class="text-sm font-semibold">Generate summary</h3>
+            </div>
+            <button
+              class="btn btn-primary btn-sm gap-1.5"
+              type="button"
+              ?disabled=${!this.canRunRepositoryWorkflows || this.runningSummary}
+              @click=${async () => this.handleRunSummary()}
+            >
+              ${this.runningSummary ? html`<span class="loading loading-spinner loading-xs"></span>` : html`<cr-icon .icon=${ScrollText} .size=${14}></cr-icon>`}
+              ${this.runningSummary ? "Generating…" : "Generate summary"}
+            </button>
           </div>
-        </div>
-      ` : ""}
+          <div class="mt-2 text-xs text-base-content/55">
+            Use summary generation when you want a quick narrative overview before a deeper review or discussion post.
+          </div>
+        </section>
+
+        ${this.summaryResult
+          ? html`
+              <section class="rounded-[0.75rem] border border-base-100/10 bg-base-300 px-4 py-4 shadow-sm">
+                <div class=${sectionEyebrowClass}>Summary output</div>
+                <div class="mt-3 text-sm text-base-content/80">
+                  ${renderMarkdown(this.summaryResult.output, {
+                    className: "text-sm text-base-content/80",
+                    emptyText: "No summary output was generated.",
+                  })}
+                </div>
+              </section>
+            `
+          : html`
+              <div class="rounded-[0.75rem] border border-dashed border-base-100/10 bg-base-300/55 px-5 py-6 text-sm text-base-content/55">
+                No summary has been generated for this review target yet.
+              </div>
+            `}
+      </div>
     `;
   }
 
   private renderChatPanel() {
     return html`
-      ${!this.canRunRepositoryWorkflows ? html`
-        <div class="alert alert-warning text-xs">Review chat is available after you connect a repository source.</div>
-      ` : ""}
+      <div class="flex h-full min-h-0 flex-col gap-3 pb-2">
+        ${!this.canRunRepositoryWorkflows ? html`
+          <div class="alert alert-warning text-xs">Review chat is available after you connect a repository source.</div>
+        ` : ""}
 
-      ${this.chatContext ? html`
-        <div class="card bg-base-300 border border-base-100/10">
-          <div class="card-body gap-2">
-            <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">Chat context</div>
-            <p class="text-xs text-base-content/60">${this.chatContext.summary}</p>
-          </div>
-        </div>
-      ` : html`
-        <div class="card bg-base-300 border border-base-100/10">
-          <div class="card-body gap-3">
-            <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">Prepare context</div>
+        <section class="rounded-[0.75rem] border border-base-100/10 bg-base-300 px-4 py-4 shadow-sm">
+          <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <div class=${sectionEyebrowClass}>Conversation setup</div>
+              <h3 class="text-sm font-semibold">Review chat</h3>
+            </div>
             <button
               class="btn btn-primary btn-sm gap-1.5"
               type="button"
@@ -2112,110 +2928,89 @@ export class CrDashboardApp extends LitElement {
               @click=${async () => this.ensureChatContext()}
             >
               ${this.loadingChat ? html`<span class="loading loading-spinner loading-xs"></span>` : html`<cr-icon .icon=${MessageSquare} .size=${14}></cr-icon>`}
-              ${this.loadingChat ? "Preparing…" : "Load chat context"}
+              ${this.chatContext ? "Refresh context" : "Load chat context"}
             </button>
           </div>
-        </div>
-      `}
-
-      ${this.chatHistory.length > 0 ? html`
-        <div class="flex flex-col gap-2">
-          ${this.chatHistory.flatMap(entry => [
-            html`<div class="chat chat-end"><div class="chat-bubble chat-bubble-primary text-sm">${entry.question}</div></div>`,
-            html`<div class="chat chat-start"><div class="chat-bubble bg-base-300 text-base-content text-sm">${entry.answer}</div></div>`,
-          ])}
-        </div>
-      ` : ""}
-
-      <div class="card bg-base-300 border border-base-100/10">
-        <div class="card-body gap-3">
-          <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">Ask a question</div>
-          <textarea
-            class="textarea textarea-bordered textarea-sm text-sm"
-            rows="3"
-            placeholder="Ask about risks, test gaps, branch intent, or suspicious changes"
-            .value=${this.chatQuestion}
-            @input=${(e: Event) => { this.chatQuestion = (e.target as HTMLTextAreaElement).value; }}
-            @keydown=${async (e: KeyboardEvent) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) await this.handleAskQuestion(); }}
-          ></textarea>
-          <button
-            class="btn btn-primary btn-sm gap-1.5"
-            type="button"
-            ?disabled=${!this.canRunRepositoryWorkflows || this.loadingChat || !this.chatContext || !this.chatQuestion.trim()}
-            @click=${async () => this.handleAskQuestion()}
-          >
-            ${this.loadingChat ? html`<span class="loading loading-spinner loading-xs"></span>` : html`<cr-icon .icon=${MessageSquare} .size=${14}></cr-icon>`}
-            ${this.loadingChat ? "Thinking…" : "Ask"}
-          </button>
-        </div>
-      </div>
-    `;
-  }
-
-  private renderCommentPanel() {
-    const reviewBoardInlineDisabled = this.selectedTarget?.provider === "reviewboard";
-
-    return html`
-      <div class="card bg-base-300 border border-base-100/10">
-        <div class="card-body gap-3">
-          <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">Summary comment</div>
-          <textarea
-            class="textarea textarea-bordered textarea-sm text-sm"
-            rows="4"
-            placeholder="Write a provider comment or paste/edit the generated review before posting"
-            .value=${this.summaryDraft}
-            @input=${(e: Event) => { this.summaryDraft = (e.target as HTMLTextAreaElement).value; }}
-          ></textarea>
-          <div class="flex gap-2 flex-wrap">
-            <button
-              class="btn btn-primary btn-sm flex-1 gap-1.5"
-              type="button"
-              ?disabled=${this.postingSummary || !this.summaryDraft.trim()}
-              @click=${async () => this.handlePostSummaryComment()}
-            >
-              ${this.postingSummary ? html`<span class="loading loading-spinner loading-xs"></span>` : ""}
-              Post summary
-            </button>
-            ${this.reviewResult ? html`
-              <button class="btn btn-ghost btn-sm" type="button" @click=${() => { this.summaryDraft = this.reviewResult?.overallSummary || this.reviewResult?.output || ""; }}>
-                Copy generated
-              </button>
-            ` : ""}
+          <div class="mt-2 text-xs text-base-content/55">
+            Ask about risks, missing tests, intent, suspicious changes, or specific files after the context is prepared.
           </div>
-        </div>
-      </div>
-
-      <div class="card bg-base-300 border border-base-100/10">
-        <div class="card-body gap-3">
-          <div class="text-xs font-bold uppercase tracking-widest text-base-content/40">Inline comment</div>
-          ${
-            this.selectedLine
-              ? html`
-                <div class="rounded-lg bg-primary/10 border border-primary/30 p-2.5 text-xs flex flex-col gap-1">
-                  <span class="font-mono text-primary">${this.selectedLine.filePath}:${this.selectedLine.line} (${this.selectedLine.positionType})</span>
-                  <span class="font-mono text-base-content/50 truncate">${this.selectedLine.text}</span>
+          ${this.chatContext
+            ? html`
+                <div class="mt-3 rounded-[0.7rem] border border-base-100/10 bg-base-100/42 px-3 py-3 text-xs text-base-content/65">
+                  ${renderMarkdown(this.chatContext.summary, {
+                    className: "text-xs text-base-content/65",
+                    compact: true,
+                    emptyText: "Chat context summary is empty.",
+                  })}
                 </div>
               `
-              : html`<div class="text-xs text-base-content/40 italic">Choose a line in the diff view to anchor an inline comment.</div>`
-          }
-          ${reviewBoardInlineDisabled ? html`<div class="alert alert-warning text-xs">Review Board inline comments are not enabled here. Use a summary comment instead.</div>` : ""}
-          <textarea
-            class="textarea textarea-bordered textarea-sm text-sm"
-            rows="3"
-            placeholder="Write a precise inline note"
-            .value=${this.inlineDraft}
-            @input=${(e: Event) => { this.inlineDraft = (e.target as HTMLTextAreaElement).value; }}
-          ></textarea>
-          <button
-            class="btn btn-primary btn-sm gap-1.5"
-            type="button"
-            ?disabled=${this.postingInline || reviewBoardInlineDisabled || !this.selectedLine || !this.inlineDraft.trim()}
-            @click=${async () => this.handlePostInlineComment()}
-          >
-            ${this.postingInline ? html`<span class="loading loading-spinner loading-xs"></span>` : ""}
-            Post inline
-          </button>
-        </div>
+            : ""}
+        </section>
+
+        <section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[0.75rem] border border-base-100/10 bg-base-300 shadow-sm">
+          <div class="border-b border-base-100/10 px-4 py-3">
+            <div class=${sectionEyebrowClass}>Transcript</div>
+            <h3 class="text-sm font-semibold">Conversation</h3>
+          </div>
+
+          <div class="flex-1 overflow-y-auto px-4 py-4">
+            ${this.chatHistory.length > 0
+              ? html`
+                  <div class="flex flex-col gap-3">
+                    ${this.chatHistory.flatMap(entry => [
+                      html`
+                        <div class="flex justify-end">
+                          <div class="max-w-[92%] rounded-[0.75rem] bg-primary px-3 py-3 text-sm text-primary-content shadow-sm">
+                            ${entry.question}
+                          </div>
+                        </div>
+                      `,
+                      html`
+                        <div class="flex justify-start">
+                          <div class="max-w-[96%] rounded-[0.75rem] border border-base-100/10 bg-base-100/48 px-3 py-3 text-sm text-base-content/82 shadow-sm">
+                            ${renderMarkdown(entry.answer, {
+                              className: "text-sm text-base-content/82",
+                              compact: true,
+                              emptyText: "No response returned.",
+                            })}
+                          </div>
+                        </div>
+                      `,
+                    ])}
+                  </div>
+                `
+              : html`
+                  <div class="flex h-full min-h-[14rem] items-center justify-center text-center text-sm text-base-content/50">
+                    ${this.chatContext
+                      ? "Your next question will start the conversation here."
+                      : "Load chat context to start asking questions about this review target."}
+                  </div>
+                `}
+          </div>
+
+          <div class="border-t border-base-100/10 px-4 py-4">
+            <textarea
+              class="textarea textarea-bordered textarea-sm min-h-24 text-sm"
+              rows="4"
+              placeholder="Ask about risk, intent, test gaps, branches, or a suspicious diff chunk"
+              .value=${this.chatQuestion}
+              @input=${(e: Event) => { this.chatQuestion = (e.target as HTMLTextAreaElement).value; }}
+              @keydown=${async (e: KeyboardEvent) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) await this.handleAskQuestion(); }}
+            ></textarea>
+            <div class="mt-3 flex items-center justify-between gap-3 flex-wrap">
+              <div class="text-xs text-base-content/50">Press Ctrl/Cmd+Enter to send faster.</div>
+              <button
+                class="btn btn-primary btn-sm gap-1.5"
+                type="button"
+                ?disabled=${!this.canRunRepositoryWorkflows || this.loadingChat || !this.chatContext || !this.chatQuestion.trim()}
+                @click=${async () => this.handleAskQuestion()}
+              >
+                ${this.loadingChat ? html`<span class="loading loading-spinner loading-xs"></span>` : html`<cr-icon .icon=${MessageSquare} .size=${14}></cr-icon>`}
+                ${this.loadingChat ? "Thinking…" : "Ask"}
+              </button>
+            </div>
+          </div>
+        </section>
       </div>
     `;
   }

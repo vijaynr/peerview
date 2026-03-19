@@ -3,11 +3,26 @@ export type ReviewState = "opened" | "closed" | "merged" | "all";
 export type DashboardSection = "overview" | ProviderId | "settings";
 export type TerminalTheme = "auto" | "dark" | "light";
 export type RepositorySourceMode = "local" | "remote";
+export type UITheme = "dark" | "light";
 
 export type RepositoryContext = {
   mode: RepositorySourceMode;
   repoPath?: string;
   remoteUrl?: string;
+  repositoryId?: number;
+};
+
+export type ProviderRepositoryOption = {
+  provider: ProviderId;
+  id: string;
+  label: string;
+  subtitle?: string;
+  description?: string;
+  remoteUrl?: string;
+  repositoryId?: number;
+  defaultBranch?: string;
+  visibility?: string;
+  private?: boolean;
 };
 
 export type DashboardRequest = {
@@ -207,6 +222,31 @@ export type ParsedDiffLine = {
   newLineNumber?: number;
   commentable: boolean;
   positionType?: "old" | "new";
+};
+
+export type ReviewDiscussionMessage = {
+  id: string;
+  body: string;
+  author?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  url?: string;
+  inline?: {
+    filePath: string;
+    line?: number;
+    endLine?: number;
+    positionType?: "new" | "old";
+  };
+};
+
+export type ReviewDiscussionThread = {
+  id: string;
+  kind: "general" | "inline";
+  title: string;
+  replyable: boolean;
+  replyTargetId?: string;
+  resolved?: boolean;
+  messages: ReviewDiscussionMessage[];
 };
 
 export const providerOrder: ProviderId[] = ["gitlab", "github", "reviewboard"];

@@ -131,6 +131,35 @@ export class GitLabClient {
   // -------------------------------------------------------------------------
 
   /**
+   * Lists projects the authenticated user can actively work in.
+   * Uses membership scope to avoid flooding the picker with unrelated public projects.
+   */
+  async listProjects(): Promise<GitLabProject[]> {
+    const projects: GitLabProject[] = [];
+    let page = 1;
+
+    while (true) {
+      const result = await this.http.get<GitLabProject[]>(
+        `/api/v4/projects?membership=true&simple=true&archived=false&order_by=last_activity_at&sort=desc&per_page=100&page=${page}`
+      );
+
+      if (result.length === 0) {
+        break;
+      }
+
+      projects.push(...result);
+
+      if (result.length < 100) {
+        break;
+      }
+
+      page += 1;
+    }
+
+    return projects;
+  }
+
+  /**
    * Fetches the raw content of a file at a specific ref.
    * Returns null if the file does not exist (404).
    */

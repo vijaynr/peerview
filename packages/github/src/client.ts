@@ -162,6 +162,32 @@ export class GitHubClient {
   // Repository
   // -------------------------------------------------------------------------
 
+  /** Lists repositories the authenticated user can review and collaborate on. */
+  async listRepositories(): Promise<GitHubRepository[]> {
+    const repositories: GitHubRepository[] = [];
+    let page = 1;
+
+    while (true) {
+      const result = await this.http.get<GitHubRepository[]>(
+        `/user/repos?affiliation=owner,collaborator,organization_member&sort=updated&per_page=100&page=${page}`
+      );
+
+      if (result.length === 0) {
+        break;
+      }
+
+      repositories.push(...result);
+
+      if (result.length < 100) {
+        break;
+      }
+
+      page += 1;
+    }
+
+    return repositories;
+  }
+
   /**
    * Returns raw file content at a specific ref.
    * Returns null if the file does not exist (404).
@@ -360,6 +386,11 @@ export class GitHubClient {
       side: c.side ?? "RIGHT",
       body: c.body,
       commitId: c.commit_id,
+      htmlUrl: c.html_url,
+      author: c.user.login,
+      createdAt: c.created_at,
+      updatedAt: c.updated_at,
+      inReplyToId: c.in_reply_to_id,
     }));
   }
 
@@ -401,6 +432,27 @@ export class GitHubClient {
     const comment = await this.http.post<GitHubReviewComment>(
       `/repos/${repoPath}/pulls/${prNumber}/comments`,
       payload
+    );
+    return comment.html_url;
+  }
+
+  /**
+   * Replies to an existing inline review comment thread.
+   *
+   * @returns The created reply comment's HTML URL.
+   */
+  async replyToReviewComment(
+    repoPath: string,
+    prNumber: number,
+    commentId: number,
+    body: string
+  ): Promise<string> {
+    const comment = await this.http.post<GitHubReviewComment>(
+      `/repos/${repoPath}/pulls/${prNumber}/comments`,
+      {
+        body,
+        in_reply_to: commentId,
+      }
     );
     return comment.html_url;
   }

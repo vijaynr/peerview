@@ -1,12 +1,14 @@
 import type {
   CRConfigRecord,
   DashboardData,
+  ProviderRepositoryOption,
   ProviderId,
   RepositoryContext,
   ReviewAgentOption,
   ReviewChatContext,
   ReviewChatHistoryEntry,
   ReviewCommit,
+  ReviewDiscussionThread,
   ReviewDiffFile,
   ReviewPostResponse,
   ReviewRunResponse,
@@ -189,6 +191,53 @@ function normalizeDiffFile(
   };
 }
 
+function normalizeProviderRepository(
+  provider: ProviderId,
+  item: unknown
+): ProviderRepositoryOption {
+  const record = asRecord(item);
+
+  if (provider === "gitlab") {
+    const label =
+      stringValue(record, "path_with_namespace", "path", "name") ?? "GitLab project";
+    return {
+      provider,
+      id: String(numberValue(record, "id") ?? stringValue(record, "id") ?? label),
+      label,
+      subtitle: stringValue(record, "web_url"),
+      description: stringValue(record, "description"),
+      remoteUrl: stringValue(record, "web_url"),
+      defaultBranch: stringValue(record, "default_branch"),
+      visibility: stringValue(record, "visibility"),
+    };
+  }
+
+  if (provider === "github") {
+    const label = stringValue(record, "full_name", "name") ?? "GitHub repository";
+    return {
+      provider,
+      id: String(numberValue(record, "id") ?? stringValue(record, "id") ?? label),
+      label,
+      subtitle: stringValue(record, "html_url"),
+      description: stringValue(record, "description"),
+      remoteUrl: stringValue(record, "html_url"),
+      defaultBranch: stringValue(record, "default_branch"),
+      visibility: stringValue(record, "visibility"),
+      private: booleanValue(record, "private"),
+    };
+  }
+
+  const label = stringValue(record, "title", "name", "path") ?? "Review Board repository";
+  return {
+    provider,
+    id: String(numberValue(record, "id") ?? stringValue(record, "id") ?? label),
+    label,
+    subtitle: stringValue(record, "path", "mirror_path"),
+    description: stringValue(record, "name"),
+    repositoryId: numberValue(record, "id"),
+  };
+}
+
 function providerListState(provider: ProviderId, state: ReviewState): string {
   if (provider === "reviewboard") {
     switch (state) {
@@ -217,6 +266,175 @@ function providerListState(provider: ProviderId, state: ReviewState): string {
   return state;
 }
 
+function normalizeGitLabDiscussions(items: unknown[]): ReviewDiscussionThread[] {
+  const threads: ReviewDiscussionThread[] = [];
+
+  for (const item of items) {
+    const discussion = asRecord(item);
+    const messages = (Array.isArray(discussion.notes) ? discussion.notes : [])
+      .map(asRecord)
+      .filter((note) => !booleanValue(note, "system"))
+      .map((note) => {
+        const author = asRecord(note.author);
+        const position = asRecord(note.position);
+        const lineRange = asRecord(position.line_range);
+        const lineRangeEnd = asRecord(lineRange.end);
+        const inlinePath = stringValue(position, "new_path", "old_path") ?? "";
+        const inlineLine = numberValue(position, "new_line", "old_line");
+        const inlineEnd =
+          numberValue(lineRangeEnd, "new_line", "old_line", "line") ?? inlineLine;
+        const positionType: "new" | "old" =
+          position.new_line !== undefined ? "new" : "old";
+
+        return {
+          id: String(numberValue(note, "id") ?? stringValue(note, "id") ?? "0"),
+          body: stringValue(note, "body") ?? "",
+          author: stringValue(author, "name", "username"),
+          createdAt: normalizeUpdatedAt(stringValue(note, "created_at")),
+          updatedAt: normalizeUpdatedAt(stringValue(note, "updated_at")),
+          inline: inlinePath
+            ? {
+                filePath: inlinePath,
+                line: inlineLine,
+                endLine: inlineEnd,
+                positionType,
+              }
+            : undefined,
+        };
+      })
+      .filter((message) => message.body.trim().length > 0);
+
+    if (messages.length === 0) {
+      continue;
+    }
+
+    const firstInline = messages.find((message) => message.inline)?.inline;
+    threads.push({
+      id: String(stringValue(discussion, "id") ?? "0"),
+      kind: firstInline ? "inline" : "general",
+      title: firstInline
+        ? `${firstInline.filePath}${firstInline.line ? `:${firstInline.line}` : ""}`
+        : "General discussion",
+      replyable: true,
+      replyTargetId: String(stringValue(discussion, "id") ?? ""),
+      resolved: booleanValue(discussion, "resolved"),
+      messages,
+    });
+  }
+
+  return threads.sort((left, right) => {
+    const leftDate = Date.parse(left.messages[left.messages.length - 1]?.updatedAt ?? "");
+    const rightDate = Date.parse(right.messages[right.messages.length - 1]?.updatedAt ?? "");
+    return (Number.isFinite(rightDate) ? rightDate : 0) - (Number.isFinite(leftDate) ? leftDate : 0);
+  });
+}
+
+function normalizeGitHubDiscussions(payload: {
+  issueComments?: unknown[];
+  reviewComments?: unknown[];
+}): ReviewDiscussionThread[] {
+  const issueThreads = (payload.issueComments ?? []).map((item) => {
+    const comment = asRecord(item);
+    const author = asRecord(comment.user);
+
+    return {
+      id: `issue:${String(numberValue(comment, "id") ?? stringValue(comment, "id") ?? "0")}`,
+      kind: "general" as const,
+      title: `Comment from ${stringValue(author, "login") ?? "Reviewer"}`,
+      replyable: false,
+      messages: [
+        {
+          id: String(numberValue(comment, "id") ?? stringValue(comment, "id") ?? "0"),
+          body: stringValue(comment, "body") ?? "",
+          author: stringValue(author, "login"),
+          createdAt: normalizeUpdatedAt(stringValue(comment, "created_at")),
+          updatedAt: normalizeUpdatedAt(stringValue(comment, "updated_at")),
+          url: stringValue(comment, "html_url"),
+        },
+      ],
+    } satisfies ReviewDiscussionThread;
+  });
+
+  const reviewComments = (payload.reviewComments ?? []).map(asRecord);
+  const reviewById = new Map<number, JsonObject>();
+  reviewComments.forEach((comment) => {
+    const id = numberValue(comment, "id");
+    if (id !== undefined) {
+      reviewById.set(id, comment);
+    }
+  });
+
+  const rootIdFor = (comment: JsonObject) => {
+    let current = comment;
+    let parentId = numberValue(current, "inReplyToId", "in_reply_to_id");
+
+    while (parentId !== undefined) {
+      const parent = reviewById.get(parentId);
+      if (!parent) {
+        break;
+      }
+      current = parent;
+      parentId = numberValue(current, "inReplyToId", "in_reply_to_id");
+    }
+
+    return numberValue(current, "id") ?? 0;
+  };
+
+  const reviewThreadsMap = new Map<number, JsonObject[]>();
+  reviewComments.forEach((comment) => {
+    const rootId = rootIdFor(comment);
+    const thread = reviewThreadsMap.get(rootId) ?? [];
+    thread.push(comment);
+    reviewThreadsMap.set(rootId, thread);
+  });
+
+  const reviewThreads = Array.from(reviewThreadsMap.entries()).map(([rootId, comments]) => {
+    const sorted = [...comments].sort((left, right) => {
+      const leftDate = Date.parse(stringValue(left, "createdAt", "created_at") ?? "");
+      const rightDate = Date.parse(stringValue(right, "createdAt", "created_at") ?? "");
+      return (Number.isFinite(leftDate) ? leftDate : 0) - (Number.isFinite(rightDate) ? rightDate : 0);
+    });
+    const root = sorted[0] ?? {};
+    const titlePath = stringValue(root, "filePath", "path") ?? "Inline thread";
+    const titleLine = numberValue(root, "line", "start_line");
+    const lastMessage = sorted[sorted.length - 1];
+
+    return {
+      id: `review:${rootId}`,
+      kind: "inline" as const,
+      title: `${titlePath}${titleLine ? `:${titleLine}` : ""}`,
+      replyable: true,
+      replyTargetId: String(numberValue(lastMessage, "id") ?? rootId),
+      messages: sorted.map((comment) => {
+        const author = asRecord(comment.user);
+        const side = stringValue(comment, "side", "start_side");
+        return {
+          id: String(numberValue(comment, "id") ?? "0"),
+          body: stringValue(comment, "body") ?? "",
+          author: stringValue(author, "login", "name") ?? stringValue(comment, "author"),
+          createdAt: normalizeUpdatedAt(stringValue(comment, "createdAt", "created_at")),
+          updatedAt: normalizeUpdatedAt(stringValue(comment, "updatedAt", "updated_at")),
+          url: stringValue(comment, "htmlUrl", "html_url"),
+          inline: {
+            filePath: stringValue(comment, "filePath", "path") ?? titlePath,
+            line: numberValue(comment, "line", "start_line"),
+            endLine: numberValue(comment, "endLine", "line"),
+            positionType: side === "LEFT" ? "old" : "new",
+          },
+        };
+      }),
+    } satisfies ReviewDiscussionThread;
+  });
+
+  return [...reviewThreads, ...issueThreads].sort((left, right) => {
+    const leftMessage = left.messages[left.messages.length - 1];
+    const rightMessage = right.messages[right.messages.length - 1];
+    const leftDate = Date.parse(leftMessage?.updatedAt ?? leftMessage?.createdAt ?? "");
+    const rightDate = Date.parse(rightMessage?.updatedAt ?? rightMessage?.createdAt ?? "");
+    return (Number.isFinite(rightDate) ? rightDate : 0) - (Number.isFinite(leftDate) ? leftDate : 0);
+  });
+}
+
 function queryWithRepositoryContext(path: string, context?: RepositoryContext): string {
   if (!context) {
     return path;
@@ -228,6 +446,9 @@ function queryWithRepositoryContext(path: string, context?: RepositoryContext): 
   }
   if (context.remoteUrl) {
     params.set("remoteUrl", context.remoteUrl);
+  }
+  if (context.repositoryId !== undefined) {
+    params.set("repositoryId", String(context.repositoryId));
   }
 
   const query = params.toString();
@@ -241,6 +462,23 @@ export async function loadDashboard(context?: RepositoryContext): Promise<Dashbo
 export async function loadLocalRepositories(): Promise<string[]> {
   const data = await fetchJson<{ repositories: string[] }>("/api/repositories/local");
   return data.repositories;
+}
+
+export async function loadProviderRepositories(
+  provider: ProviderId
+): Promise<ProviderRepositoryOption[]> {
+  if (provider === "gitlab") {
+    const data = await fetchJson<unknown[]>("/api/gitlab/repositories");
+    return data.map((item) => normalizeProviderRepository(provider, item));
+  }
+
+  if (provider === "github") {
+    const data = await fetchJson<unknown[]>("/api/github/repositories");
+    return data.map((item) => normalizeProviderRepository(provider, item));
+  }
+
+  const data = await fetchJson<unknown[]>("/api/reviewboard/repositories");
+  return data.map((item) => normalizeProviderRepository(provider, item));
 }
 
 export async function loadConfig(): Promise<CRConfigRecord> {
@@ -372,6 +610,28 @@ export async function loadReviewCommits(
       queryWithRepositoryContext(`/api/github/pull-requests/${targetId}/commits`, context)
     );
     return data.map(normalizeCommit);
+  }
+
+  return [];
+}
+
+export async function loadReviewDiscussions(
+  provider: ProviderId,
+  targetId: number,
+  context?: RepositoryContext
+): Promise<ReviewDiscussionThread[]> {
+  if (provider === "gitlab") {
+    const data = await fetchJson<unknown[]>(
+      queryWithRepositoryContext(`/api/gitlab/merge-requests/${targetId}/discussions`, context)
+    );
+    return normalizeGitLabDiscussions(data);
+  }
+
+  if (provider === "github") {
+    const data = await fetchJson<{ issueComments?: unknown[]; reviewComments?: unknown[] }>(
+      queryWithRepositoryContext(`/api/github/pull-requests/${targetId}/discussions`, context)
+    );
+    return normalizeGitHubDiscussions(data);
   }
 
   return [];
@@ -523,6 +783,45 @@ export async function postInlineComment(args: {
   }
 
   throw new Error("Inline comments are not supported for Review Board in the web workspace.");
+}
+
+export async function replyToReviewDiscussion(args: {
+  provider: ProviderId;
+  targetId: number;
+  threadId: string;
+  replyTargetId?: string;
+  body: string;
+  repositoryContext?: RepositoryContext;
+}): Promise<void> {
+  if (args.provider === "gitlab") {
+    await fetchJson(`/api/gitlab/merge-requests/${args.targetId}/discussions/${encodeURIComponent(args.threadId)}/replies`, {
+      method: "POST",
+      body: JSON.stringify({
+        body: args.body,
+        repoPath: args.repositoryContext?.repoPath,
+        url: args.repositoryContext?.remoteUrl,
+      }),
+    });
+    return;
+  }
+
+  if (args.provider === "github") {
+    if (!args.replyTargetId) {
+      throw new Error("This discussion cannot accept replies.");
+    }
+
+    await fetchJson(`/api/github/pull-requests/${args.targetId}/review-comments/${encodeURIComponent(args.replyTargetId)}/replies`, {
+      method: "POST",
+      body: JSON.stringify({
+        body: args.body,
+        repoPath: args.repositoryContext?.repoPath,
+        remoteUrl: args.repositoryContext?.remoteUrl,
+      }),
+    });
+    return;
+  }
+
+  throw new Error("Discussion replies are not supported for Review Board in the web workspace.");
 }
 
 export type TestConnectionResult = { ok: boolean; message: string };

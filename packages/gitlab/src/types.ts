@@ -21,8 +21,14 @@ export type GitLabBranch = {
 export type GitLabProject = {
   id: number;
   name: string;
+  path: string;
+  path_with_namespace: string;
   default_branch: string;
   web_url: string;
+  description?: string;
+  visibility?: string;
+  archived?: boolean;
+  last_activity_at?: string;
 };
 
 // ---------------------------------------------------------------------------

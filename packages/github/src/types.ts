@@ -17,11 +17,17 @@ export type GitHubBranch = {
 
 export type GitHubRepository = {
   id: number;
+  name: string;
   full_name: string;
   default_branch: string;
   html_url: string;
   private: boolean;
   description?: string;
+  visibility?: string;
+  updated_at?: string;
+  owner?: {
+    login: string;
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -155,6 +161,8 @@ export type GitHubReviewComment = {
   updated_at: string;
   /** ID of the review this comment belongs to, if any. */
   pull_request_review_id?: number;
+  /** Present when this comment is a reply to another review comment. */
+  in_reply_to_id?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -190,6 +198,11 @@ export type GitHubInlineComment = {
   side: "LEFT" | "RIGHT";
   body: string;
   commitId: string;
+  htmlUrl?: string;
+  author?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  inReplyToId?: number;
 };
 
 // ---------------------------------------------------------------------------

@@ -43,10 +43,12 @@ export class ReviewBoardClient {
 
   async listReviewRequests(
     status: "pending" | "submitted" | "all",
-    fromUser?: string
+    fromUser?: string,
+    repositoryId?: number
   ): Promise<ReviewBoardRequest[]> {
     let endpoint = `/api/review-requests/?status=${status}&counts-only=0&max-results=200&expand=submitter`;
     if (fromUser) endpoint += `&from-user=${encodeURIComponent(fromUser)}`;
+    if (repositoryId !== undefined) endpoint += `&repository=${encodeURIComponent(String(repositoryId))}`;
 
     const response = await this.http.requestJSON<{ review_requests: ReviewBoardRequest[] }>(
       endpoint
@@ -311,9 +313,14 @@ export async function listReviewRequests(
   baseUrl: string,
   token: string,
   status: "pending" | "submitted" | "all",
-  fromUser?: string
+  fromUser?: string,
+  repositoryId?: number
 ): Promise<ReviewBoardRequest[]> {
-  return new ReviewBoardClient(baseUrl, token).listReviewRequests(status, fromUser);
+  return new ReviewBoardClient(baseUrl, token).listReviewRequests(
+    status,
+    fromUser,
+    repositoryId
+  );
 }
 
 /**

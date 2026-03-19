@@ -70,7 +70,6 @@ async function loadGitLabDashboardProvider(args: {
       provider: "gitlab",
       configured: true,
       items: [],
-      error: "No git remote detected for the current directory.",
     };
   }
 
@@ -133,7 +132,6 @@ async function loadGitHubDashboardProvider(args: {
       provider: "github",
       configured: true,
       items: [],
-      error: "No git remote detected for the current directory.",
     };
   }
 

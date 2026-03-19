@@ -4,10 +4,10 @@
  * re-exports free-function wrappers for backward compatibility.
  */
 
-import type { GitLabInlineComment } from "@cr/gitlab";
+import type { GitLabDiscussion, GitLabInlineComment } from "@cr/gitlab";
 import { GitLabClient } from "@cr/gitlab";
 
-export type { GitLabInlineComment };
+export type { GitLabDiscussion, GitLabInlineComment };
 
 function client(baseUrl: string, token: string): GitLabClient {
   return new GitLabClient(baseUrl, token);
@@ -32,6 +32,15 @@ export function getMergeRequestInlineComments(
   return client(baseUrl, token).listInlineComments(projectPath, mrIid);
 }
 
+export function listMergeRequestDiscussions(
+  baseUrl: string,
+  token: string,
+  projectPath: string,
+  mrIid: number
+): Promise<GitLabDiscussion[]> {
+  return client(baseUrl, token).listDiscussions(projectPath, mrIid);
+}
+
 export function addInlineMergeRequestComment(
   baseUrl: string,
   token: string,
@@ -51,4 +60,15 @@ export function addInlineMergeRequestComment(
     undefined,
     positionType
   );
+}
+
+export function replyToMergeRequestDiscussion(
+  baseUrl: string,
+  token: string,
+  projectPath: string,
+  mrIid: number,
+  discussionId: string,
+  body: string
+): Promise<import("@cr/gitlab").GitLabDiscussionNote> {
+  return client(baseUrl, token).replyToDiscussion(projectPath, mrIid, discussionId, body);
 }

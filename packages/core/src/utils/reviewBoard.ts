@@ -27,9 +27,14 @@ export async function listReviewRequests(
   baseUrl: string,
   token: string,
   status: "pending" | "submitted" | "all",
-  fromUser?: string
+  fromUser?: string,
+  repositoryId?: number
 ): Promise<ReviewBoardRequest[]> {
-  return createReviewBoardClient(baseUrl, token).listReviewRequests(status, fromUser);
+  return createReviewBoardClient(baseUrl, token).listReviewRequests(
+    status,
+    fromUser,
+    repositoryId
+  );
 }
 
 export async function getReviewRequest(
