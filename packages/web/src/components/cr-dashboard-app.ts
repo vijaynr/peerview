@@ -49,6 +49,7 @@ import {
 import {
   providerLabels,
   providerOrder,
+  providerQueueLabels,
   reviewStates,
   type CRConfigRecord,
   type DashboardData,
@@ -257,6 +258,8 @@ export class CrDashboardApp extends LitElement {
   declare loadingProviderRepositories: Record<ProviderId, boolean>;
   declare providerRepositoriesError: Record<ProviderId, string>;
   declare uiTheme: UITheme;
+
+  private noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     super();
@@ -1004,8 +1007,16 @@ export class CrDashboardApp extends LitElement {
   }
 
   private setNotice(message: string, tone: NoticeTone) {
+    if (this.noticeTimer) {
+      clearTimeout(this.noticeTimer);
+      this.noticeTimer = null;
+    }
     this.noticeMessage = message;
     this.noticeTone = tone;
+    this.noticeTimer = setTimeout(() => {
+      this.noticeMessage = "";
+      this.noticeTimer = null;
+    }, 5000);
   }
 
   private toMessage(error: unknown): string {
@@ -1198,14 +1209,14 @@ export class CrDashboardApp extends LitElement {
 
   private providerRepositorySelectionMessage(provider: ProviderId) {
     if (provider === "gitlab") {
-      return "Select a GitLab project to load merge requests.";
+      return "Choose a GitLab project to load merge requests.";
     }
 
     if (provider === "github") {
-      return "Select a GitHub repository to load pull requests.";
+      return "Choose a GitHub repository to load pull requests.";
     }
 
-    return "Select a Review Board repository to load review requests.";
+    return "Choose a Review Board repository to load review requests.";
   }
 
   private providerAvailabilityErrorFor(
@@ -1323,16 +1334,13 @@ export class CrDashboardApp extends LitElement {
             <label for="cr-drawer" class="btn btn-ghost btn-sm btn-square">
               <cr-icon .icon=${Menu} .size=${18}></cr-icon>
             </label>
-            <span class="font-bold tracking-tight flex-1">CR Platform</span>
+            <span class="font-bold tracking-tight flex-1">Code Review Platform</span>
             ${this.renderThemeToggle(true)}
             ${isLoading ? html`<span class="loading loading-spinner loading-xs text-primary"></span>` : ""}
           </nav>
 
-          <!-- Notice bar -->
-          ${this.noticeMessage ? this.renderNoticeBar() : ""}
-
           <!-- Main content -->
-          <main class="cr-main-shell flex-1 min-h-0 w-full max-w-[min(100%,112rem)] mx-auto px-3 py-4 sm:px-4 lg:px-6 xl:px-8">
+          <main class="cr-main-shell flex-1 min-h-0 w-full max-w-[min(100%,140rem)] mx-auto px-4 py-5 sm:px-5 lg:px-7 xl:px-10 2xl:px-14">
             ${
               this.activeSection === "overview"
                 ? this.renderOverviewPage()
@@ -1346,21 +1354,21 @@ export class CrDashboardApp extends LitElement {
         <!-- Sidebar drawer -->
         <div class="drawer-side z-40">
           <label for="cr-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
-          <aside class="border-r border-base-300/75 bg-base-200/96 w-72 min-h-full flex flex-col gap-4 p-4 backdrop-blur-md">
+          <aside class="border-r border-base-300/75 bg-base-200/96 w-64 min-h-full flex flex-col gap-5 p-5 backdrop-blur-md">
             <!-- Brand -->
             <div class="flex items-center gap-2 pt-1 pb-2 border-b border-base-300">
               <div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
                 <cr-icon .icon=${Waypoints} .size=${16} class="text-primary"></cr-icon>
               </div>
               <div>
-                <div class="font-bold text-sm tracking-tight">CR Platform</div>
+                <div class="font-bold text-sm tracking-tight">Code Review Platform</div>
                 <div class="text-xs text-base-content/40">Review Command Center</div>
               </div>
               ${isLoading ? html`<span class="loading loading-spinner loading-xs text-primary ml-auto"></span>` : ""}
             </div>
 
             <!-- Navigation -->
-            <ul class="menu menu-sm p-0 gap-0.5 flex-none">
+            <ul class="menu menu-sm p-0 gap-1 flex-none">
               ${this.renderNavItem("overview", "Overview", LayoutDashboard)}
               ${providerOrder.map((p) => this.renderNavItem(p, providerLabels[p]))}
               ${this.renderNavItem("settings", "Settings", Settings2)}
@@ -1399,18 +1407,31 @@ export class CrDashboardApp extends LitElement {
             </div>
           </aside>
         </div>
+
+        <!-- Toast notification -->
+        ${this.noticeMessage ? this.renderToast() : ""}
       </div>
     `;
   }
 
-  private renderNoticeBar() {
+  private renderToast() {
     const alertClass =
       this.noticeTone === "success" ? "alert-success" :
       this.noticeTone === "error" ? "alert-error" : "alert-warning";
     return html`
-      <div class="alert ${alertClass} rounded-none border-x-0 py-2 px-6 text-sm">
+      <div class="cr-toast alert ${alertClass} text-sm shadow-lg">
         <span class="flex-1">${this.noticeMessage}</span>
-        <button class="btn btn-ghost btn-xs" type="button" @click=${() => { this.noticeMessage = ""; }}>✕</button>
+        <button
+          class="btn btn-ghost btn-xs opacity-70 hover:opacity-100"
+          type="button"
+          @click=${() => {
+            if (this.noticeTimer) {
+              clearTimeout(this.noticeTimer);
+              this.noticeTimer = null;
+            }
+            this.noticeMessage = "";
+          }}
+        >✕</button>
       </div>
     `;
   }
@@ -1493,6 +1514,23 @@ export class CrDashboardApp extends LitElement {
   }
 
   private renderOverviewPage() {
+    if (this.loadingDashboard) {
+      return html`
+        <div class="cr-fade-in flex flex-col gap-7">
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight">Overview</h1>
+            <p class="text-base-content/50 text-sm mt-1">Loading dashboard…</p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${[1, 2, 3].map(() => html`<div class="cr-skeleton h-28 rounded-[0.55rem]"></div>`)}
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            ${[1, 2, 3].map(() => html`<div class="cr-skeleton h-40 rounded-[0.55rem]"></div>`)}
+          </div>
+        </div>
+      `;
+    }
+
     const configuredProviders = providerOrder.filter(
       (provider) => this.dashboard?.providers?.[provider]?.configured
     ).length;
@@ -1500,7 +1538,7 @@ export class CrDashboardApp extends LitElement {
       this.dashboard?.config?.defaultReviewAgents.length ?? this.selectedAgents.length ?? 0;
 
     return html`
-      <div class="flex flex-col gap-6">
+      <div class="cr-fade-in flex flex-col gap-7">
         <!-- Page header -->
         <div class="flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -1520,7 +1558,7 @@ export class CrDashboardApp extends LitElement {
         </div>
 
         <!-- Stats row -->
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-4 items-stretch">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
           <cr-stat-card
             .eyebrow=${"Configured providers"}
             .value=${`${configuredProviders}/3`}
@@ -1544,12 +1582,12 @@ export class CrDashboardApp extends LitElement {
         </div>
 
         <!-- Provider summary cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           ${providerOrder.map((provider) => this.renderProviderSummaryCard(provider))}
         </div>
 
         <!-- Config overview -->
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           <cr-config-card
             .label=${"AI runtime"}
             .value=${this.dashboard?.config?.openai?.model || "No model configured"}
@@ -1579,7 +1617,7 @@ export class CrDashboardApp extends LitElement {
     const label = providerLabels[provider];
 
     return html`
-      <div class="h-full rounded-[0.55rem] border border-base-300 bg-base-200 shadow-sm px-4 py-4 flex flex-col gap-3">
+      <div class="h-full rounded-[0.55rem] border border-base-300 bg-base-200 px-4 py-4 flex flex-col gap-3">
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
             <div class="${sectionEyebrowClass} mb-1 flex items-center gap-1.5">
@@ -1619,15 +1657,14 @@ export class CrDashboardApp extends LitElement {
 
     if (!this.configured) {
       return html`
-        <div class="hero min-h-[40vh] bg-base-200 rounded-xl border border-base-300">
-          <div class="hero-content text-center flex-col gap-4 max-w-lg">
-            <div class="badge badge-error badge-lg gap-1.5">
-              <cr-icon .icon=${this.iconForSection(this.provider)} .size=${14}></cr-icon>
-              ${label}
+        <div class="cr-fade-in flex flex-1 items-center justify-center py-16">
+          <div class="cr-empty-state cr-empty-state--warning max-w-md">
+            <div class="cr-empty-state__icon">
+              <cr-icon .icon=${this.iconForSection(this.provider)} .size=${32}></cr-icon>
             </div>
-            <h2 class="text-2xl font-bold">${label} is not configured</h2>
-            <p class="text-base-content/50">Add your ${label} connection details in Settings before loading this provider's review queue.</p>
-            <button class="btn btn-primary gap-1.5" type="button" @click=${() => this.handleSectionChange("settings")}>
+            <div class="cr-empty-state__title">${label} is not configured</div>
+            <div class="cr-empty-state__description">Add your ${label} connection details in Settings before loading this provider's review queue.</div>
+            <button class="btn btn-primary btn-sm gap-1.5 mt-3" type="button" @click=${() => this.handleSectionChange("settings")}>
               <cr-icon .icon=${Settings2} .size=${16}></cr-icon>
               Open Settings
             </button>
@@ -1637,39 +1674,15 @@ export class CrDashboardApp extends LitElement {
     }
 
     return html`
-      <div class="cr-provider-page flex h-full min-h-0 flex-col gap-4">
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-4 items-stretch">
-          <cr-stat-card
-            .eyebrow=${`${label} repository`}
-            .value=${this.selectedRepository ? "Connected" : "Not selected"}
-            .note=${this.selectedRepository?.label || "Choose a repository below to load review items."}
-            .tone=${this.selectedRepository ? "success" : "default"}
-            .icon=${FolderSearch}
-          ></cr-stat-card>
-          <cr-stat-card
-            .eyebrow=${`${label} queue`}
-            .value=${String(this.targets.length)}
-            .note=${this.selectedRepository ? `${this.reviewStateLabel(this.stateFilter)} items loaded` : "Repository selection is required before the queue can load."}
-            .tone=${this.targets.length > 0 ? "accent" : "default"}
-            .icon=${Workflow}
-          ></cr-stat-card>
-          <cr-stat-card
-            .eyebrow=${"AI workspace"}
-            .value=${detail ? this.workspaceTabLabel(this.workspaceTab) : "Standby"}
-            .note=${detail ? detail.title : "Open a review request to unlock summary, chat, and review actions."}
-            .tone=${detail ? "success" : "default"}
-            .icon=${BrainCircuit}
-          ></cr-stat-card>
-        </div>
-
+      <div class="cr-fade-in cr-provider-page flex h-full min-h-0 flex-col gap-5">
         ${this.renderRepositorySelectionCard(label)}
 
         <div
           class="cr-provider-workspace"
-          style=${`--cr-left-rail:${this.queueRailCollapsed ? "4rem" : "23rem"}; --cr-right-rail:${this.analysisRailCollapsed ? "4rem" : "25rem"};`}
+          style=${`--cr-left-rail:${this.queueRailCollapsed ? "4rem" : "22rem"}; --cr-right-rail:${this.analysisRailCollapsed ? "4rem" : "24rem"};`}
         >
-          ${this.renderQueueRail(label)}
-          ${this.renderWorkspacePanel(label, detail)}
+          ${this.renderQueueRail()}
+          ${this.renderWorkspacePanel(detail)}
           ${this.renderAnalysisRail(label, detail)}
         </div>
       </div>
@@ -1678,14 +1691,19 @@ export class CrDashboardApp extends LitElement {
 
   private renderRepositorySelectionCard(label: string) {
     return html`
-      <section class="rounded-[0.7rem] border border-base-300 bg-base-200 px-4 py-3 shadow-sm">
+      <section class="rounded-[0.55rem] border border-base-300 bg-base-200/80 px-4 py-3">
         <div class="flex items-center justify-between gap-3 flex-wrap">
-          <div class="min-w-0">
-            <div class=${sectionEyebrowClass}>${label}</div>
-            <h2 class="text-sm font-semibold">Repository</h2>
+          <div class="min-w-0 flex items-center gap-3">
+            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+              <cr-icon .icon=${this.iconForSection(this.provider)} .size=${14} class="text-primary"></cr-icon>
+            </div>
+            <div>
+              <h2 class="text-sm font-semibold">${label} Repository</h2>
+              <div class="text-[0.72rem] text-base-content/40">Select a project to load its review queue</div>
+            </div>
           </div>
 
-          <div class="min-w-[18rem] flex-1">
+          <div class="min-w-[18rem] flex-1 max-w-xl">
             <cr-provider-repository-picker
               .provider=${this.provider}
               .options=${this.providerRepositoryOptions}
@@ -1701,7 +1719,7 @@ export class CrDashboardApp extends LitElement {
             ? html`
                 <button
                   type="button"
-                  class="btn btn-ghost btn-sm rounded-[0.7rem] border border-base-100/10 bg-base-100/38"
+                  class="btn btn-ghost btn-sm rounded-[0.55rem] text-base-content/60 hover:text-base-content"
                   @click=${() => this.clearSelectedRepository(this.provider)}
                 >
                   Clear
@@ -1713,7 +1731,7 @@ export class CrDashboardApp extends LitElement {
     `;
   }
 
-  private renderQueueRail(label: string) {
+  private renderQueueRail() {
     return html`
       <section
         class="cr-side-rail cr-side-rail--left rounded-[0.55rem] border border-base-300 bg-base-200 ${
@@ -1724,9 +1742,9 @@ export class CrDashboardApp extends LitElement {
           class="cr-side-rail__toggle cr-side-rail__toggle--left btn btn-ghost btn-sm"
           type="button"
           @click=${() => this.toggleQueueRail()}
-          aria-label=${this.queueRailCollapsed ? "Expand review queue" : "Collapse review queue"}
+          aria-label=${this.queueRailCollapsed ? `Expand ${providerQueueLabels[this.provider]}` : `Collapse ${providerQueueLabels[this.provider]}`}
           aria-expanded=${String(!this.queueRailCollapsed)}
-          title=${this.queueRailCollapsed ? "Expand review queue" : "Collapse review queue"}
+          title=${this.queueRailCollapsed ? `Expand ${providerQueueLabels[this.provider]}` : `Collapse ${providerQueueLabels[this.provider]}`}
         >
           <cr-icon
             .icon=${this.queueRailCollapsed ? ChevronRight : ChevronLeft}
@@ -1737,8 +1755,7 @@ export class CrDashboardApp extends LitElement {
         <div class="cr-side-rail__inner flex h-full min-h-0 flex-col gap-3 p-4">
           <div class="flex items-center justify-between gap-2">
             <div class="min-w-0">
-              <div class=${sectionEyebrowClass}>${label}</div>
-              <h2 class="text-base font-semibold">Review queue</h2>
+              <h2 class="text-base font-semibold">${providerQueueLabels[this.provider]}</h2>
             </div>
             <div class="badge badge-primary badge-sm">${this.reviewStateLabel(this.stateFilter)}</div>
           </div>
@@ -1774,7 +1791,6 @@ export class CrDashboardApp extends LitElement {
 
           <div class="flex items-center justify-between gap-2 text-xs text-base-content/50">
             <span>${this.queueCountLabel(this.filteredTargets.length)}</span>
-            <span>${label}</span>
           </div>
 
           <cr-review-list
@@ -1793,24 +1809,14 @@ export class CrDashboardApp extends LitElement {
     `;
   }
 
-  private renderWorkspacePanel(label: string, detail: ReviewTarget | null) {
+  private renderWorkspacePanel(detail: ReviewTarget | null) {
     return html`
       <section class="cr-review-workspace-panel relative rounded-[0.55rem] border border-base-300 bg-base-200 p-4">
-        <div class="flex items-center justify-between gap-2">
-          <div>
-            <div class=${sectionEyebrowClass}>${label}</div>
-            <h2 class="text-base font-semibold">Review workspace</h2>
-          </div>
-          ${detail
-            ? html`<div class="badge badge-success badge-sm">Active</div>`
-            : html`<div class="badge badge-ghost badge-sm">Idle</div>`}
-        </div>
-
         ${detail
           ? html`
               <div class="flex items-start justify-between gap-2 flex-wrap">
                 <div class="flex min-w-0 flex-col gap-1">
-                  <div class=${sectionEyebrowClass}>${label} review</div>
+                  
                   <h2 class="text-base font-semibold leading-snug">
                     <span class="font-mono text-primary text-sm">
                       ${detail.provider === "gitlab" ? `!${detail.id}` : `#${detail.id}`}
@@ -1877,9 +1883,9 @@ export class CrDashboardApp extends LitElement {
                   ? html`<div class="alert alert-error text-sm">${this.detailError}</div>`
                   : this.loadingDetail
                     ? html`
-                        <div class="flex h-full items-center gap-2 p-4 text-base-content/50 text-sm">
-                          <span class="loading loading-spinner loading-xs"></span>
-                          Loading workspace…
+                        <div class="cr-loader-shell">
+                          <span class="loading loading-spinner loading-sm text-primary"></span>
+                          <span class="text-sm text-base-content/50">Loading workspace…</span>
                         </div>
                       `
                     : this.workspaceTab === "overview"
@@ -1906,19 +1912,21 @@ export class CrDashboardApp extends LitElement {
             `
           : this.selectedRepository
             ? html`
-              <div class="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-base-content/40">
-                <cr-icon .icon=${FolderSearch} .size=${32}></cr-icon>
-                <p class="max-w-xs text-center text-sm">
-                  Select a review request from the queue to open this workspace.
-                </p>
+              <div class="flex flex-1 items-center justify-center">
+                <div class="cr-empty-state">
+                  <div class="cr-empty-state__icon"><cr-icon .icon=${FolderSearch} .size=${32}></cr-icon></div>
+                  <div class="cr-empty-state__title">No review request selected</div>
+                  <div class="cr-empty-state__description">Choose a review item from the queue on the left to open the workspace.</div>
+                </div>
               </div>
             `
             : html`
-              <div class="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-base-content/40">
-                <cr-icon .icon=${FolderSearch} .size=${32}></cr-icon>
-                <p class="max-w-sm text-center text-sm">
-                  Choose a ${label} repository in the selector above to load review items and open the workspace.
-                </p>
+              <div class="flex flex-1 items-center justify-center">
+                <div class="cr-empty-state">
+                  <div class="cr-empty-state__icon"><cr-icon .icon=${FolderSearch} .size=${32}></cr-icon></div>
+                  <div class="cr-empty-state__title">Select a repository</div>
+                  <div class="cr-empty-state__description">Choose a repository in the selector above to load review items and open the workspace.</div>
+                </div>
               </div>
             `}
       </section>
@@ -1949,8 +1957,7 @@ export class CrDashboardApp extends LitElement {
         <div class="cr-side-rail__inner flex h-full min-h-0 flex-col gap-3 p-4">
           <div class="flex items-center justify-between gap-2">
             <div>
-              <div class=${sectionEyebrowClass}>AI workspace</div>
-              <h2 class="text-base font-semibold">Action rail</h2>
+              <h2 class="text-base font-semibold">Actions</h2>
             </div>
             ${detail
               ? html`<div class="badge badge-primary badge-sm">${label}</div>`
@@ -1963,11 +1970,8 @@ export class CrDashboardApp extends LitElement {
                 <button
                   type="button"
                   class="tab tab-sm cr-tab ${this.analysisTab === tab ? "tab-active" : ""}"
-                  @click=${async () => {
+                  @click=${() => {
                     this.analysisTab = tab;
-                    if (tab === "chat") {
-                      await this.ensureChatContext();
-                    }
                   }}
                 >
                   ${this.analysisTabLabel(tab)}
@@ -1976,13 +1980,17 @@ export class CrDashboardApp extends LitElement {
             )}
           </div>
 
-          <div class="cr-side-rail__content flex-1 min-h-0 flex flex-col gap-3">
+          <div class="cr-side-rail__content">
             ${!detail
               ? html`
-                  <div class="alert text-sm">
-                    ${this.selectedRepository
-                      ? "Open a review request before running AI workflows."
-                      : `Select a ${label} repository first, then choose a review request.`}
+                  <div class="cr-empty-state" style="min-height:10rem">
+                    <div class="cr-empty-state__icon"><cr-icon .icon=${Bot} .size=${24}></cr-icon></div>
+                    <div class="cr-empty-state__title">AI Actions</div>
+                    <div class="cr-empty-state__description">
+                      ${this.selectedRepository
+                        ? "Open a review request to run AI workflows."
+                        : `Choose a ${label} repository, then open a review request.`}
+                    </div>
                   </div>
                 `
               : this.analysisTab === "review"
@@ -2000,8 +2008,10 @@ export class CrDashboardApp extends LitElement {
     if (detail.provider === "reviewboard") {
       return html`
         <div class="flex h-full items-center justify-center">
-          <div class="max-w-md rounded-[0.75rem] border border-base-100/10 bg-base-300 px-5 py-5 text-center text-sm text-base-content/60">
-            Review Board discussion threading is not exposed in this workspace yet. Use the provider page to open the review request and post summary feedback.
+          <div class="cr-empty-state max-w-md">
+            <div class="cr-empty-state__icon"><cr-icon .icon=${MessageSquare} .size=${28}></cr-icon></div>
+            <div class="cr-empty-state__title">Not available for Review Board</div>
+            <div class="cr-empty-state__description">Discussion threading is not exposed in this workspace yet. Use the provider page to open the review request and post summary feedback.</div>
           </div>
         </div>
       `;
@@ -2011,9 +2021,6 @@ export class CrDashboardApp extends LitElement {
       <div class="cr-comments-workspace flex h-full min-h-0 flex-col gap-3">
         <section class="cr-discussion-composer">
           <div class="cr-discussion-composer__header">
-            <div>
-              <h3 class="text-base font-semibold text-base-content/92">Comments</h3>
-            </div>
             <div class="cr-discussion-composer__assist">
               ${this.reviewResult
                 ? html`
@@ -2063,7 +2070,6 @@ export class CrDashboardApp extends LitElement {
               }}
             ></textarea>
             <div class="cr-discussion-composer__footer">
-              <div class="cr-discussion-composer__hint">Inline comments start in Diff.</div>
               <button
                 class="btn btn-primary btn-sm gap-1.5"
                 type="submit"
@@ -2080,19 +2086,19 @@ export class CrDashboardApp extends LitElement {
           <div class="cr-discussion-feed__body">
             ${this.loadingDiscussions
               ? html`
-                  <div class="flex min-h-[16rem] items-center justify-center gap-2 text-sm text-base-content/55">
-                    <span class="loading loading-spinner loading-sm"></span>
-                    Loading discussions…
+                  <div class="cr-loader-shell">
+                    <span class="loading loading-spinner loading-sm text-primary"></span>
+                    <span class="text-sm text-base-content/50">Loading discussions…</span>
                   </div>
                 `
               : this.discussionsError
                 ? html`<div class="alert alert-warning text-sm">${this.discussionsError}</div>`
               : this.discussions.length === 0
                   ? html`
-                      <div class="cr-discussion-feed__empty">
-                        <p class="text-sm text-base-content/58">
-                          No comments yet. Start the conversation here or add an inline note from Diff.
-                        </p>
+                      <div class="cr-empty-state" style="min-height:10rem">
+                        <div class="cr-empty-state__icon"><cr-icon .icon=${MessageSquare} .size=${24}></cr-icon></div>
+                        <div class="cr-empty-state__title">No comments yet</div>
+                        <div class="cr-empty-state__description">Start the conversation above or add an inline note from the Diff tab.</div>
                       </div>
                     `
                   : html`
@@ -2118,7 +2124,7 @@ export class CrDashboardApp extends LitElement {
       <section class="cr-discussion-thread">
         <div class="cr-discussion-thread__header">
           <div class="min-w-0">
-            <h4 class="cr-discussion-thread__title">${thread.title}</h4>
+            ${thread.kind !== "general" ? html`<h4 class="cr-discussion-thread__title">${thread.title}</h4>` : ""}
             <div class="cr-discussion-thread__meta">
               <span>${starter}</span>
               ${lastUpdated ? html`<span>Updated ${lastUpdated}</span>` : ""}
@@ -2126,24 +2132,38 @@ export class CrDashboardApp extends LitElement {
               ${thread.resolved ? html`<span>Resolved</span>` : ""}
             </div>
           </div>
-          ${thread.replyable
-            ? html`
-                <button
-                  class="btn ${replying ? "btn-primary" : "btn-ghost"} btn-xs rounded-[0.7rem]"
-                  type="button"
-                  @click=${() => {
-                    if (replying) {
-                      this.cancelReplyToThread();
-                      return;
-                    }
+          <div class="flex items-center gap-2">
+            ${thread.messages[0]?.url
+              ? html`
+                  <a
+                    class="cr-discussion-message__link btn btn-ghost btn-xs rounded-[0.7rem] no-underline"
+                    href=${thread.messages[0].url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open
+                  </a>
+                `
+              : ""}
+            ${thread.replyable
+              ? html`
+                  <button
+                    class="btn ${replying ? "btn-primary" : "btn-ghost"} btn-xs rounded-[0.7rem]"
+                    type="button"
+                    @click=${() => {
+                      if (replying) {
+                        this.cancelReplyToThread();
+                        return;
+                      }
 
-                    this.startReplyToThread(thread);
-                  }}
-                >
-                  ${replying ? "Close reply" : "Reply"}
-                </button>
-              `
-            : ""}
+                      this.startReplyToThread(thread);
+                    }}
+                  >
+                    ${replying ? "Close reply" : "Reply"}
+                  </button>
+                `
+              : ""}
+          </div>
         </div>
 
         <div class="cr-discussion-thread__messages">
@@ -2160,7 +2180,7 @@ export class CrDashboardApp extends LitElement {
                 }}
               >
                 <textarea
-                  class="textarea textarea-bordered textarea-sm min-h-24 text-sm"
+                  class="textarea textarea-bordered textarea-sm min-h-24 text-sm w-full"
                   rows="4"
                   placeholder="Write a reply"
                   .value=${this.discussionReplyDraft}
@@ -2204,6 +2224,7 @@ export class CrDashboardApp extends LitElement {
 
     return html`
       <article class="cr-discussion-message ${index === 0 ? "cr-discussion-message--root" : ""}">
+        ${index > 0 ? html`
         <div class="cr-discussion-message__meta">
           <div class="cr-discussion-message__author-line">
             <span class="cr-discussion-message__author">${author}</span>
@@ -2225,6 +2246,7 @@ export class CrDashboardApp extends LitElement {
               `
             : ""}
         </div>
+        ` : ""}
         <div class="cr-discussion-message__bubble">
           ${renderMarkdown(message.body, {
             className: "cr-discussion-message__markdown",
@@ -2244,11 +2266,11 @@ export class CrDashboardApp extends LitElement {
     const reviewBoardInlineDisabled = this.selectedTarget?.provider === "reviewboard";
 
     return html`
-      <div class="cr-inline-comment-popover rounded-[0.8rem] border border-base-100/12 bg-base-100/96 p-4 shadow-2xl backdrop-blur-md">
+      <div class="cr-inline-comment-popover rounded-[0.75rem] border border-base-300 bg-base-200/98 p-4 backdrop-blur-md" style="box-shadow:var(--cr-shadow-3)">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <div class=${sectionEyebrowClass}>Inline comment</div>
-            <h3 class="text-sm font-semibold text-base-content/92">Comment on selected line</h3>
+            <h3 class="text-sm font-semibold text-base-content/92">Inline comment</h3>
+            <div class=${sectionEyebrowClass}>Comment on selected line</div>
           </div>
           <button
             class="btn btn-ghost btn-xs"
@@ -2301,109 +2323,114 @@ export class CrDashboardApp extends LitElement {
   }
 
   private renderSettingsPage() {
+    if (this.loadingConfig && !this.dashboard) {
+      return html`
+        <div class="cr-fade-in flex flex-col gap-10 pb-28">
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight">Settings</h1>
+            <p class="mt-1 text-sm text-base-content/50">Loading configuration…</p>
+          </div>
+          <div class="flex flex-col gap-6">
+            ${[1, 2, 3].map(() => html`<div class="cr-skeleton h-32 rounded-xl"></div>`)}
+          </div>
+        </div>
+      `;
+    }
+
     const gitlabConfigured = this.dashboard?.config?.gitlab?.configured;
     const githubConfigured = this.dashboard?.config?.github?.configured;
     const reviewBoardConfigured = this.dashboard?.config?.reviewboard?.configured;
 
     return html`
-      <div class="flex flex-col gap-6 pb-24">
+      <div class="cr-fade-in flex flex-col gap-10 pb-28">
+
         <!-- Page header -->
         <div>
           <h1 class="text-2xl font-bold tracking-tight">Settings</h1>
-          <p class="text-base-content/50 text-sm mt-1">Configure providers, AI runtime, webhooks, and server options.</p>
+          <p class="mt-1 text-sm text-base-content/50">Configure providers, AI runtime, webhooks, and server options.</p>
         </div>
 
-        <!-- Stats row -->
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-4 items-stretch">
-          <cr-stat-card
-            .eyebrow=${"AI runtime"}
-            .value=${this.dashboard?.config?.openai?.model || "Not configured"}
-            .note=${this.dashboard?.config?.openai?.configured ? "Model endpoint ready" : "Add API settings to enable AI"}
-            .tone=${this.dashboard?.config?.openai?.configured ? "success" : "accent"}
-            .icon=${BrainCircuit}
-          ></cr-stat-card>
-          <cr-stat-card
-            .eyebrow=${"Webhook workers"}
-            .value=${this.configDraft.webhookConcurrency}
-            .note=${`Queue limit: ${this.configDraft.webhookQueueLimit}`}
-            .icon=${Webhook}
-          ></cr-stat-card>
-          <cr-stat-card
-            .eyebrow=${"Terminal theme"}
-            .value=${this.formatLabel(this.configDraft.terminalTheme || "Auto")}
-            .note=${"CLI and server terminal rendering"}
-            .icon=${Waypoints}
-          ></cr-stat-card>
-        </div>
+        <!-- ── AI ──────────────────────────────────────────── -->
+        <section class="flex flex-col gap-5">
+          <div class="flex items-center gap-2.5">
+            <cr-icon .icon=${BrainCircuit} .size=${18}></cr-icon>
+            <h2 class="text-lg font-semibold">AI</h2>
+            <span class="badge ${this.dashboard?.config?.openai?.configured ? "badge-success" : "badge-error"} badge-sm ml-1">
+              ${this.dashboard?.config?.openai?.configured ? "Ready" : "Needs setup"}
+            </span>
+          </div>
 
-        ${renderCollapsibleCard({
-          cardClass: "bg-base-200 border border-base-300",
-          bodyClass: "px-4 pb-4 pt-0 flex flex-col gap-4",
-          summary: html`
-            <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2">
-                <cr-icon .icon=${BrainCircuit} .size=${16}></cr-icon>
-                <div>
-                  <div class=${sectionEyebrowClass}>AI workspace</div>
-                  <h3 class="text-base font-semibold">AI and defaults</h3>
+          <div class="rounded-xl border border-base-300 bg-base-200 divide-y divide-base-300">
+
+            <!-- Model & API -->
+            <div class="px-6 py-5 flex flex-col gap-5">
+              <div>
+                <div class="text-sm font-semibold">Model &amp; API</div>
+                <div class=${sectionEyebrowClass}>OpenAI-compatible endpoint for all AI workflows</div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                ${this.renderConfigInput({ label: "API URL", note: "Compatible base URL for review, summarize, and chat.", value: this.configDraft.openaiApiUrl, onInput: (v) => this.handleConfigField("openaiApiUrl", v) })}
+                ${this.renderConfigInput({ label: "API key", note: "Stored in CR config for all AI workflows.", value: this.configDraft.openaiApiKey, type: "password", onInput: (v) => this.handleConfigField("openaiApiKey", v) })}
+                ${this.renderConfigInput({ label: "Model", note: "Default model name for CR review workflows.", value: this.configDraft.openaiModel, onInput: (v) => this.handleConfigField("openaiModel", v) })}
+              </div>
+              <div class="flex items-center gap-3 flex-wrap">
+                <button
+                  class="btn btn-outline btn-sm gap-1.5"
+                  type="button"
+                  ?disabled=${this.testResults.openai?.testing}
+                  @click=${() => this.handleTestConnection("openai")}
+                >
+                  ${this.testResults.openai?.testing ? html`<span class="loading loading-spinner loading-xs"></span>` : ""}
+                  Test connection
+                </button>
+                ${this.testResults.openai && !this.testResults.openai.testing ? html`
+                  <span class="text-sm ${this.testResults.openai.ok ? "text-success" : "text-error"}">
+                    ${this.testResults.openai.ok ? "✓" : "✗"} ${this.testResults.openai.message}
+                  </span>` : ""}
+              </div>
+            </div>
+
+            <!-- Options -->
+            <div class="px-6 py-5 flex flex-col gap-5">
+              <div>
+                <div class="text-sm font-semibold">Options</div>
+                <div class=${sectionEyebrowClass}>Runtime behaviour and terminal rendering</div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div class="form-control gap-1">
+                  <label class="label py-0"><span class="label-text text-sm font-medium">Terminal theme</span></label>
+                  <div class="text-xs text-base-content/50 mb-1">Optional override for terminal-facing surfaces.</div>
+                  <select
+                    class="select select-bordered select-sm"
+                    .value=${this.configDraft.terminalTheme}
+                    @change=${(e: Event) => this.handleConfigField("terminalTheme", (e.target as HTMLSelectElement).value as TerminalTheme | "")}
+                  >
+                    <option value="">Auto</option>
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                  </select>
                 </div>
               </div>
-              <div class="badge ${this.dashboard?.config?.openai?.configured ? "badge-success" : "badge-error"} badge-sm">
-                ${this.dashboard?.config?.openai?.configured ? "Ready" : "Needs setup"}
-              </div>
-            </div>
-          `,
-          body: html`
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              ${this.renderConfigInput({ label: "OpenAI API URL", note: "Compatible base URL for review, summarize, and chat.", value: this.configDraft.openaiApiUrl, onInput: (v) => this.handleConfigField("openaiApiUrl", v) })}
-              ${this.renderConfigInput({ label: "OpenAI API key", note: "Stored in CR config for all AI workflows.", value: this.configDraft.openaiApiKey, type: "password", onInput: (v) => this.handleConfigField("openaiApiKey", v) })}
-              ${this.renderConfigInput({ label: "Model", note: "Default model name for CR review workflows.", value: this.configDraft.openaiModel, onInput: (v) => this.handleConfigField("openaiModel", v) })}
-              <div class="form-control gap-1">
-                <label class="label py-0"><span class="label-text text-sm font-medium">Terminal theme</span></label>
-                <div class="text-xs text-base-content/50 mb-1">Optional override for terminal-facing surfaces.</div>
-                <select
-                  class="select select-bordered select-sm"
-                  .value=${this.configDraft.terminalTheme}
-                  @change=${(e: Event) => this.handleConfigField("terminalTheme", (e.target as HTMLSelectElement).value as TerminalTheme | "")}
-                >
-                  <option value="">Auto</option>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
-              </div>
-            </div>
-            <div class="flex items-center justify-between gap-2 mt-1">
-              <div></div>
-              <button
-                class="btn btn-outline btn-xs gap-1.5"
-                type="button"
-                ?disabled=${this.testResults.openai?.testing}
-                @click=${() => this.handleTestConnection("openai")}
-              >
-                ${this.testResults.openai?.testing ? html`<span class="loading loading-spinner loading-xs"></span>` : ""}
-                Test connection
-              </button>
-            </div>
-            ${this.testResults.openai && !this.testResults.openai.testing ? html`
-              <div class="alert ${this.testResults.openai.ok ? "alert-success" : "alert-error"} py-2 text-sm">
-                ${this.testResults.openai.ok ? "✓" : "✗"} ${this.testResults.openai.message}
-              </div>` : ""}
-            <div class="form-control gap-1">
-              <label class="label py-0 cursor-pointer justify-start gap-3">
+              <label class="cursor-pointer flex items-start gap-3">
                 <input
                   type="checkbox"
-                  class="checkbox checkbox-sm"
+                  class="checkbox checkbox-sm mt-0.5"
                   .checked=${this.configDraft.useCustomStreaming}
                   @change=${(e: Event) => this.handleConfigField("useCustomStreaming", (e.target as HTMLInputElement).checked)}
                 />
                 <div>
-                  <span class="label-text font-medium">Use custom streaming</span>
-                  <div class="text-xs text-base-content/50">Enable CR's custom SSE streaming instead of the default SDK.</div>
+                  <div class="text-sm font-medium">Use custom streaming</div>
+                  <div class="text-xs text-base-content/50 mt-0.5">Enable CR's custom SSE streaming instead of the default SDK.</div>
                 </div>
               </label>
             </div>
-            <div class="form-control gap-2">
-              <label class="label py-0"><span class="label-text text-sm font-medium">Default review agents</span></label>
+
+            <!-- Default review agents -->
+            <div class="px-6 py-5 flex flex-col gap-4">
+              <div>
+                <div class="text-sm font-semibold">Default review agents</div>
+                <div class=${sectionEyebrowClass}>Pre-selected agents when opening the review workflow</div>
+              </div>
               <div class="flex flex-wrap gap-2">
                 ${this.agentOptions.map(option => html`
                   <label class="cursor-pointer flex items-center gap-1.5 badge badge-ghost badge-lg">
@@ -2418,45 +2445,41 @@ export class CrDashboardApp extends LitElement {
                 `)}
               </div>
             </div>
-          `,
-        })}
 
-        <!-- Provider connections -->
-        ${renderCollapsibleCard({
-          cardClass: "bg-base-200 border border-base-300",
-          bodyClass: "px-4 pb-4 pt-0 flex flex-col gap-4",
-          summary: html`
-            <div class="flex items-center justify-between gap-2 flex-wrap">
-              <div class="flex items-center gap-2">
-                <cr-icon .icon=${GitBranch} .size=${16}></cr-icon>
-                <div>
-                  <div class=${sectionEyebrowClass}>Sources</div>
-                  <h3 class="text-base font-semibold">Source connections</h3>
-                </div>
-              </div>
-              <div class="flex gap-1.5 flex-wrap">
-                <span class="badge ${gitlabConfigured ? "badge-success" : "badge-error"} badge-sm">GitLab</span>
-                <span class="badge ${githubConfigured ? "badge-success" : "badge-error"} badge-sm">GitHub</span>
-                <span class="badge ${reviewBoardConfigured ? "badge-success" : "badge-error"} badge-sm">Review Board</span>
-              </div>
+          </div>
+        </section>
+
+        <!-- ── Source Control ──────────────────────────────── -->
+        <section class="flex flex-col gap-5">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <cr-icon .icon=${GitBranch} .size=${18}></cr-icon>
+            <h2 class="text-lg font-semibold">Source Control</h2>
+            <div class="flex gap-1.5 ml-1 flex-wrap">
+              <span class="badge ${gitlabConfigured ? "badge-success" : "badge-error"} badge-sm">GitLab</span>
+              <span class="badge ${githubConfigured ? "badge-success" : "badge-error"} badge-sm">GitHub</span>
+              <span class="badge ${reviewBoardConfigured ? "badge-success" : "badge-error"} badge-sm">Review Board</span>
             </div>
-          `,
-          body: html`
+          </div>
 
-            <!-- GitLab -->
-            <div class="divider my-0 text-xs">GitLab</div>
-            <div class="flex items-center justify-between gap-2">
-              <label class="label cursor-pointer gap-3 py-0">
-                <input
-                  type="checkbox"
-                  class="toggle toggle-sm toggle-primary"
-                  .checked=${this.configDraft.gitlabEnabled}
-                  @change=${(e: Event) => this.handleConfigField("gitlabEnabled", (e.target as HTMLInputElement).checked)}
-                />
-                <span class="label-text font-medium">Enable GitLab</span>
-              </label>
+          <!-- GitLab -->
+          <div class="rounded-xl border border-base-300 bg-base-200 divide-y divide-base-300">
+            <div class="px-6 py-4 flex items-center justify-between gap-3 flex-wrap">
+              <div class="flex items-center gap-3">
+                <label class="cursor-pointer flex items-center gap-2.5">
+                  <input
+                    type="checkbox"
+                    class="toggle toggle-sm toggle-primary"
+                    .checked=${this.configDraft.gitlabEnabled}
+                    @change=${(e: Event) => this.handleConfigField("gitlabEnabled", (e.target as HTMLInputElement).checked)}
+                  />
+                  <span class="text-sm font-semibold">GitLab</span>
+                </label>
+                <span class="badge ${gitlabConfigured ? "badge-success" : "badge-ghost"} badge-sm">
+                  ${gitlabConfigured ? "Connected" : "Not configured"}
+                </span>
+              </div>
               <button
-                class="btn btn-outline btn-xs gap-1.5"
+                class="btn btn-outline btn-sm gap-1.5"
                 type="button"
                 ?disabled=${this.testResults.gitlab?.testing}
                 @click=${() => this.handleTestConnection("gitlab")}
@@ -2466,28 +2489,38 @@ export class CrDashboardApp extends LitElement {
               </button>
             </div>
             ${this.testResults.gitlab && !this.testResults.gitlab.testing ? html`
-              <div class="alert ${this.testResults.gitlab.ok ? "alert-success" : "alert-error"} py-2 text-sm">
-                ${this.testResults.gitlab.ok ? "✓" : "✗"} ${this.testResults.gitlab.message}
+              <div class="px-6 py-3">
+                <span class="text-sm ${this.testResults.gitlab.ok ? "text-success" : "text-error"}">
+                  ${this.testResults.gitlab.ok ? "✓" : "✗"} ${this.testResults.gitlab.message}
+                </span>
               </div>` : ""}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              ${this.renderConfigInput({ label: "GitLab URL", note: "Base URL for merge request and inline comment APIs.", value: this.configDraft.gitlabUrl, onInput: (v) => this.handleConfigField("gitlabUrl", v) })}
-              ${this.renderConfigInput({ label: "GitLab token", note: "Private token for CR GitLab workflows.", value: this.configDraft.gitlabKey, type: "password", onInput: (v) => this.handleConfigField("gitlabKey", v) })}
+            <div class="px-6 py-5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                ${this.renderConfigInput({ label: "GitLab URL", note: "Base URL for merge request and inline comment APIs.", value: this.configDraft.gitlabUrl, onInput: (v) => this.handleConfigField("gitlabUrl", v) })}
+                ${this.renderConfigInput({ label: "GitLab token", note: "Private token for CR GitLab workflows.", value: this.configDraft.gitlabKey, type: "password", onInput: (v) => this.handleConfigField("gitlabKey", v) })}
+              </div>
             </div>
+          </div>
 
-            <!-- GitHub -->
-            <div class="divider my-0 text-xs">GitHub</div>
-            <div class="flex items-center justify-between gap-2">
-              <label class="label cursor-pointer gap-3 py-0">
-                <input
-                  type="checkbox"
-                  class="toggle toggle-sm toggle-primary"
-                  .checked=${this.configDraft.githubEnabled}
-                  @change=${(e: Event) => this.handleConfigField("githubEnabled", (e.target as HTMLInputElement).checked)}
-                />
-                <span class="label-text font-medium">Enable GitHub</span>
-              </label>
+          <!-- GitHub -->
+          <div class="rounded-xl border border-base-300 bg-base-200 divide-y divide-base-300">
+            <div class="px-6 py-4 flex items-center justify-between gap-3 flex-wrap">
+              <div class="flex items-center gap-3">
+                <label class="cursor-pointer flex items-center gap-2.5">
+                  <input
+                    type="checkbox"
+                    class="toggle toggle-sm toggle-primary"
+                    .checked=${this.configDraft.githubEnabled}
+                    @change=${(e: Event) => this.handleConfigField("githubEnabled", (e.target as HTMLInputElement).checked)}
+                  />
+                  <span class="text-sm font-semibold">GitHub</span>
+                </label>
+                <span class="badge ${githubConfigured ? "badge-success" : "badge-ghost"} badge-sm">
+                  ${githubConfigured ? "Connected" : "Not configured"}
+                </span>
+              </div>
               <button
-                class="btn btn-outline btn-xs gap-1.5"
+                class="btn btn-outline btn-sm gap-1.5"
                 type="button"
                 ?disabled=${this.testResults.github?.testing}
                 @click=${() => this.handleTestConnection("github")}
@@ -2497,28 +2530,38 @@ export class CrDashboardApp extends LitElement {
               </button>
             </div>
             ${this.testResults.github && !this.testResults.github.testing ? html`
-              <div class="alert ${this.testResults.github.ok ? "alert-success" : "alert-error"} py-2 text-sm">
-                ${this.testResults.github.ok ? "✓" : "✗"} ${this.testResults.github.message}
+              <div class="px-6 py-3">
+                <span class="text-sm ${this.testResults.github.ok ? "text-success" : "text-error"}">
+                  ${this.testResults.github.ok ? "✓" : "✗"} ${this.testResults.github.message}
+                </span>
               </div>` : ""}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              ${this.renderConfigInput({ label: "GitHub URL", note: "Leave blank for github.com. Set to your GitHub Enterprise Server base URL.", value: this.configDraft.githubUrl, onInput: (v) => this.handleConfigField("githubUrl", v) })}
-              ${this.renderConfigInput({ label: "GitHub token", note: "PAT to list pull requests and post review comments.", value: this.configDraft.githubToken, type: "password", onInput: (v) => this.handleConfigField("githubToken", v) })}
+            <div class="px-6 py-5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                ${this.renderConfigInput({ label: "GitHub URL", note: "Leave blank for github.com. Set for GitHub Enterprise.", value: this.configDraft.githubUrl, onInput: (v) => this.handleConfigField("githubUrl", v) })}
+                ${this.renderConfigInput({ label: "GitHub token", note: "PAT to list pull requests and post review comments.", value: this.configDraft.githubToken, type: "password", onInput: (v) => this.handleConfigField("githubToken", v) })}
+              </div>
             </div>
+          </div>
 
-            <!-- Review Board -->
-            <div class="divider my-0 text-xs">Review Board</div>
-            <div class="flex items-center justify-between gap-2">
-              <label class="label cursor-pointer gap-3 py-0">
-                <input
-                  type="checkbox"
-                  class="toggle toggle-sm toggle-primary"
-                  .checked=${this.configDraft.reviewboardEnabled}
-                  @change=${(e: Event) => this.handleConfigField("reviewboardEnabled", (e.target as HTMLInputElement).checked)}
-                />
-                <span class="label-text font-medium">Enable Review Board</span>
-              </label>
+          <!-- Review Board -->
+          <div class="rounded-xl border border-base-300 bg-base-200 divide-y divide-base-300">
+            <div class="px-6 py-4 flex items-center justify-between gap-3 flex-wrap">
+              <div class="flex items-center gap-3">
+                <label class="cursor-pointer flex items-center gap-2.5">
+                  <input
+                    type="checkbox"
+                    class="toggle toggle-sm toggle-primary"
+                    .checked=${this.configDraft.reviewboardEnabled}
+                    @change=${(e: Event) => this.handleConfigField("reviewboardEnabled", (e.target as HTMLInputElement).checked)}
+                  />
+                  <span class="text-sm font-semibold">Review Board</span>
+                </label>
+                <span class="badge ${reviewBoardConfigured ? "badge-success" : "badge-ghost"} badge-sm">
+                  ${reviewBoardConfigured ? "Connected" : "Not configured"}
+                </span>
+              </div>
               <button
-                class="btn btn-outline btn-xs gap-1.5"
+                class="btn btn-outline btn-sm gap-1.5"
                 type="button"
                 ?disabled=${this.testResults.reviewboard?.testing}
                 @click=${() => this.handleTestConnection("reviewboard")}
@@ -2528,53 +2571,79 @@ export class CrDashboardApp extends LitElement {
               </button>
             </div>
             ${this.testResults.reviewboard && !this.testResults.reviewboard.testing ? html`
-              <div class="alert ${this.testResults.reviewboard.ok ? "alert-success" : "alert-error"} py-2 text-sm">
-                ${this.testResults.reviewboard.ok ? "✓" : "✗"} ${this.testResults.reviewboard.message}
+              <div class="px-6 py-3">
+                <span class="text-sm ${this.testResults.reviewboard.ok ? "text-success" : "text-error"}">
+                  ${this.testResults.reviewboard.ok ? "✓" : "✗"} ${this.testResults.reviewboard.message}
+                </span>
               </div>` : ""}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              ${this.renderConfigInput({ label: "Review Board URL", note: "Base URL for review request and diff APIs.", value: this.configDraft.rbUrl, onInput: (v) => this.handleConfigField("rbUrl", v) })}
-              ${this.renderConfigInput({ label: "Review Board token", note: "Token for review publishing and queue access.", value: this.configDraft.rbToken, type: "password", onInput: (v) => this.handleConfigField("rbToken", v) })}
+            <div class="px-6 py-5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                ${this.renderConfigInput({ label: "Review Board URL", note: "Base URL for review request and diff APIs.", value: this.configDraft.rbUrl, onInput: (v) => this.handleConfigField("rbUrl", v) })}
+                ${this.renderConfigInput({ label: "Review Board token", note: "Token for review publishing and queue access.", value: this.configDraft.rbToken, type: "password", onInput: (v) => this.handleConfigField("rbToken", v) })}
+              </div>
             </div>
-          `,
-        })}
+          </div>
+        </section>
 
-        <!-- Webhooks -->
-        ${renderCollapsibleCard({
-          cardClass: "bg-base-200 border border-base-300",
-          bodyClass: "px-4 pb-4 pt-0 flex flex-col gap-4",
-          summary: html`
-            <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2">
-                <cr-icon .icon=${Webhook} .size=${16}></cr-icon>
-                <div>
-                  <div class=${sectionEyebrowClass}>Automation</div>
-                  <h3 class="text-base font-semibold">Webhooks &amp; queueing</h3>
-                </div>
+        <!-- ── Automation ──────────────────────────────────── -->
+        <section class="flex flex-col gap-5">
+          <div class="flex items-center gap-2.5">
+            <cr-icon .icon=${Webhook} .size=${18}></cr-icon>
+            <h2 class="text-lg font-semibold">Automation</h2>
+            <span class="badge ${this.dashboard?.config?.webhook?.sslEnabled ? "badge-success" : "badge-ghost"} badge-sm ml-1">
+              ${this.dashboard?.config?.webhook?.sslEnabled ? "SSL enabled" : "HTTP only"}
+            </span>
+          </div>
+
+          <div class="rounded-xl border border-base-300 bg-base-200 divide-y divide-base-300">
+
+            <!-- Webhook secrets -->
+            <div class="px-6 py-5 flex flex-col gap-5">
+              <div>
+                <div class="text-sm font-semibold">Webhook secrets</div>
+                <div class=${sectionEyebrowClass}>Optional shared secrets to validate incoming webhook payloads</div>
               </div>
-              <div class="badge ${this.dashboard?.config?.webhook?.sslEnabled ? "badge-success" : "badge-ghost"} badge-sm">
-                ${this.dashboard?.config?.webhook?.sslEnabled ? "SSL enabled" : "HTTP only"}
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                ${this.renderConfigInput({ label: "GitLab webhook secret", note: "Shared secret for GitLab webhook events.", value: this.configDraft.gitlabWebhookSecret, type: "password", onInput: (v) => this.handleConfigField("gitlabWebhookSecret", v) })}
+                ${this.renderConfigInput({ label: "GitHub webhook secret", note: "Shared secret for GitHub webhook events.", value: this.configDraft.githubWebhookSecret, type: "password", onInput: (v) => this.handleConfigField("githubWebhookSecret", v) })}
+                ${this.renderConfigInput({ label: "Review Board webhook secret", note: "Shared secret for Review Board webhook events.", value: this.configDraft.rbWebhookSecret, type: "password", onInput: (v) => this.handleConfigField("rbWebhookSecret", v) })}
               </div>
             </div>
-          `,
-          body: html`
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              ${this.renderConfigInput({ label: "GitLab webhook secret", note: "Optional shared secret for GitLab webhooks.", value: this.configDraft.gitlabWebhookSecret, type: "password", onInput: (v) => this.handleConfigField("gitlabWebhookSecret", v) })}
-              ${this.renderConfigInput({ label: "GitHub webhook secret", note: "Optional shared secret for GitHub webhooks.", value: this.configDraft.githubWebhookSecret, type: "password", onInput: (v) => this.handleConfigField("githubWebhookSecret", v) })}
-              ${this.renderConfigInput({ label: "Review Board webhook secret", note: "Optional shared secret for Review Board webhooks.", value: this.configDraft.rbWebhookSecret, type: "password", onInput: (v) => this.handleConfigField("rbWebhookSecret", v) })}
-              ${this.renderConfigInput({ label: "Concurrency", note: "Parallel webhook jobs.", value: this.configDraft.webhookConcurrency, inputMode: "numeric", onInput: (v) => this.handleConfigField("webhookConcurrency", v) })}
-              ${this.renderConfigInput({ label: "Queue limit", note: "Max jobs before rejection.", value: this.configDraft.webhookQueueLimit, inputMode: "numeric", onInput: (v) => this.handleConfigField("webhookQueueLimit", v) })}
-              ${this.renderConfigInput({ label: "Timeout (ms)", note: "Per-job timeout.", value: this.configDraft.webhookJobTimeoutMs, inputMode: "numeric", onInput: (v) => this.handleConfigField("webhookJobTimeoutMs", v) })}
-              ${this.renderConfigInput({ label: "SSL cert path", note: "Certificate path for HTTPS.", value: this.configDraft.sslCertPath, onInput: (v) => this.handleConfigField("sslCertPath", v) })}
-              ${this.renderConfigInput({ label: "SSL key path", note: "Private key path for HTTPS.", value: this.configDraft.sslKeyPath, onInput: (v) => this.handleConfigField("sslKeyPath", v) })}
-              ${this.renderConfigInput({ label: "SSL CA path", note: "CA path for custom trust chain.", value: this.configDraft.sslCaPath, onInput: (v) => this.handleConfigField("sslCaPath", v) })}
+
+            <!-- Queue settings -->
+            <div class="px-6 py-5 flex flex-col gap-5">
+              <div>
+                <div class="text-sm font-semibold">Queue settings</div>
+                <div class=${sectionEyebrowClass}>Control parallelism, backlog size, and job timeouts</div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                ${this.renderConfigInput({ label: "Concurrency", note: "Number of parallel webhook jobs.", value: this.configDraft.webhookConcurrency, inputMode: "numeric", onInput: (v) => this.handleConfigField("webhookConcurrency", v) })}
+                ${this.renderConfigInput({ label: "Queue limit", note: "Max queued jobs before rejection.", value: this.configDraft.webhookQueueLimit, inputMode: "numeric", onInput: (v) => this.handleConfigField("webhookQueueLimit", v) })}
+                ${this.renderConfigInput({ label: "Timeout (ms)", note: "Per-job execution timeout.", value: this.configDraft.webhookJobTimeoutMs, inputMode: "numeric", onInput: (v) => this.handleConfigField("webhookJobTimeoutMs", v) })}
+              </div>
             </div>
-          `,
-        })}
+
+            <!-- SSL -->
+            <div class="px-6 py-5 flex flex-col gap-5">
+              <div>
+                <div class="text-sm font-semibold">SSL / HTTPS</div>
+                <div class=${sectionEyebrowClass}>Certificate paths for enabling HTTPS on the server</div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                ${this.renderConfigInput({ label: "SSL cert path", note: "Certificate file path for HTTPS.", value: this.configDraft.sslCertPath, onInput: (v) => this.handleConfigField("sslCertPath", v) })}
+                ${this.renderConfigInput({ label: "SSL key path", note: "Private key file path for HTTPS.", value: this.configDraft.sslKeyPath, onInput: (v) => this.handleConfigField("sslKeyPath", v) })}
+                ${this.renderConfigInput({ label: "SSL CA path", note: "CA file path for custom trust chain.", value: this.configDraft.sslCaPath, onInput: (v) => this.handleConfigField("sslCaPath", v) })}
+              </div>
+            </div>
+
+          </div>
+        </section>
+
       </div>
 
       <!-- Sticky footer with Save / Reset -->
-      <div class="fixed bottom-0 left-0 right-0 lg:left-72 bg-base-200/95 backdrop-blur-sm border-t border-base-300 z-20">
-        <div class="max-w-screen-2xl mx-auto px-4 lg:px-6 xl:px-8 py-3 flex items-center justify-between gap-4">
+      <div class="fixed bottom-0 left-0 right-0 lg:left-64 bg-base-200/95 backdrop-blur-sm border-t border-base-300 z-20">
+        <div class="max-w-screen-2xl mx-auto px-4 lg:px-6 xl:px-8 py-5 flex items-center justify-between gap-4">
           <div class="text-xs text-base-content/50">
             ${this.configDirty
               ? html`<span class="text-warning font-semibold">● Unsaved changes</span>`
@@ -2631,37 +2700,27 @@ export class CrDashboardApp extends LitElement {
     return html`
       <div class="flex flex-col gap-4 min-h-0">
         <div class="rounded-[0.55rem] border border-base-100/10 bg-base-300 px-4 py-4 flex flex-col gap-3">
-          <div class=${sectionEyebrowClass}>Request summary</div>
+          <h3 class="text-sm font-semibold">Description</h3>
           ${renderMarkdown(detail.description || detail.summary, {
             className: "text-sm text-base-content/70",
             emptyText: "No rich description from the provider. Use the diff and commit tabs for full review context.",
           })}
         </div>
-        <div class="rounded-[0.55rem] border border-base-100/10 bg-base-300 px-4 py-4 flex flex-col gap-3">
-          <div class=${sectionEyebrowClass}>Workspace stats</div>
-          <div class="flex flex-wrap gap-2">
-            <span class="badge badge-ghost badge-sm">${this.diffFiles.length} changed files</span>
-            <span class="badge badge-ghost badge-sm">${this.commits.length} commits</span>
-            <span class="badge badge-ghost badge-sm">${this.reviewResult?.inlineComments.length ?? 0} AI inline notes</span>
-          </div>
-        </div>
-        <div class="rounded-[0.55rem] border border-base-100/10 bg-base-300 px-4 py-4 flex flex-col gap-3">
-          <div class=${sectionEyebrowClass}>Workflow availability</div>
-          <div class="text-xs text-base-content/60">
-            ${
-              detail.provider === "reviewboard"
-                ? "Review Board can receive summary review posts. Inline comments are disabled in this workspace."
-                : "GitLab and GitHub support AI review posts plus manual inline comments from the diff viewer."
-            }
-          </div>
-        </div>
+
+
       </div>
     `;
   }
 
   private renderCommits() {
     if (this.commits.length === 0) {
-      return html`<div class="alert text-sm">No commits available for this review target.</div>`;
+      return html`
+        <div class="cr-empty-state" style="min-height:10rem">
+          <div class="cr-empty-state__icon"><cr-icon .icon=${GitBranch} .size=${24}></cr-icon></div>
+          <div class="cr-empty-state__title">No commits</div>
+          <div class="cr-empty-state__description">No commits are available for this review target.</div>
+        </div>
+      `;
     }
     return html`
       <div class="flex flex-col gap-2">
@@ -2678,9 +2737,15 @@ export class CrDashboardApp extends LitElement {
 
   private renderReviewPanel() {
     return html`
-      <div class="flex min-h-0 flex-col gap-3 pb-2">
+      <div class="flex flex-col gap-3 pb-2">
         ${!this.canRunRepositoryWorkflows ? html`
-          <div class="alert alert-warning text-xs">AI review requires a connected repository source before the workflow can run.</div>
+          <div class="alert alert-warning text-xs">Review requires a connected repository source.</div>
+        ` : ""}
+
+        ${!this.reviewResult ? html`
+          <div class="alert alert-info text-xs">
+            Run a review to generate an aggregated summary, inline comments, and per-agent detail.
+          </div>
         ` : ""}
 
         ${renderCollapsibleCard({
@@ -2690,8 +2755,8 @@ export class CrDashboardApp extends LitElement {
           summary: html`
             <div class="flex items-center justify-between gap-2">
               <div>
-                <div class=${sectionEyebrowClass}>Review control</div>
-                <h3 class="text-sm font-semibold">Run AI review</h3>
+              <h3 class="text-base font-semibold">Review Workflow</h3>
+              <div class=${sectionEyebrowClass}>Choose the agents below, then run the review when you are ready</div>
               </div>
               <label class="cursor-pointer flex items-center gap-1.5 text-xs">
                 <input
@@ -2700,7 +2765,7 @@ export class CrDashboardApp extends LitElement {
                   .checked=${this.inlineCommentsEnabled}
                   @change=${(e: Event) => { this.inlineCommentsEnabled = (e.target as HTMLInputElement).checked; }}
                 />
-                Inline candidates
+                Inline Comments
               </label>
             </div>
           `,
@@ -2723,26 +2788,12 @@ export class CrDashboardApp extends LitElement {
                   </label>
                 `)}
               </div>
-
-              <div class="form-control gap-1">
-                <label class="label py-0"><span class="label-text text-xs">Focus the next run</span></label>
-                <textarea
-                  class="textarea textarea-bordered textarea-sm text-sm"
-                  rows="4"
-                  placeholder="Focus on performance, security, test coverage, or a specific subsystem"
-                  .value=${this.feedbackDraft}
-                  @input=${(e: Event) => { this.feedbackDraft = (e.target as HTMLTextAreaElement).value; }}
-                ></textarea>
-              </div>
             </div>
 
             <div class="cr-review-control-card__footer">
-              <div class="cr-review-control-card__footer-text">
-                Choose the agents above, then run the review when you are ready.
-              </div>
               <div class="cr-review-control-card__footer-actions">
                 <button
-                  class="btn btn-primary btn-sm flex-1 gap-1.5"
+                  class="btn btn-primary btn-sm min-w-[8rem] gap-1.5"
                   type="button"
                   ?disabled=${!this.canRunRepositoryWorkflows || this.runningReview || this.selectedAgents.length === 0}
                   @click=${async () => this.handleRunReview()}
@@ -2751,9 +2802,7 @@ export class CrDashboardApp extends LitElement {
                   ${this.runningReview ? "Running review…" : "Run review"}
                 </button>
                 <button
-                  class="btn btn-ghost btn-sm gap-1.5"
-                  type="button"
-                  ?disabled=${!this.reviewResult || this.postingGeneratedReview}
+                  class="btn btn-ghost btn-sm min-w-[7rem] gap-1.5"
                   @click=${() => this.handlePostGeneratedReview()}
                 >
                   ${this.postingGeneratedReview ? html`<span class="loading loading-spinner loading-xs"></span>` : ""}
@@ -2767,18 +2816,16 @@ export class CrDashboardApp extends LitElement {
         ${this.reviewWarnings.map(w => html`<div class="alert alert-warning text-xs">${w}</div>`)}
 
         ${this.reviewResult ? html`
-          <section class="rounded-[0.75rem] border border-base-100/10 bg-base-300 px-4 py-4 shadow-sm">
+          <section class="rounded-[0.75rem] border border-base-300 bg-base-300 px-4 py-4">
             <div class="flex items-start justify-between gap-3 flex-wrap">
               <div>
-                <div class=${sectionEyebrowClass}>Review digest</div>
-                <h3 class="text-base font-semibold">Aggregated review</h3>
+                <h3 class="text-sm font-semibold">Aggregated Review</h3>
+                <div class=${sectionEyebrowClass}>Review generated from one or more agents</div>
+                </div>
               </div>
               <div class="flex flex-wrap gap-1.5">
                 <span class="badge badge-ghost badge-sm">${this.reviewResult.selectedAgents.length} agents</span>
-                <span class="badge badge-ghost badge-sm">${this.reviewResult.inlineComments.length} inline notes</span>
-                <span class="badge ${this.reviewResult.aggregated ? "badge-primary" : "badge-ghost"} badge-sm">
-                  ${this.reviewResult.aggregated ? "Aggregated" : "Single agent"}
-                </span>
+                <span class="badge badge-ghost badge-sm">${this.reviewResult.inlineComments.length} inline comments</span>
               </div>
             </div>
             <div class="mt-3 text-sm text-base-content/80">
@@ -2790,11 +2837,11 @@ export class CrDashboardApp extends LitElement {
           </section>
 
           ${this.reviewResult.inlineComments.length > 0 ? html`
-            <section class="rounded-[0.75rem] border border-base-100/10 bg-base-300 px-4 py-4 shadow-sm">
+            <section class="rounded-[0.75rem] border border-base-300 bg-base-300 px-4 py-4">
               <div class="flex items-center justify-between gap-2">
                 <div>
-                  <div class=${sectionEyebrowClass}>Inline candidates</div>
-                  <h3 class="text-sm font-semibold">Suggested file comments</h3>
+                  <h3 class="text-sm font-semibold">Inline Comments</h3>
+                  <div class=${sectionEyebrowClass}>Suggested inline comments</div>
                 </div>
                 <span class="badge badge-ghost badge-sm">${this.reviewResult.inlineComments.length}</span>
               </div>
@@ -2823,8 +2870,8 @@ export class CrDashboardApp extends LitElement {
               summary: html`
                 <div class="flex items-center justify-between gap-2">
                   <div>
-                    <div class=${sectionEyebrowClass}>Agent perspectives</div>
-                    <h3 class="text-sm font-semibold">Per-agent output</h3>
+                    <h3 class="text-sm font-semibold">Agent Perspectives</h3>
+                    <div class=${sectionEyebrowClass}>Per-agent output</div>
                   </div>
                   <span class="badge badge-ghost badge-sm">${this.reviewResult.agentResults.length}</span>
                 </div>
@@ -2850,46 +2897,56 @@ export class CrDashboardApp extends LitElement {
               `,
             })}
           ` : ""}
-        ` : html`
-          <div class="rounded-[0.75rem] border border-dashed border-base-100/10 bg-base-300/55 px-5 py-6 text-sm text-base-content/55">
-            Run review to generate an aggregated summary, inline candidates, and per-agent detail in this rail.
-          </div>
-        `}
+        ` : ""}
       </div>
     `;
   }
 
   private renderSummaryPanel() {
     return html`
-      <div class="flex min-h-0 flex-col gap-3 pb-2">
+      <div class="flex flex-col gap-3 pb-2">
         ${!this.canRunRepositoryWorkflows ? html`
-          <div class="alert alert-warning text-xs">Summary generation needs a connected repository source.</div>
+          <div class="alert alert-warning text-xs">Summary requires a connected repository source.</div>
         ` : ""}
 
-        <section class="rounded-[0.75rem] border border-base-100/10 bg-base-300 px-4 py-4 shadow-sm">
-          <div class="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <div class=${sectionEyebrowClass}>Summary workflow</div>
-              <h3 class="text-sm font-semibold">Generate summary</h3>
+        ${!this.summaryResult ? html`
+          <div class="alert alert-info text-xs">
+            Generate a summary for a quick narrative overview of changes before a deeper review or discussion.
+          </div>
+        ` : ""}
+
+        ${renderCollapsibleCard({
+          cardClass: "bg-base-300 border border-base-100/10",
+          summaryClass: "px-4 py-3.5",
+          bodyClass: "cr-review-control-card__body",
+          summary: html`
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <h3 class="text-base font-semibold">Summary Workflow</h3>
+                <div class=${sectionEyebrowClass}>Generate a narrative overview of changes</div>
+              </div>
             </div>
-            <button
-              class="btn btn-primary btn-sm gap-1.5"
-              type="button"
-              ?disabled=${!this.canRunRepositoryWorkflows || this.runningSummary}
-              @click=${async () => this.handleRunSummary()}
-            >
-              ${this.runningSummary ? html`<span class="loading loading-spinner loading-xs"></span>` : html`<cr-icon .icon=${ScrollText} .size=${14}></cr-icon>`}
-              ${this.runningSummary ? "Generating…" : "Generate summary"}
-            </button>
-          </div>
-          <div class="mt-2 text-xs text-base-content/55">
-            Use summary generation when you want a quick narrative overview before a deeper review or discussion post.
-          </div>
-        </section>
+          `,
+          body: html`
+            <div class="cr-review-control-card__footer">
+              <div class="cr-review-control-card__footer-actions">
+                <button
+                  class="btn btn-primary btn-sm min-w-[10rem] gap-1.5"
+                  type="button"
+                  ?disabled=${!this.canRunRepositoryWorkflows || this.runningSummary}
+                  @click=${async () => this.handleRunSummary()}
+                >
+                  ${this.runningSummary ? html`<span class="loading loading-spinner loading-xs"></span>` : html`<cr-icon .icon=${ScrollText} .size=${14}></cr-icon>`}
+                  ${this.runningSummary ? "Generating…" : "Generate summary"}
+                </button>
+              </div>
+            </div>
+          `,
+        })}
 
         ${this.summaryResult
           ? html`
-              <section class="rounded-[0.75rem] border border-base-100/10 bg-base-300 px-4 py-4 shadow-sm">
+              <section class="rounded-[0.75rem] border border-base-300 bg-base-300 px-4 py-4">
                 <div class=${sectionEyebrowClass}>Summary output</div>
                 <div class="mt-3 text-sm text-base-content/80">
                   ${renderMarkdown(this.summaryResult.output, {
@@ -2899,118 +2956,121 @@ export class CrDashboardApp extends LitElement {
                 </div>
               </section>
             `
-          : html`
-              <div class="rounded-[0.75rem] border border-dashed border-base-100/10 bg-base-300/55 px-5 py-6 text-sm text-base-content/55">
-                No summary has been generated for this review target yet.
-              </div>
-            `}
+          : ""}
       </div>
     `;
   }
 
   private renderChatPanel() {
     return html`
-      <div class="flex h-full min-h-0 flex-col gap-3 pb-2">
+      <div class="flex flex-col gap-3 pb-2">
         ${!this.canRunRepositoryWorkflows ? html`
-          <div class="alert alert-warning text-xs">Review chat is available after you connect a repository source.</div>
+          <div class="alert alert-warning text-xs">Chat requires a connected repository source.</div>
         ` : ""}
 
-        <section class="rounded-[0.75rem] border border-base-100/10 bg-base-300 px-4 py-4 shadow-sm">
-          <div class="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <div class=${sectionEyebrowClass}>Conversation setup</div>
-              <h3 class="text-sm font-semibold">Review chat</h3>
+        ${!this.chatContext ? html`
+          <div class="alert alert-info text-xs">
+            Load chat context to ask questions about risks, missing tests, intent, or specific files.
+          </div>
+        ` : ""}
+
+        ${renderCollapsibleCard({
+          cardClass: "bg-base-300 border border-base-100/10",
+          summaryClass: "px-4 py-3.5",
+          bodyClass: "cr-review-control-card__body",
+          summary: html`
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <h3 class="text-base font-semibold">Chat Workflow</h3>
+                <div class=${sectionEyebrowClass}>Ask questions about this review target</div>
+              </div>
             </div>
-            <button
-              class="btn btn-primary btn-sm gap-1.5"
-              type="button"
-              ?disabled=${!this.canRunRepositoryWorkflows || this.loadingChat}
-              @click=${async () => this.ensureChatContext()}
-            >
-              ${this.loadingChat ? html`<span class="loading loading-spinner loading-xs"></span>` : html`<cr-icon .icon=${MessageSquare} .size=${14}></cr-icon>`}
-              ${this.chatContext ? "Refresh context" : "Load chat context"}
-            </button>
-          </div>
-          <div class="mt-2 text-xs text-base-content/55">
-            Ask about risks, missing tests, intent, suspicious changes, or specific files after the context is prepared.
-          </div>
-          ${this.chatContext
-            ? html`
-                <div class="mt-3 rounded-[0.7rem] border border-base-100/10 bg-base-100/42 px-3 py-3 text-xs text-base-content/65">
-                  ${renderMarkdown(this.chatContext.summary, {
-                    className: "text-xs text-base-content/65",
-                    compact: true,
-                    emptyText: "Chat context summary is empty.",
-                  })}
-                </div>
-              `
-            : ""}
-        </section>
-
-        <section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[0.75rem] border border-base-100/10 bg-base-300 shadow-sm">
-          <div class="border-b border-base-100/10 px-4 py-3">
-            <div class=${sectionEyebrowClass}>Transcript</div>
-            <h3 class="text-sm font-semibold">Conversation</h3>
-          </div>
-
-          <div class="flex-1 overflow-y-auto px-4 py-4">
-            ${this.chatHistory.length > 0
+          `,
+          body: html`
+            ${this.chatContext
               ? html`
-                  <div class="flex flex-col gap-3">
-                    ${this.chatHistory.flatMap(entry => [
-                      html`
-                        <div class="flex justify-end">
-                          <div class="max-w-[92%] rounded-[0.75rem] bg-primary px-3 py-3 text-sm text-primary-content shadow-sm">
-                            ${entry.question}
-                          </div>
-                        </div>
-                      `,
-                      html`
-                        <div class="flex justify-start">
-                          <div class="max-w-[96%] rounded-[0.75rem] border border-base-100/10 bg-base-100/48 px-3 py-3 text-sm text-base-content/82 shadow-sm">
-                            ${renderMarkdown(entry.answer, {
-                              className: "text-sm text-base-content/82",
-                              compact: true,
-                              emptyText: "No response returned.",
-                            })}
-                          </div>
-                        </div>
-                      `,
-                    ])}
+                  <div class="px-4 pt-3 pb-1">
+                    <div class="rounded-[0.7rem] border border-base-100/10 bg-base-100/42 px-3 py-3 text-xs text-base-content/65">
+                      ${renderMarkdown(this.chatContext.summary, {
+                        className: "text-xs text-base-content/65",
+                        compact: true,
+                        emptyText: "Chat context summary is empty.",
+                      })}
+                    </div>
                   </div>
                 `
-              : html`
-                  <div class="flex h-full min-h-[14rem] items-center justify-center text-center text-sm text-base-content/50">
-                    ${this.chatContext
-                      ? "Your next question will start the conversation here."
-                      : "Load chat context to start asking questions about this review target."}
-                  </div>
-                `}
-          </div>
-
-          <div class="border-t border-base-100/10 px-4 py-4">
-            <textarea
-              class="textarea textarea-bordered textarea-sm min-h-24 text-sm"
-              rows="4"
-              placeholder="Ask about risk, intent, test gaps, branches, or a suspicious diff chunk"
-              .value=${this.chatQuestion}
-              @input=${(e: Event) => { this.chatQuestion = (e.target as HTMLTextAreaElement).value; }}
-              @keydown=${async (e: KeyboardEvent) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) await this.handleAskQuestion(); }}
-            ></textarea>
-            <div class="mt-3 flex items-center justify-between gap-3 flex-wrap">
-              <div class="text-xs text-base-content/50">Press Ctrl/Cmd+Enter to send faster.</div>
-              <button
-                class="btn btn-primary btn-sm gap-1.5"
-                type="button"
-                ?disabled=${!this.canRunRepositoryWorkflows || this.loadingChat || !this.chatContext || !this.chatQuestion.trim()}
-                @click=${async () => this.handleAskQuestion()}
-              >
-                ${this.loadingChat ? html`<span class="loading loading-spinner loading-xs"></span>` : html`<cr-icon .icon=${MessageSquare} .size=${14}></cr-icon>`}
-                ${this.loadingChat ? "Thinking…" : "Ask"}
-              </button>
+              : ""}
+            <div class="cr-review-control-card__footer">
+              <div class="cr-review-control-card__footer-actions">
+                <button
+                  class="btn btn-primary btn-sm min-w-[10rem] gap-1.5"
+                  type="button"
+                  ?disabled=${!this.canRunRepositoryWorkflows || this.loadingChat}
+                  @click=${async () => this.ensureChatContext()}
+                >
+                  ${this.loadingChat ? html`<span class="loading loading-spinner loading-xs"></span>` : html`<cr-icon .icon=${MessageSquare} .size=${14}></cr-icon>`}
+                  ${this.chatContext ? "Refresh context" : "Start conversation"}
+                </button>
+              </div>
             </div>
-          </div>
-        </section>
+          `,
+        })}
+
+        ${this.chatContext ? html`
+          <section class="flex flex-col rounded-[0.75rem] border border-base-300 bg-base-300">
+            <div class="px-4 py-4">
+              ${this.chatHistory.length > 0
+                ? html`
+                    <div class="flex flex-col gap-3">
+                      ${this.chatHistory.flatMap(entry => [
+                        html`
+                          <div class="flex justify-end">
+                            <div class="max-w-[92%] rounded-[0.75rem] bg-primary px-3 py-3 text-sm text-primary-content shadow-sm">
+                              ${entry.question}
+                            </div>
+                          </div>
+                        `,
+                        html`
+                          <div class="flex justify-start">
+                            <div class="max-w-[96%] rounded-[0.75rem] border border-base-100/10 bg-base-100/48 px-3 py-3 text-sm text-base-content/82 shadow-sm">
+                              ${renderMarkdown(entry.answer, {
+                                className: "text-sm text-base-content/82",
+                                compact: true,
+                                emptyText: "No response returned.",
+                              })}
+                            </div>
+                          </div>
+                        `,
+                      ])}
+                    </div>
+                  `
+                : ""}
+            </div>
+
+            <div class="border-t border-base-100/10 px-4 py-4">
+              <textarea
+                class="textarea textarea-bordered textarea-sm w-full min-h-24 text-sm"
+                rows="4"
+                placeholder="Ask about risk, intent, test gaps, branches, or a suspicious diff chunk"
+                .value=${this.chatQuestion}
+                @input=${(e: Event) => { this.chatQuestion = (e.target as HTMLTextAreaElement).value; }}
+                @keydown=${async (e: KeyboardEvent) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) await this.handleAskQuestion(); }}
+              ></textarea>
+              <div class="mt-3 flex items-center justify-between gap-3 flex-wrap">
+                <div class="text-xs text-base-content/50">Press Ctrl/Cmd+Enter to send faster.</div>
+                <button
+                  class="btn btn-primary btn-sm gap-1.5"
+                  type="button"
+                  ?disabled=${!this.canRunRepositoryWorkflows || this.loadingChat || !this.chatContext || !this.chatQuestion.trim()}
+                  @click=${async () => this.handleAskQuestion()}
+                >
+                  ${this.loadingChat ? html`<span class="loading loading-spinner loading-xs"></span>` : html`<cr-icon .icon=${MessageSquare} .size=${14}></cr-icon>`}
+                  ${this.loadingChat ? "Thinking…" : "Ask"}
+                </button>
+              </div>
+            </div>
+          </section>
+        ` : ""}
       </div>
     `;
   }

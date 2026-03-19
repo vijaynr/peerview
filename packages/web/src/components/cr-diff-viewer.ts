@@ -369,12 +369,12 @@ export class CrDiffViewer extends LitElement {
               <cr-icon .icon=${FileDiff} .size=${14}></cr-icon>
             </span>
             <div class="min-w-0 flex flex-col">
-              <span class="font-mono text-sm text-base-content/90 truncate">
+              <span class="font-mono text-xs text-base-content/90 truncate">
                 ${file.path}
               </span>
               ${file.oldPath && file.oldPath !== file.path
                 ? html`
-                    <span class="font-mono text-[11px] text-base-content/45 truncate">
+                    <span class="font-mono text-[10px] text-base-content/45 truncate">
                       from ${file.oldPath}
                     </span>
                   `

@@ -83,16 +83,14 @@ export class CrReviewList extends LitElement {
   private renderStateShell(
     title: string,
     description: string,
-    toneClass = "border-base-300/80 bg-base-300/35 text-base-content/55",
+    warning = false,
   ) {
     return html`
       <div class="min-h-0 flex-1 overflow-y-auto pr-1">
-        <div
-          class="flex h-full min-h-[16rem] flex-col items-center justify-center gap-2 rounded-[0.55rem] border border-dashed px-5 py-6 text-center ${toneClass}"
-        >
-          <cr-icon .icon=${FolderSearch} .size=${24}></cr-icon>
-          <div class="text-sm font-semibold text-base-content/82">${title}</div>
-          <div class="max-w-xs text-xs leading-5 text-base-content/55">${description}</div>
+        <div class="cr-empty-state ${warning ? "cr-empty-state--warning" : ""}">
+          <div class="cr-empty-state__icon"><cr-icon .icon=${FolderSearch} .size=${24}></cr-icon></div>
+          <div class="cr-empty-state__title">${title}</div>
+          <div class="cr-empty-state__description">${description}</div>
         </div>
       </div>
     `;
@@ -103,16 +101,16 @@ export class CrReviewList extends LitElement {
       return this.renderStateShell(
         `${providerLabels[this.provider]} is not configured`,
         `Update CR settings before loading the ${this.requestLabel()} queue.`,
-        "border-warning/35 bg-warning/10 text-warning-content",
+        true,
       );
     }
 
     if (this.loading) {
       return html`
         <div class="min-h-0 flex-1 overflow-y-auto pr-1">
-          <div class="flex h-full min-h-[16rem] items-center justify-center gap-2 rounded-[0.55rem] border border-base-300/80 bg-base-300/35 px-5 py-6 text-sm text-base-content/55">
-            <span class="loading loading-spinner loading-sm"></span>
-            Loading ${this.requestLabel()}…
+          <div class="cr-loader-shell">
+            <span class="loading loading-spinner loading-sm text-primary"></span>
+            <span class="text-sm text-base-content/50">Loading ${this.requestLabel()}…</span>
           </div>
         </div>
       `;
@@ -122,7 +120,7 @@ export class CrReviewList extends LitElement {
       return this.renderStateShell(
         `Unable to load ${this.requestLabel()}`,
         this.error,
-        "border-warning/35 bg-warning/10 text-warning-content",
+        true,
       );
     }
 
@@ -130,7 +128,7 @@ export class CrReviewList extends LitElement {
       if (this.emptyTitle || this.emptyDescription) {
         return this.renderStateShell(
           this.emptyTitle || `No ${this.requestLabel()} selected`,
-          this.emptyDescription || `Select a ${providerLabels[this.provider]} repository to load this queue.`,
+          this.emptyDescription || `Choose a repository to load the queue.`,
         );
       }
 

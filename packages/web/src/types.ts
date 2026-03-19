@@ -256,3 +256,8 @@ export const providerLabels: Record<ProviderId, string> = {
   github: "GitHub",
   reviewboard: "Review Board",
 };
+export const providerQueueLabels: Record<ProviderId, string> = {
+  gitlab: "Merge Requests",
+  github: "Pull Requests",
+  reviewboard: "Review Requests",
+};

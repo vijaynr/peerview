@@ -44,7 +44,7 @@ export class CrRequestItem extends LitElement {
       <a href=${this.item.url} target="_blank" rel="noreferrer" class="block no-underline">
         <div class="rounded-lg bg-base-300/75 hover:bg-base-200 border border-base-100/10 hover:border-primary/30 transition-all cursor-pointer px-3 py-2.5">
           <div class="flex flex-col gap-2">
-            <div class="font-semibold text-sm leading-snug">
+            <div class="font-semibold text-sm leading-snug break-words">
               <span class="text-primary font-mono text-xs mr-1">${getRequestPrefix(this.provider, this.item.id)}</span>
               ${this.item.title}
             </div>
@@ -57,7 +57,7 @@ export class CrRequestItem extends LitElement {
                   `
                 : ""}
               ${this.item.author ? html`<span>${this.item.author}</span>` : ""}
-              ${this.item.sourceBranch ? html`<span class="font-mono">${this.item.sourceBranch}${this.item.targetBranch ? ` → ${this.item.targetBranch}` : ""}</span>` : ""}
+              ${this.item.sourceBranch ? html`<span class="font-mono break-all">${this.item.sourceBranch}${this.item.targetBranch ? ` → ${this.item.targetBranch}` : ""}</span>` : ""}
               ${this.item.updatedAt ? html`<span>${this.item.updatedAt}</span>` : ""}
             </div>
           </div>
