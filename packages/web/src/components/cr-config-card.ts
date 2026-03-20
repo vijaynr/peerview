@@ -22,12 +22,12 @@ export class CrConfigCard extends LitElement {
 
   render() {
     return html`
-      <div class="h-full rounded-[0.55rem] border border-base-300 bg-base-200 px-4 py-4 flex flex-col gap-2 overflow-hidden">
-        <div class="text-[0.72rem] font-semibold tracking-[0.08em] text-base-content/40 truncate">${this.label}</div>
-        <h3 class="text-lg font-bold break-words">${this.value || "Not configured"}</h3>
+      <div class="cr-overview-card">
+        <span class="text-[0.7rem] font-semibold tracking-[0.06em] uppercase text-base-content/45">${this.label}</span>
+        <div class="text-sm font-semibold text-base-content/80 break-words">${this.value || "Not configured"}</div>
         ${this.note
-          ? html`<p class="text-sm text-base-content/50 break-words">${this.note}</p>`
-          : html`<div class="text-sm text-base-content/35">No supporting detail configured.</div>`}
+          ? html`<div class="text-xs text-base-content/45 leading-relaxed">${this.note}</div>`
+          : ""}
       </div>
     `;
   }

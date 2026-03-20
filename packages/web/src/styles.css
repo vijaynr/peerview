@@ -14,28 +14,28 @@
   prefersdark: true;
   color-scheme: dark;
 
-  --color-base-100: oklch(9.8% 0.003 264);
-  --color-base-200: oklch(12.5% 0.003 264);
-  --color-base-300: oklch(16.8% 0.004 264);
-  --color-base-content: oklch(95% 0.004 264);
+  --color-base-100: oklch(18.5% 0.008 260);
+  --color-base-200: oklch(21.5% 0.009 260);
+  --color-base-300: oklch(25.5% 0.01 260);
+  --color-base-content: oklch(91% 0.006 260);
 
-  --color-primary: oklch(72% 0.154 252);
-  --color-primary-content: oklch(18% 0.035 252);
-  --color-secondary: oklch(70% 0.105 200);
-  --color-secondary-content: oklch(16% 0.03 200);
-  --color-accent: oklch(81% 0.115 91);
-  --color-accent-content: oklch(20% 0.03 91);
-  --color-neutral: oklch(14% 0.004 264);
-  --color-neutral-content: oklch(95% 0.004 264);
+  --color-primary: oklch(68% 0.14 248);
+  --color-primary-content: oklch(16% 0.03 248);
+  --color-secondary: oklch(66% 0.09 205);
+  --color-secondary-content: oklch(15% 0.025 205);
+  --color-accent: oklch(76% 0.1 95);
+  --color-accent-content: oklch(20% 0.025 95);
+  --color-neutral: oklch(22% 0.008 260);
+  --color-neutral-content: oklch(90% 0.006 260);
 
-  --color-info: oklch(76% 0.108 235);
-  --color-info-content: oklch(19% 0.03 235);
-  --color-success: oklch(77% 0.128 154);
-  --color-success-content: oklch(19% 0.03 154);
-  --color-warning: oklch(83% 0.141 84);
-  --color-warning-content: oklch(22% 0.03 84);
-  --color-error: oklch(68% 0.198 24);
-  --color-error-content: oklch(18% 0.03 24);
+  --color-info: oklch(72% 0.09 232);
+  --color-info-content: oklch(17% 0.025 232);
+  --color-success: oklch(73% 0.11 158);
+  --color-success-content: oklch(17% 0.025 158);
+  --color-warning: oklch(80% 0.12 85);
+  --color-warning-content: oklch(22% 0.025 85);
+  --color-error: oklch(65% 0.17 22);
+  --color-error-content: oklch(17% 0.025 22);
 
   --radius-selector: 0.35rem;
   --radius-field: 0.4rem;
@@ -53,28 +53,28 @@
   prefersdark: false;
   color-scheme: light;
 
-  --color-base-100: oklch(98% 0.004 255);
-  --color-base-200: oklch(95.8% 0.006 255);
-  --color-base-300: oklch(91.8% 0.01 255);
-  --color-base-content: oklch(20.5% 0.02 255);
+  --color-base-100: oklch(95.5% 0.008 250);
+  --color-base-200: oklch(93% 0.01 250);
+  --color-base-300: oklch(89.5% 0.013 250);
+  --color-base-content: oklch(25% 0.025 250);
 
-  --color-primary: oklch(61% 0.16 252);
-  --color-primary-content: oklch(98% 0.01 252);
-  --color-secondary: oklch(65% 0.11 206);
-  --color-secondary-content: oklch(97% 0.01 206);
-  --color-accent: oklch(72% 0.12 92);
-  --color-accent-content: oklch(24% 0.02 92);
-  --color-neutral: oklch(91% 0.01 255);
-  --color-neutral-content: oklch(23% 0.02 255);
+  --color-primary: oklch(56% 0.15 248);
+  --color-primary-content: oklch(96% 0.008 248);
+  --color-secondary: oklch(58% 0.1 210);
+  --color-secondary-content: oklch(96% 0.008 210);
+  --color-accent: oklch(66% 0.11 95);
+  --color-accent-content: oklch(24% 0.02 95);
+  --color-neutral: oklch(89% 0.012 250);
+  --color-neutral-content: oklch(27% 0.02 250);
 
-  --color-info: oklch(68% 0.1 235);
-  --color-info-content: oklch(98% 0.01 235);
-  --color-success: oklch(66% 0.12 154);
-  --color-success-content: oklch(98% 0.01 154);
-  --color-warning: oklch(76% 0.14 84);
-  --color-warning-content: oklch(26% 0.03 84);
-  --color-error: oklch(64% 0.19 24);
-  --color-error-content: oklch(98% 0.01 24);
+  --color-info: oklch(62% 0.1 232);
+  --color-info-content: oklch(96% 0.008 232);
+  --color-success: oklch(60% 0.12 158);
+  --color-success-content: oklch(96% 0.008 158);
+  --color-warning: oklch(72% 0.13 85);
+  --color-warning-content: oklch(26% 0.025 85);
+  --color-error: oklch(58% 0.18 22);
+  --color-error-content: oklch(96% 0.008 22);
 
   --radius-selector: 0.35rem;
   --radius-field: 0.4rem;
@@ -91,7 +91,7 @@ html[data-theme="cr-black"] {
   color-scheme: dark;
   --cr-app-background:
     radial-gradient(circle at top, rgb(31 48 82 / 0.22), transparent 38%),
-    linear-gradient(180deg, #050608 0%, #020202 58%, #000000 100%);
+    linear-gradient(180deg, #141822 0%, #10141c 58%, #0c1018 100%);
   --cr-shadow-1: 0 1px 3px rgb(0 0 0 / 0.24);
   --cr-shadow-2: 0 2px 8px rgb(0 0 0 / 0.28);
   --cr-shadow-3: 0 4px 16px rgb(0 0 0 / 0.32);
@@ -99,13 +99,18 @@ html[data-theme="cr-black"] {
   --cr-border-default: rgb(255 255 255 / 0.09);
   --cr-border-elevated: rgb(255 255 255 / 0.12);
   --cr-surface-overlay: rgb(255 255 255 / 0.03);
+  --cr-picker-grad-a: hsl(28 45% 55%);
+  --cr-picker-grad-b: hsl(215 35% 52%);
+  --cr-picker-grad-c: hsl(28 40% 48%);
+  --cr-picker-inner-bg: rgb(14 18 26 / 0.92);
+  --cr-picker-shimmer: rgb(255 255 255 / 0.04);
 }
 
 html[data-theme="cr-light"] {
   color-scheme: light;
   --cr-app-background:
     radial-gradient(circle at top, rgb(90 129 212 / 0.1), transparent 38%),
-    linear-gradient(180deg, #f8fafd 0%, #f1f5fb 56%, #eaf0f8 100%);
+    linear-gradient(180deg, #edf1f8 0%, #e6ecf5 56%, #dfe6f2 100%);
   --cr-shadow-1: 0 1px 2px rgb(15 23 42 / 0.06);
   --cr-shadow-2: 0 2px 6px rgb(15 23 42 / 0.07);
   --cr-shadow-3: 0 4px 12px rgb(15 23 42 / 0.08);
@@ -113,6 +118,11 @@ html[data-theme="cr-light"] {
   --cr-border-default: rgb(15 23 42 / 0.1);
   --cr-border-elevated: rgb(15 23 42 / 0.14);
   --cr-surface-overlay: rgb(15 23 42 / 0.02);
+  --cr-picker-grad-a: hsl(225 36% 52%);
+  --cr-picker-grad-b: hsl(195 40% 46%);
+  --cr-picker-grad-c: hsl(250 30% 54%);
+  --cr-picker-inner-bg: rgb(240 244 252 / 0.92);
+  --cr-picker-shimmer: rgb(255 255 255 / 0.2);
 }
 
 html {
@@ -585,7 +595,16 @@ body {
 }
 
 .cr-provider-picker__trigger {
+  background:
+    linear-gradient(var(--cr-picker-inner-bg), var(--cr-picker-inner-bg)) padding-box,
+    conic-gradient(from var(--cr-picker-angle), var(--cr-picker-grad-a), var(--cr-picker-grad-b), var(--cr-picker-grad-c), var(--cr-picker-grad-a)) border-box;
+  border: 1px solid transparent;
   box-shadow: var(--cr-shadow-1);
+  animation: cr-picker-spin 12s linear infinite;
+}
+
+.cr-provider-picker__trigger:hover {
+  box-shadow: var(--cr-shadow-2);
 }
 
 .cr-provider-picker__panel {
@@ -1477,4 +1496,91 @@ html[data-theme="cr-light"] .cr-diff-viewer__comment-button:hover {
 @keyframes cr-fade-in {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Picker gradient rotation ───────────────────── */
+@property --cr-picker-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes cr-picker-spin {
+  to { --cr-picker-angle: 360deg; }
+}
+
+/* ── Staggered card entrance ───────────────────── */
+.cr-card-enter {
+  animation: cr-card-rise 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cr-card-enter:nth-child(1) { animation-delay: 0ms; }
+.cr-card-enter:nth-child(2) { animation-delay: 60ms; }
+.cr-card-enter:nth-child(3) { animation-delay: 120ms; }
+.cr-card-enter:nth-child(4) { animation-delay: 180ms; }
+.cr-card-enter:nth-child(5) { animation-delay: 240ms; }
+.cr-card-enter:nth-child(6) { animation-delay: 300ms; }
+
+@keyframes cr-card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Overview card base ────────────────────────── */
+.cr-overview-card {
+  border: 1px solid var(--cr-border-default);
+  border-radius: 0.55rem;
+  background: linear-gradient(180deg, rgb(17 20 25 / 0.98), rgb(10 12 16 / 0.98));
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  overflow: hidden;
+  height: 100%;
+  box-shadow: var(--cr-shadow-1);
+  transition:
+    border-color 200ms ease,
+    transform 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.cr-overview-card:hover {
+  border-color: var(--cr-border-elevated);
+  transform: translateY(-1px);
+  box-shadow: var(--cr-shadow-2);
+}
+
+.cr-overview-card[role="button"] {
+  cursor: pointer;
+}
+
+.cr-overview-card[role="button"]:active {
+  transform: translateY(0);
+}
+
+/* Tone borders for stat cards */
+.cr-overview-card--accent  { border-color: oklch(var(--p) / 0.3); }
+.cr-overview-card--success { border-color: oklch(var(--su) / 0.3); }
+.cr-overview-card--accent:hover  { border-color: oklch(var(--p) / 0.45); }
+.cr-overview-card--success:hover { border-color: oklch(var(--su) / 0.45); }
+
+/* Provider status dot */
+.cr-status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cr-status-dot--ready   { background: oklch(var(--su)); }
+.cr-status-dot--pending { background: oklch(var(--wa)); }
+.cr-status-dot--missing { background: oklch(var(--er)); }
+
+html[data-theme="cr-light"] .cr-overview-card {
+  background: linear-gradient(180deg, rgb(253 254 255 / 0.98), rgb(244 248 253 / 0.98));
 }

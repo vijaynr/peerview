@@ -171,6 +171,8 @@ export function makeCoreMock(overrides: Record<string, unknown> = {}): Record<st
     addMergeRequestComment: mock(async () => {}),
     getMergeRequestInlineComments: mock(async () => []),
     addInlineMergeRequestComment: mock(async () => {}),
+    listMergeRequestDiscussions: mock(async () => []),
+    replyToMergeRequestDiscussion: mock(async () => ""),
     // github helpers
     remoteToGitHubRepoPath: mock(() => ""),
     isGitHubRemote: mock(() => false),
@@ -189,6 +191,11 @@ export function makeCoreMock(overrides: Record<string, unknown> = {}): Record<st
     findExistingGitHubPullRequest: mock(async () => null),
     createGitHubPullRequest: mock(async () => ""),
     updateGitHubPullRequest: mock(async () => ""),
+    listGitHubIssueComments: mock(async () => []),
+    listGitHubReviewComments: mock(async () => []),
+    replyToGitHubReviewComment: mock(async () => ""),
+    listGitLabProjects: mock(async () => []),
+    listGitHubRepositories: mock(async () => []),
     // svn helpers
     isSvnWorkingCopy: mock(async () => false),
     getSvnDiff: mock(async () => ""),

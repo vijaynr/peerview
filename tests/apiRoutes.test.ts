@@ -222,6 +222,7 @@ describe("API routes", () => {
       "gitlab",
       "github",
       "reviewboard",
+      "test",
     ]);
   });
 

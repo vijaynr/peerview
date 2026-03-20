@@ -55,7 +55,8 @@ export function getWebAppHtml(styles: string): string {
 ${styles}
 body { margin: 0; }
 cr-dashboard-app { display: block; min-height: 100vh; }
-cr-stat-card, cr-review-list, cr-request-item, cr-provider-card, cr-config-card, cr-diff-viewer, cr-dashboard-header { display: contents; }
+cr-stat-card, cr-review-list, cr-request-item, cr-provider-card, cr-config-card, cr-diff-viewer, cr-dashboard-header, cr-overview-page, cr-provider-page, cr-settings-page, cr-theme-toggle, cr-queue-rail, cr-workspace-panel, cr-analysis-rail, cr-review-panel, cr-summary-panel, cr-chat-panel, cr-comments-workspace, cr-inline-comment-popover, cr-commits-list, cr-discussion-thread, cr-config-input, cr-provider-summary-card, cr-toast-notification { display: contents; }
+cr-sidebar-nav { display: flex; flex-direction: column; min-height: 100vh; width: 16rem; }
     </style>
   </head>
   <body>

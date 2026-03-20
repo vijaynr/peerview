@@ -459,7 +459,7 @@ describe("Webhook Server", () => {
     });
 
     expect(scriptResponse.status).toBe(200);
-    expect(await scriptResponse.text()).toContain('customElements.define("cr-dashboard-app"');
+    expect(await scriptResponse.text()).toContain('"cr-dashboard-app"');
     expect(loadDashboardDataMock).toHaveBeenCalledTimes(1);
   });
 });

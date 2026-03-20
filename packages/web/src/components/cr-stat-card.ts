@@ -31,21 +31,22 @@ export class CrStatCard extends LitElement {
   }
 
   private get toneClass() {
-    if (this.tone === "accent") return "border-primary/35";
-    if (this.tone === "success") return "border-success/35";
-    return "border-base-300";
+    if (this.tone === "accent") return "cr-overview-card--accent";
+    if (this.tone === "success") return "cr-overview-card--success";
+    return "";
   }
 
   render() {
     return html`
-      <div class="h-full min-w-0 rounded-[0.55rem] border bg-base-200 px-4 py-4 flex flex-col gap-2 overflow-hidden transition-colors duration-200 hover:border-base-content/12 ${this.toneClass}">
-        <div class="stat-value text-3xl font-bold tracking-tight flex items-center gap-2 min-w-0">
-          ${this.icon ? html`<cr-icon .icon=${this.icon} .size=${22} class="shrink-0"></cr-icon>` : ""}
-          <span class="truncate">${this.value}</span>
+      <div class="cr-overview-card ${this.toneClass}">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[0.7rem] font-semibold tracking-[0.06em] uppercase text-base-content/45">${this.eyebrow}</span>
+          ${this.icon ? html`<cr-icon .icon=${this.icon} .size=${15} class="text-base-content/25"></cr-icon>` : ""}
         </div>
+        <div class="text-2xl font-bold tracking-tight text-base-content/90 truncate">${this.value}</div>
         ${this.note
-          ? html`<div class="stat-desc text-base-content/50 break-words">${this.note}</div>`
-          : html`<div class="text-sm text-base-content/35">No additional detail.</div>`}
+          ? html`<div class="text-xs text-base-content/45 leading-relaxed">${this.note}</div>`
+          : ""}
       </div>
     `;
   }

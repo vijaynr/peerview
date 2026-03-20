@@ -32,16 +32,15 @@ export class CrProviderCard extends LitElement {
     const providerLabel = providerLabels[this.provider];
 
     return html`
-      <div class="h-full rounded-[0.55rem] border border-base-300 bg-base-200 px-4 py-4 flex flex-col gap-3 overflow-hidden">
-        <div class="flex items-start justify-between gap-2">
-          <div class="min-w-0">
-            <div class="text-[0.72rem] font-semibold tracking-[0.08em] text-base-content/40 mb-1">${providerLabel}</div>
-            ${repository ? html`<div class="text-xs text-base-content/50 font-mono mt-0.5 truncate">${repository}</div>` : ""}
-          </div>
-          <div class="badge ${configured ? "badge-success" : "badge-error"} badge-sm gap-1 shrink-0">
-            ${configured ? "Configured" : "Missing config"}
+      <div class="cr-overview-card">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[0.7rem] font-semibold tracking-[0.06em] uppercase text-base-content/45">${providerLabel}</span>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span class="cr-status-dot ${configured ? "cr-status-dot--ready" : "cr-status-dot--missing"}"></span>
+            <span class="text-[0.65rem] font-medium text-base-content/40">${configured ? "Configured" : "Missing"}</span>
           </div>
         </div>
+        ${repository ? html`<div class="text-xs text-base-content/55 font-mono truncate">${repository}</div>` : ""}
         ${error ? html`<div class="alert alert-error text-xs py-2">${error}</div>` : ""}
         ${!error && items.length === 0 ? html`<div class="cr-empty-state"><p>No open review requests</p></div>` : ""}
         ${items.length > 0 ? html`

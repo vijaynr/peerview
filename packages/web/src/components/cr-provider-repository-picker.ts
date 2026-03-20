@@ -166,11 +166,11 @@ export class CrProviderRepositoryPicker extends LitElement {
     const selected = this.selectedOption;
 
     return html`
-      <div class="cr-provider-picker relative flex flex-col gap-2">
+      <div class="cr-provider-picker ${!selected ? "cr-provider-picker--idle" : ""} relative flex flex-col gap-2">
         <div class="flex items-center gap-2">
           <button
             type="button"
-            class="cr-provider-picker__trigger btn btn-sm min-h-11 flex-1 items-center justify-between gap-3 rounded-[0.55rem] border border-base-300 bg-base-200/80 px-3 text-left"
+            class="cr-provider-picker__trigger btn btn-sm min-h-11 flex-1 items-center justify-between gap-3 rounded-[0.55rem] px-3 text-left"
             @click=${() => this.handleToggle()}
             aria-expanded=${String(this.open)}
             aria-haspopup="listbox"
@@ -208,7 +208,7 @@ export class CrProviderRepositoryPicker extends LitElement {
 
         ${this.open
           ? html`
-              <div class="cr-provider-picker__panel absolute left-0 right-0 top-full z-20 mt-1.5 rounded-[0.75rem] border border-base-300 bg-base-200/98 p-3 backdrop-blur-md" style="box-shadow:var(--cr-shadow-3)">
+              <div class="cr-provider-picker__panel absolute left-0 right-0 top-full z-20 mt-1.5 rounded-[0.75rem] p-3 backdrop-blur-md" style="box-shadow:var(--cr-shadow-3)">
                 <label class="input input-sm flex h-10 w-full items-center gap-2 rounded-[0.55rem] border border-base-300 bg-base-100/60 px-3">
                   <cr-icon .icon=${Search} .size=${14}></cr-icon>
                   <input
