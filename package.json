@@ -24,10 +24,15 @@
     "format:check": "biome format packages/ tests/",
     "build:bin": "bun run build:web-bundle && bun build --compile --minify packages/cli/src/cli.ts --outfile dist/cr",
     "build:bin-compress": "bun run build:web-bundle && bun build --compile --minify packages/cli/src/cli.ts --outfile dist/cr && (upx dist/cr.exe || echo 'upx not found, skipping compression')",
-    "build": "bun run typecheck && bun run build:bin"
+    "build": "bun run typecheck && bun run build:bin",
+    "desktop:dev": "bun run build:web-bundle && cd packages/desktop && bun run dev",
+    "desktop:dev:watch": "bun run build:web-bundle && cd packages/desktop && bun run dev:watch",
+    "desktop:build": "bun run build:web-bundle && cd packages/desktop && bun run build:stable",
+    "desktop:icons": "bun scripts/generate-desktop-icons.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.7",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/bun": "latest",
     "@types/node": "^24.6.0",
     "esbuild": "^0.27.0",

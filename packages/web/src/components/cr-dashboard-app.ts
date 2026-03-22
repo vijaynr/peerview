@@ -303,6 +303,7 @@ export class CrDashboardApp extends LitElement {
     } finally {
       this.loadingDashboard = false;
       this.loadingConfig = false;
+      this.dismissBootLoader();
     }
   }
 
@@ -1017,6 +1018,12 @@ export class CrDashboardApp extends LitElement {
 
   private toMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
+  }
+
+  /** Signal the inline boot loader to begin its exit animation. */
+  private dismissBootLoader() {
+    const dismiss = (window as unknown as Record<string, unknown>).__crBootDismiss;
+    if (typeof dismiss === "function") dismiss();
   }
 
   private optionalString(value: string): string | undefined {

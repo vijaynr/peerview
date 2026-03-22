@@ -20,7 +20,8 @@
       "@cr/server": ["./packages/server/src/index.ts"],
       "@cr/reviewboard": ["./packages/reviewboard/src/index.ts"],
       "@cr/gitlab": ["./packages/gitlab/src/index.ts"],
-      "@cr/github": ["./packages/github/src/index.ts"]
+      "@cr/github": ["./packages/github/src/index.ts"],
+      "@cr/desktop": ["./packages/desktop/src/bun/index.ts"]
     }
   },
   "include": ["packages/*/src/**/*"]

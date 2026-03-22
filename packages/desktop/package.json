@@ -1,0 +1,22 @@
+{
+  "name": "@cr/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/bun/index.ts"
+  },
+  "scripts": {
+    "start": "electrobun run",
+    "build:dev": "bun install && electrobun build",
+    "build:canary": "bun install && electrobun build --env=canary",
+    "build:stable": "bun install && electrobun build --env=stable",
+    "dev": "bun run build:dev && electrobun dev",
+    "dev:watch": "electrobun dev --watch"
+  },
+  "dependencies": {
+    "@cr/core": "workspace:*",
+    "@cr/server": "workspace:*",
+    "electrobun": "^1.16.0"
+  }
+}

@@ -7,6 +7,11 @@ import {
   getCrAppIconSvg,
   getCrFaviconSvg,
 } from "./brand.js";
+import {
+  getBootLoaderHtml,
+  getBootLoaderScript,
+  getBootLoaderStyles,
+} from "./boot-loader.js";
 
 export const WEB_APP_ROOT_ROUTE = "/";
 export const WEB_APP_ALT_ROUTE = "/web";
@@ -34,7 +39,17 @@ let devAssetsPromise: Promise<WebAppAssets> | null = null;
 let devAssetsBuiltAt = 0;
 
 function isBundledRuntime(): boolean {
-  return import.meta.url.includes("$bunfs");
+  // $bunfs: bun --compile embeds files in a virtual filesystem
+  // Electrobun also bundles all imports into a single JS file — the
+  // generated web-app assets are inlined and resolvable, so we treat
+  // it as a bundled runtime too. Detect that by checking whether our
+  // source path no longer points at the original packages/web/src dir.
+  if (import.meta.url.includes("$bunfs")) return true;
+  try {
+    return !import.meta.url.includes("/packages/web/");
+  } catch {
+    return false;
+  }
 }
 
 export function getWebAppHtml(styles: string): string {
@@ -64,11 +79,14 @@ body { margin: 0; }
 cr-dashboard-app { display: block; min-height: 100vh; }
 cr-stat-card, cr-review-list, cr-request-item, cr-provider-card, cr-config-card, cr-diff-viewer, cr-dashboard-header, cr-overview-page, cr-provider-page, cr-settings-page, cr-theme-toggle, cr-queue-rail, cr-workspace-panel, cr-analysis-rail, cr-review-panel, cr-summary-panel, cr-chat-panel, cr-comments-workspace, cr-inline-comment-popover, cr-commits-list, cr-discussion-thread, cr-config-input, cr-provider-summary-card, cr-toast-notification { display: contents; }
 cr-sidebar-nav { display: flex; flex-direction: column; min-height: 100vh; width: 16rem; }
+${getBootLoaderStyles()}
     </style>
   </head>
   <body>
+    ${getBootLoaderHtml()}
     <cr-dashboard-app></cr-dashboard-app>
     <script type="module" src="${WEB_APP_SCRIPT_ROUTE}"></script>
+    ${getBootLoaderScript()}
   </body>
 </html>`;
 }
