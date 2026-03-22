@@ -3,7 +3,13 @@ export { assert } from "./assertions.js";
 // Bootstrap exports
 export { initializeCRHome } from "./bootstrap.js";
 // Configuration exports
-export { envOrConfig, loadCRConfig, readCRConfigContents, saveCRConfig } from "./config.js";
+export {
+  envOrConfig,
+  envOrConfigBoolean,
+  loadCRConfig,
+  readCRConfigContents,
+  saveCRConfig,
+} from "./config.js";
 export { loadDashboardData } from "./dashboard.js";
 export { type FormattedError, formatKnownNetworkError } from "./errors.js";
 // Git exports

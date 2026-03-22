@@ -63,6 +63,9 @@ describe("config encryption", () => {
       gitlabWebhookSecret: "gitlab-webhook-secret",
       githubWebhookSecret: "github-webhook-secret",
       rbWebhookSecret: "rb-webhook-secret",
+      gitlabWebhookEnabled: false,
+      githubWebhookEnabled: true,
+      reviewboardWebhookEnabled: false,
     });
 
     const raw = await fs.readFile(confPath, "utf-8");
@@ -82,6 +85,9 @@ describe("config encryption", () => {
     expect(raw.includes("gitlab_webhook_secret_enc = enc:v1:")).toBe(true);
     expect(raw.includes("github_webhook_secret_enc = enc:v1:")).toBe(true);
     expect(raw.includes("rb_webhook_secret_enc = enc:v1:")).toBe(true);
+    expect(raw.includes("gitlab_webhook_enabled = false")).toBe(true);
+    expect(raw.includes("github_webhook_enabled = true")).toBe(true);
+    expect(raw.includes("reviewboard_webhook_enabled = false")).toBe(true);
     expect(raw.includes("default_review_agents = general,security")).toBe(true);
 
     const loaded = await loadCRConfig();
@@ -94,5 +100,8 @@ describe("config encryption", () => {
     expect(loaded.gitlabWebhookSecret).toBe("gitlab-webhook-secret");
     expect(loaded.githubWebhookSecret).toBe("github-webhook-secret");
     expect(loaded.rbWebhookSecret).toBe("rb-webhook-secret");
+    expect(loaded.gitlabWebhookEnabled).toBe(false);
+    expect(loaded.githubWebhookEnabled).toBe(true);
+    expect(loaded.reviewboardWebhookEnabled).toBe(false);
   });
 });

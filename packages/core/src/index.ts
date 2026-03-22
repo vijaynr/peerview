@@ -69,6 +69,7 @@ export {
   DEFAULT_REVIEW_AGENT_NAME,
   detectGitProvider,
   envOrConfig,
+  envOrConfigBoolean,
   findExistingGitHubPullRequest,
   findExistingMergeRequest,
   findOpenGitHubPullRequestByHead,

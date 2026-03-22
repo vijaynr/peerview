@@ -91,6 +91,9 @@ type ConfigDraft = {
   gitlabEnabled: boolean;
   githubEnabled: boolean;
   reviewboardEnabled: boolean;
+  gitlabWebhookEnabled: boolean;
+  githubWebhookEnabled: boolean;
+  reviewboardWebhookEnabled: boolean;
 };
 
 function isProviderSection(value: DashboardSection): value is ProviderId {
@@ -131,6 +134,9 @@ function emptyConfigDraft(): ConfigDraft {
     gitlabEnabled: true,
     githubEnabled: true,
     reviewboardEnabled: true,
+    gitlabWebhookEnabled: true,
+    githubWebhookEnabled: true,
+    reviewboardWebhookEnabled: true,
   };
 }
 
@@ -932,6 +938,9 @@ export class CrDashboardApp extends LitElement {
         gitlabEnabled: this.configDraft.gitlabEnabled,
         githubEnabled: this.configDraft.githubEnabled,
         reviewboardEnabled: this.configDraft.reviewboardEnabled,
+        gitlabWebhookEnabled: this.configDraft.gitlabWebhookEnabled,
+        githubWebhookEnabled: this.configDraft.githubWebhookEnabled,
+        reviewboardWebhookEnabled: this.configDraft.reviewboardWebhookEnabled,
       };
 
       const saved = await saveConfig(payload);
@@ -1100,6 +1109,18 @@ export class CrDashboardApp extends LitElement {
       gitlabEnabled: config.gitlabEnabled !== false,
       githubEnabled: config.githubEnabled !== false,
       reviewboardEnabled: config.reviewboardEnabled !== false,
+      gitlabWebhookEnabled:
+        config.gitlabWebhookEnabled ??
+        dashboard?.config?.webhook?.providers?.gitlab?.enabled ??
+        true,
+      githubWebhookEnabled:
+        config.githubWebhookEnabled ??
+        dashboard?.config?.webhook?.providers?.github?.enabled ??
+        true,
+      reviewboardWebhookEnabled:
+        config.reviewboardWebhookEnabled ??
+        dashboard?.config?.webhook?.providers?.reviewboard?.enabled ??
+        true,
     };
   }
 

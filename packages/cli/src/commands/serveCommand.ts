@@ -31,6 +31,7 @@ export async function runServeCommand(args: string[]): Promise<void> {
           "Web app:                 http://host:3000/",
           "Alt web app URL:         http://host:3000/web",
           "GitLab webhook URL:      https://host:3000/webhook/gitlab",
+          "GitHub webhook URL:      https://host:3000/webhook/github",
           "Review Board webhook URL: https://host:3000/webhook/reviewboard",
           "Review Board: configure only the review_request_published webhook event.",
           "Review Board: provide the same HMAC secret here and in Review Board.",

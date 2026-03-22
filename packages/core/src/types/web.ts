@@ -19,6 +19,7 @@ export type DashboardConfigSummary = {
     concurrency: number;
     queueLimit: number;
     jobTimeoutMs: number;
+    providers: Record<DashboardProviderName, { enabled: boolean }>;
   };
   defaultReviewAgents: string[];
 };

@@ -1,5 +1,5 @@
 import type { DashboardData, DashboardProviderData } from "../types/web.js";
-import { envOrConfig, loadCRConfig } from "./config.js";
+import { envOrConfig, envOrConfigBoolean, loadCRConfig } from "./config.js";
 import { getOriginRemoteUrl } from "./git.js";
 import { isGitHubRemote, listGitHubPullRequests, looksLikeConfiguredGitHub, remoteToGitHubRepoPath } from "./github.js";
 import { listMergeRequests, remoteToProjectPath } from "./gitlab.js";
@@ -279,6 +279,21 @@ export async function loadDashboardData(
     envOrConfig("WEBHOOK_JOB_TIMEOUT_MS", config.webhookJobTimeoutMs?.toString(), "600000"),
     10
   );
+  const gitlabWebhookEnabled = envOrConfigBoolean(
+    "GITLAB_WEBHOOK_ENABLED",
+    config.gitlabWebhookEnabled,
+    true
+  );
+  const githubWebhookEnabled = envOrConfigBoolean(
+    "GITHUB_WEBHOOK_ENABLED",
+    config.githubWebhookEnabled,
+    true
+  );
+  const reviewboardWebhookEnabled = envOrConfigBoolean(
+    "REVIEWBOARD_WEBHOOK_ENABLED",
+    config.reviewboardWebhookEnabled,
+    true
+  );
 
   const [gitlab, github, reviewboard] = await Promise.all([
     config.gitlabEnabled === false
@@ -329,6 +344,11 @@ export async function loadDashboardData(
         concurrency: webhookConcurrency,
         queueLimit: webhookQueueLimit,
         jobTimeoutMs: webhookJobTimeoutMs,
+        providers: {
+          gitlab: { enabled: gitlabWebhookEnabled },
+          github: { enabled: githubWebhookEnabled },
+          reviewboard: { enabled: reviewboardWebhookEnabled },
+        },
       },
       defaultReviewAgents: config.defaultReviewAgents?.length
         ? config.defaultReviewAgents

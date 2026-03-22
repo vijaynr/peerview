@@ -1,9 +1,11 @@
 import { describe, expect, it, mock } from "bun:test";
 import { makeCoreMock, makeUiMock } from "./mocks.ts";
 
-let lastQuestions: any[] = [];
-let lastSavedConfig: any = null;
-let mockConfig: any = {};
+type PromptQuestion = { name: string; initial?: unknown };
+
+let lastQuestions: PromptQuestion[] = [];
+let lastSavedConfig: Record<string, unknown> | null = null;
+let mockConfig: Record<string, unknown> = {};
 const printCommandHelpMock = mock(() => {});
 const setupSpecsMock = mock(async () => []);
 const setupRpiMock = mock(async () => []);
@@ -15,11 +17,12 @@ const runLiveTaskMock = mock(
 
 mock.module("@cr/tui", () =>
   makeUiMock({
-    promptWithFrame: mock(async (questions: any) => {
+    promptWithFrame: mock(async (questions: PromptQuestion[]) => {
       lastQuestions = questions;
-      const answers: any = {};
+      const answers: Record<string, unknown> = {};
       for (const q of questions) {
         if (q.name === "gitlabWebhookSecret") answers[q.name] = "new-secret";
+        else if (q.name === "githubWebhookSecret") answers[q.name] = "new-gh-secret";
         else if (q.name === "rbUrl") answers[q.name] = "https://new-rb.com";
         else if (q.name === "rbToken") answers[q.name] = "new-token";
         else if (q.name === "rbWebhookSecret") answers[q.name] = "new-rb-secret";
@@ -61,7 +64,7 @@ mock.module("@cr/tui", () =>
 mock.module("@cr/core", () =>
   makeCoreMock({
     loadCRConfig: mock(async () => mockConfig),
-    saveCRConfig: mock(async (config: any) => {
+    saveCRConfig: mock(async (config: Record<string, unknown>) => {
       lastSavedConfig = config;
     }),
     initializeCRHome: mock(async () => {}),
@@ -110,7 +113,7 @@ describe("initCommand - specialized setup flows", () => {
     expect(modes).toContain("research-plan-implement");
   });
 
-  it("should ask for both GitLab and Review Board webhook configs", async () => {
+  it("should ask for provider webhook secrets and feature flags", async () => {
     mockConfig = { gitlabWebhookSecret: "old-secret" };
     lastQuestions = [];
     lastSavedConfig = null;
@@ -121,13 +124,21 @@ describe("initCommand - specialized setup flows", () => {
     expect(runLiveTaskMock).toHaveBeenCalledTimes(1);
     expect(runLiveTaskMock.mock.calls[0]?.[0]).toBe("Webhook Configuration");
     expect(lastQuestions.some((q) => q.name === "gitlabWebhookSecret")).toBe(true);
+    expect(lastQuestions.some((q) => q.name === "githubWebhookSecret")).toBe(true);
     expect(lastQuestions.some((q) => q.name === "rbUrl")).toBe(true);
     expect(lastQuestions.some((q) => q.name === "rbToken")).toBe(true);
     expect(lastQuestions.some((q) => q.name === "rbWebhookSecret")).toBe(true);
+    expect(lastQuestions.some((q) => q.name === "gitlabWebhookEnabled")).toBe(true);
+    expect(lastQuestions.some((q) => q.name === "githubWebhookEnabled")).toBe(true);
+    expect(lastQuestions.some((q) => q.name === "reviewboardWebhookEnabled")).toBe(true);
     expect(lastSavedConfig.gitlabWebhookSecret).toBe("new-secret");
+    expect(lastSavedConfig.githubWebhookSecret).toBe("new-gh-secret");
     expect(lastSavedConfig.rbUrl).toBe("https://new-rb.com");
     expect(lastSavedConfig.rbToken).toBe("new-token");
     expect(lastSavedConfig.rbWebhookSecret).toBe("new-rb-secret");
+    expect(lastSavedConfig.gitlabWebhookEnabled).toBe(true);
+    expect(lastSavedConfig.githubWebhookEnabled).toBe(true);
+    expect(lastSavedConfig.reviewboardWebhookEnabled).toBe(true);
   });
 
   it("should preserve existing config fields", async () => {

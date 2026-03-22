@@ -14,6 +14,19 @@ type GitLabWebhookEvent = {
   };
 };
 
+type GitHubWebhookEvent = {
+  action?: string;
+  number?: number;
+  pull_request?: {
+    number?: number;
+    state?: string;
+    draft?: boolean;
+  };
+  repository?: {
+    full_name?: string;
+  };
+};
+
 type ReviewBoardWebhookEvent = {
   event?: string;
   review_request?: {
@@ -25,6 +38,13 @@ type ReviewBoardWebhookEvent = {
 };
 
 const SUPPORTED_REVIEW_BOARD_EVENT = "review_request_published";
+const SUPPORTED_GITHUB_EVENT = "pull_request";
+const SUPPORTED_GITHUB_ACTIONS = new Set([
+  "opened",
+  "reopened",
+  "synchronize",
+  "ready_for_review",
+]);
 const REVIEW_BOARD_SIGNATURE_HEADERS = [
   "x-reviewboard-signature",
   "x-reviewboard-signature-256",
@@ -81,12 +101,12 @@ function parseFormEncodedEvent(body: string): GitLabWebhookEvent | ReviewBoardWe
 function parseWebhookEvent(
   body: string,
   contentType: string
-): GitLabWebhookEvent | ReviewBoardWebhookEvent {
+): GitLabWebhookEvent | GitHubWebhookEvent | ReviewBoardWebhookEvent {
   if (contentType.includes("application/x-www-form-urlencoded")) {
     return parseFormEncodedEvent(body);
   }
 
-  return (JSON.parse(body) as GitLabWebhookEvent | ReviewBoardWebhookEvent) ?? {};
+  return (JSON.parse(body) as GitLabWebhookEvent | GitHubWebhookEvent | ReviewBoardWebhookEvent) ?? {};
 }
 
 function getReviewBoardEventType(
@@ -136,9 +156,41 @@ function verifyReviewBoardSignature(headers: Headers, body: string, secret: stri
   return timingSafeEqual(providedBuffer, expectedBuffer);
 }
 
+function verifyGitHubSignature(headers: Headers, body: string, secret: string): boolean {
+  const provided = headers.get("x-hub-signature-256");
+  if (!provided?.trim()) {
+    return false;
+  }
+
+  const expected = createHmac("sha256", secret).update(body, "utf8").digest("hex");
+  const normalizedProvided = normalizeSignature(provided);
+  const expectedBuffer = Buffer.from(expected, "hex");
+  const providedBuffer = Buffer.from(normalizedProvided, "hex");
+
+  if (expectedBuffer.length === 0 || providedBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(providedBuffer, expectedBuffer);
+}
+
+function isWebhookProviderEnabled(context: ServerContext, provider: WebhookProvider): boolean {
+  switch (provider) {
+    case "gitlab":
+      return context.runtime.gitlabWebhookEnabled;
+    case "github":
+      return context.runtime.githubWebhookEnabled;
+    case "reviewboard":
+      return context.runtime.reviewboardWebhookEnabled;
+  }
+}
+
 function getConfigError(context: ServerContext, provider: WebhookProvider): string | null {
   if (provider === "gitlab" && (!context.runtime.gitlabUrl || !context.runtime.gitlabKey)) {
     return "Missing GitLab configuration. Run `cr init --gitlab` or set GITLAB_URL/GITLAB_KEY.";
+  }
+  if (provider === "github" && !context.runtime.githubToken) {
+    return "Missing GitHub configuration. Run `cr init --github` or set GITHUB_TOKEN.";
   }
   if (provider === "reviewboard" && (!context.runtime.rbUrl || !context.runtime.rbToken)) {
     return "Missing Review Board configuration. Run `cr init --rb` or set RB_URL/RB_TOKEN.";
@@ -151,7 +203,7 @@ async function handleWebhookRequest(
   provider: WebhookProvider,
   request: Request
 ): Promise<Response> {
-  if (!context.enableWebhook) {
+  if (!context.enableWebhook || !isWebhookProviderEnabled(context, provider)) {
     return new Response("Not Found", { status: 404 });
   }
 
@@ -180,6 +232,14 @@ async function handleWebhookRequest(
   }
 
   try {
+    if (provider === "github" && context.runtime.githubWebhookSecret) {
+      if (!verifyGitHubSignature(request.headers, body, context.runtime.githubWebhookSecret)) {
+        console.error("[SERVER] Forbidden: Invalid GitHub signature received.");
+        logger.warn("server", "Forbidden: Invalid GitHub signature");
+        return new Response("Forbidden", { status: 403 });
+      }
+    }
+
     if (provider === "reviewboard" && context.runtime.rbWebhookSecret) {
       if (!verifyReviewBoardSignature(request.headers, body, context.runtime.rbWebhookSecret)) {
         console.error("[SERVER] Forbidden: Invalid Review Board signature received.");
@@ -207,6 +267,32 @@ async function handleWebhookRequest(
 
       requestId = gitlabEvent.object_attributes?.iid;
       projectId = gitlabEvent.project?.id;
+    } else if (provider === "github") {
+      const githubEventName = request.headers.get("x-github-event")?.trim();
+      if (githubEventName !== SUPPORTED_GITHUB_EVENT) {
+        return new Response(
+          githubEventName
+            ? `Ignored GitHub event: ${githubEventName}`
+            : "Ignored GitHub event: unknown"
+        );
+      }
+
+      const githubEvent = event as GitHubWebhookEvent;
+      const action = githubEvent.action;
+      if (!action || !SUPPORTED_GITHUB_ACTIONS.has(action)) {
+        return new Response(
+          action ? `Ignored GitHub pull_request action: ${action}` : "Ignored GitHub pull_request action: unknown"
+        );
+      }
+
+      if (githubEvent.pull_request?.state !== "open") {
+        return new Response(
+          `Ignored GitHub pull request state: ${githubEvent.pull_request?.state ?? "unknown"}`
+        );
+      }
+
+      requestId = githubEvent.number ?? githubEvent.pull_request?.number;
+      projectId = githubEvent.repository?.full_name;
     } else {
       const reviewBoardEvent = event as ReviewBoardWebhookEvent;
       const eventType = getReviewBoardEventType(
@@ -266,6 +352,7 @@ export function createWebhookRoutes(context: ServerContext): Hono {
   const app = new Hono();
 
   app.all("/webhook/gitlab", (c) => handleWebhookRequest(context, "gitlab", c.req.raw));
+  app.all("/webhook/github", (c) => handleWebhookRequest(context, "github", c.req.raw));
   app.all("/webhook/reviewboard", (c) => handleWebhookRequest(context, "reviewboard", c.req.raw));
 
   return app;

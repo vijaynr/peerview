@@ -1,6 +1,12 @@
 import { Hono, type Context } from "hono";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  WEB_APP_FAVICON_ROUTE,
+  WEB_APP_ICON_ROUTE,
+  getCrAppIconSvg,
+  getCrFaviconSvg,
+} from "./brand.js";
 
 export const WEB_APP_ROOT_ROUTE = "/";
 export const WEB_APP_ALT_ROUTE = "/web";
@@ -40,6 +46,7 @@ export function getWebAppHtml(styles: string): string {
     <title>CR Review Command Center</title>
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#000000" />
+    <link rel="icon" type="image/svg+xml" href="${WEB_APP_FAVICON_ROUTE}" />
     <script>
 (() => {
   try {
@@ -170,6 +177,20 @@ export async function createWebRoutes(options: WebRoutesOptions): Promise<Hono> 
       "Cache-Control": "no-store",
     });
   });
+
+  app.get(WEB_APP_ICON_ROUTE, (c) =>
+    c.body(getCrAppIconSvg(), 200, {
+      "Content-Type": "image/svg+xml; charset=utf-8",
+      "Cache-Control": "no-store",
+    })
+  );
+
+  app.get(WEB_APP_FAVICON_ROUTE, (c) =>
+    c.body(getCrFaviconSvg(), 200, {
+      "Content-Type": "image/svg+xml; charset=utf-8",
+      "Cache-Control": "no-store",
+    })
+  );
 
   const renderHtml = async (c: Context) => {
     const styles = await readWebAppStyles();

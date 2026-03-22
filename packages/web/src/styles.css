@@ -1,7 +1,7 @@
-@import "@fontsource/inter/400.css";
-@import "@fontsource/inter/500.css";
-@import "@fontsource/inter/600.css";
-@import "@fontsource/inter/700.css";
+@import "@fontsource/manrope/400.css";
+@import "@fontsource/manrope/500.css";
+@import "@fontsource/manrope/600.css";
+@import "@fontsource/manrope/700.css";
 @import "tailwindcss";
 
 @source "./**/*.{ts,js}";
@@ -53,28 +53,28 @@
   prefersdark: false;
   color-scheme: light;
 
-  --color-base-100: oklch(95.5% 0.008 250);
-  --color-base-200: oklch(93% 0.01 250);
-  --color-base-300: oklch(89.5% 0.013 250);
-  --color-base-content: oklch(25% 0.025 250);
+  --color-base-100: oklch(97.8% 0.014 78);
+  --color-base-200: oklch(95.4% 0.02 85);
+  --color-base-300: oklch(90.8% 0.03 236);
+  --color-base-content: oklch(28% 0.03 248);
 
-  --color-primary: oklch(56% 0.15 248);
-  --color-primary-content: oklch(96% 0.008 248);
-  --color-secondary: oklch(58% 0.1 210);
-  --color-secondary-content: oklch(96% 0.008 210);
-  --color-accent: oklch(66% 0.11 95);
-  --color-accent-content: oklch(24% 0.02 95);
-  --color-neutral: oklch(89% 0.012 250);
-  --color-neutral-content: oklch(27% 0.02 250);
+  --color-primary: oklch(55% 0.18 255);
+  --color-primary-content: oklch(98% 0.01 255);
+  --color-secondary: oklch(64% 0.11 196);
+  --color-secondary-content: oklch(19% 0.03 196);
+  --color-accent: oklch(76% 0.14 66);
+  --color-accent-content: oklch(28% 0.04 66);
+  --color-neutral: oklch(93.4% 0.018 252);
+  --color-neutral-content: oklch(29% 0.028 248);
 
-  --color-info: oklch(62% 0.1 232);
-  --color-info-content: oklch(96% 0.008 232);
-  --color-success: oklch(60% 0.12 158);
-  --color-success-content: oklch(96% 0.008 158);
-  --color-warning: oklch(72% 0.13 85);
-  --color-warning-content: oklch(26% 0.025 85);
-  --color-error: oklch(58% 0.18 22);
-  --color-error-content: oklch(96% 0.008 22);
+  --color-info: oklch(66% 0.12 240);
+  --color-info-content: oklch(97% 0.008 240);
+  --color-success: oklch(67% 0.13 160);
+  --color-success-content: oklch(20% 0.03 160);
+  --color-warning: oklch(78% 0.15 78);
+  --color-warning-content: oklch(29% 0.04 78);
+  --color-error: oklch(63% 0.2 28);
+  --color-error-content: oklch(97% 0.008 28);
 
   --radius-selector: 0.35rem;
   --radius-field: 0.4rem;
@@ -89,6 +89,16 @@
 :root,
 html[data-theme="cr-black"] {
   color-scheme: dark;
+  --cr-font-sans: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+  --cr-font-display: var(--cr-font-sans);
+  --cr-font-mono:
+    ui-monospace,
+    "SFMono-Regular",
+    "SF Mono",
+    Consolas,
+    "Liberation Mono",
+    Menlo,
+    monospace;
   --cr-app-background:
     radial-gradient(circle at top, rgb(31 48 82 / 0.22), transparent 38%),
     linear-gradient(180deg, #141822 0%, #10141c 58%, #0c1018 100%);
@@ -109,39 +119,53 @@ html[data-theme="cr-black"] {
 html[data-theme="cr-light"] {
   color-scheme: light;
   --cr-app-background:
-    radial-gradient(circle at top, rgb(90 129 212 / 0.1), transparent 38%),
-    linear-gradient(180deg, #edf1f8 0%, #e6ecf5 56%, #dfe6f2 100%);
-  --cr-shadow-1: 0 1px 2px rgb(15 23 42 / 0.06);
-  --cr-shadow-2: 0 2px 6px rgb(15 23 42 / 0.07);
-  --cr-shadow-3: 0 4px 12px rgb(15 23 42 / 0.08);
-  --cr-border-subtle: rgb(15 23 42 / 0.06);
-  --cr-border-default: rgb(15 23 42 / 0.1);
-  --cr-border-elevated: rgb(15 23 42 / 0.14);
-  --cr-surface-overlay: rgb(15 23 42 / 0.02);
-  --cr-picker-grad-a: hsl(225 36% 52%);
-  --cr-picker-grad-b: hsl(195 40% 46%);
-  --cr-picker-grad-c: hsl(250 30% 54%);
-  --cr-picker-inner-bg: rgb(240 244 252 / 0.92);
-  --cr-picker-shimmer: rgb(255 255 255 / 0.2);
+    radial-gradient(circle at top left, rgb(59 130 246 / 0.14), transparent 32%),
+    radial-gradient(circle at top right, rgb(251 146 60 / 0.16), transparent 36%),
+    radial-gradient(circle at bottom left, rgb(45 212 191 / 0.1), transparent 34%),
+    linear-gradient(180deg, #fffaf1 0%, #f8f1e5 28%, #eef4fb 64%, #e8eff8 100%);
+  --cr-shadow-1: 0 1px 2px rgb(31 41 55 / 0.08);
+  --cr-shadow-2: 0 10px 24px rgb(59 130 246 / 0.08), 0 2px 8px rgb(15 23 42 / 0.08);
+  --cr-shadow-3: 0 20px 48px rgb(249 115 22 / 0.08), 0 10px 22px rgb(15 23 42 / 0.1);
+  --cr-border-subtle: rgb(71 85 105 / 0.08);
+  --cr-border-default: rgb(71 85 105 / 0.14);
+  --cr-border-elevated: rgb(37 99 235 / 0.18);
+  --cr-surface-overlay: rgb(255 255 255 / 0.54);
+  --cr-picker-grad-a: hsl(219 82% 58%);
+  --cr-picker-grad-b: hsl(173 54% 44%);
+  --cr-picker-grad-c: hsl(27 88% 62%);
+  --cr-picker-inner-bg: rgb(255 250 242 / 0.94);
+  --cr-picker-shimmer: rgb(255 255 255 / 0.5);
 }
 
 html {
   min-height: 100%;
   background: var(--cr-app-background);
-  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--cr-font-sans);
 }
 
 body {
   min-height: 100vh;
   background: transparent;
   color: var(--color-base-content);
-  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--cr-font-sans);
   letter-spacing: -0.01em;
+}
+
+:where(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--cr-font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 ::selection {
   background: rgb(114 152 255 / 0.34);
   color: #f7faff;
+}
+
+html[data-theme="cr-light"] ::selection {
+  background: rgb(59 130 246 / 0.2);
+  color: rgb(17 24 39 / 0.96);
 }
 
 :where(button, input, select, textarea) {
@@ -421,14 +445,7 @@ body {
 }
 
 .cr-markdown code {
-  font-family:
-    ui-monospace,
-    "SFMono-Regular",
-    "SF Mono",
-    Consolas,
-    "Liberation Mono",
-    Menlo,
-    monospace;
+  font-family: var(--cr-font-mono);
   font-size: 0.92em;
 }
 
@@ -675,14 +692,7 @@ body {
 .cr-diff-viewer__code {
   background: rgb(24 24 27 / 0.96);
   color: rgb(234 238 245 / 0.92);
-  font-family:
-    ui-monospace,
-    "SFMono-Regular",
-    "SF Mono",
-    Consolas,
-    "Liberation Mono",
-    Menlo,
-    monospace;
+  font-family: var(--cr-font-mono);
   font-size: 0.78rem;
   min-width: 46rem;
 }
@@ -964,19 +974,11 @@ body {
 }
 
 .cr-discussion-thread__header {
-  align-items: center;
+  align-items: flex-start;
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
   justify-content: space-between;
-}
-
-.cr-discussion-thread__title {
-  color: rgb(241 245 249 / 0.92);
-  font-size: 0.96rem;
-  font-weight: 600;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
 }
 
 .cr-discussion-thread__meta {
@@ -985,8 +987,25 @@ body {
   display: flex;
   flex-wrap: wrap;
   font-size: 0.76rem;
-  gap: 0.55rem;
-  margin-top: 0.35rem;
+  gap: 0.2rem 0.45rem;
+  min-height: 2rem;
+}
+
+.cr-discussion-thread__meta-item {
+  align-items: center;
+  display: inline-flex;
+  line-height: 1.25;
+}
+
+.cr-discussion-thread__meta-item[data-first="false"]::before {
+  background: rgb(148 163 184 / 0.34);
+  border-radius: 999px;
+  content: "";
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 0.24rem;
+  margin-right: 0.45rem;
+  width: 0.24rem;
 }
 
 .cr-discussion-thread__location {
@@ -994,19 +1013,68 @@ body {
   border: 0;
   color: rgb(147 197 253 / 0.88);
   display: inline-flex;
-  font-family:
-    ui-monospace,
-    "SFMono-Regular",
-    "SF Mono",
-    Consolas,
-    "Liberation Mono",
-    Menlo,
-    monospace;
+  font-family: var(--cr-font-mono);
   font-size: 0.72rem;
   line-height: 1.2;
   max-width: 100%;
   overflow-wrap: anywhere;
   padding: 0;
+}
+
+.cr-discussion-thread__actions {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.cr-discussion-thread__action {
+  align-items: center;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 999px;
+  color: rgb(226 232 240 / 0.9);
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 600;
+  gap: 0.38rem;
+  justify-content: center;
+  min-height: 1.9rem;
+  padding: 0 0.85rem;
+  text-decoration: none;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.cr-discussion-thread__action:hover {
+  border-color: rgb(147 197 253 / 0.26);
+  color: rgb(248 250 252 / 0.98);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.cr-discussion-thread__action--secondary {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.02), rgb(255 255 255 / 0.01));
+}
+
+.cr-discussion-thread__action--secondary:hover {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.02));
+}
+
+.cr-discussion-thread__action--primary {
+  background: linear-gradient(180deg, rgb(59 130 246 / 0.22), rgb(37 99 235 / 0.16));
+  border-color: rgb(96 165 250 / 0.36);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  color: rgb(219 234 254 / 0.98);
+}
+
+.cr-discussion-thread__action--primary:hover {
+  background: linear-gradient(180deg, rgb(59 130 246 / 0.28), rgb(37 99 235 / 0.2));
+  border-color: rgb(147 197 253 / 0.46);
 }
 
 .cr-discussion-thread__messages {
@@ -1246,102 +1314,114 @@ body {
 }
 
 html[data-theme="cr-light"] .cr-tab-strip {
-  background: linear-gradient(180deg, rgb(247 250 255 / 0.98), rgb(238 244 251 / 0.98));
+  background:
+    linear-gradient(180deg, rgb(255 252 245 / 0.98), rgb(242 247 255 / 0.98)),
+    linear-gradient(135deg, rgb(59 130 246 / 0.05), rgb(251 146 60 / 0.04));
   border-color: var(--cr-border-default);
 }
 
 html[data-theme="cr-light"] .cr-tab-strip .cr-tab {
-  color: rgb(71 85 105 / 0.88);
+  color: rgb(71 85 105 / 0.86);
 }
 
 html[data-theme="cr-light"] .cr-tab-strip .cr-tab:hover {
-  background: rgb(37 99 235 / 0.06);
-  color: rgb(15 23 42 / 0.92);
+  background: linear-gradient(180deg, rgb(59 130 246 / 0.08), rgb(45 212 191 / 0.05));
+  color: rgb(17 24 39 / 0.92);
 }
 
 html[data-theme="cr-light"] .cr-tab-strip .cr-tab.tab-active,
 html[data-theme="cr-light"] .cr-tab-strip .cr-tab[aria-selected="true"] {
-  background: linear-gradient(180deg, rgb(240 247 255 / 1), rgb(227 238 255 / 1));
-  border-color: rgb(37 99 235 / 0.16);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 1), rgb(240 247 255 / 1)),
+    linear-gradient(135deg, rgb(59 130 246 / 0.08), rgb(251 146 60 / 0.06));
+  border-color: rgb(59 130 246 / 0.2);
   box-shadow: var(--cr-shadow-1);
-  color: rgb(15 23 42 / 0.94);
+  color: rgb(17 24 39 / 0.94);
 }
 
 html[data-theme="cr-light"] .cr-collapsible-card {
-  background: linear-gradient(180deg, rgb(253 254 255 / 0.98), rgb(244 248 253 / 0.98));
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(248 250 255 / 0.98)),
+    linear-gradient(145deg, rgb(59 130 246 / 0.035), rgb(251 146 60 / 0.03));
   border-color: var(--cr-border-default);
 }
 
 html[data-theme="cr-light"] .cr-review-control-card__footer {
   background:
-    linear-gradient(180deg, rgb(250 252 255 / 0.9), rgb(243 247 252 / 0.98)),
-    linear-gradient(180deg, rgb(37 99 235 / 0.03), transparent 50%);
+    linear-gradient(180deg, rgb(255 252 247 / 0.92), rgb(242 247 255 / 0.98)),
+    linear-gradient(90deg, rgb(59 130 246 / 0.04), rgb(251 146 60 / 0.03));
   border-top-color: var(--cr-border-default);
-  box-shadow: 0 -4px 12px rgb(15 23 42 / 0.04);
+  box-shadow: 0 -6px 16px rgb(15 23 42 / 0.05);
 }
 
 html[data-theme="cr-light"] .cr-review-control-card__footer-text {
-  color: rgb(71 85 105 / 0.8);
+  color: rgb(71 85 105 / 0.82);
 }
 
 html[data-theme="cr-light"] .cr-side-rail {
   background:
-    linear-gradient(180deg, rgb(248 251 255 / 0.98), rgb(240 245 251 / 1)),
-    linear-gradient(180deg, rgb(37 99 235 / 0.03), transparent 40%);
+    linear-gradient(180deg, rgb(255 251 245 / 0.98), rgb(241 246 255 / 1)),
+    linear-gradient(180deg, rgb(59 130 246 / 0.04), rgb(251 146 60 / 0.03) 55%, transparent);
   border-color: var(--cr-border-default);
 }
 
 html[data-theme="cr-light"] .cr-review-workspace-panel {
   background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(245 249 254 / 1)),
-    linear-gradient(135deg, rgb(37 99 235 / 0.03), transparent 52%);
+    linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(246 249 255 / 1)),
+    linear-gradient(135deg, rgb(59 130 246 / 0.035), rgb(45 212 191 / 0.03) 48%, transparent 75%);
   border-color: var(--cr-border-default);
 }
 
 html[data-theme="cr-light"] .cr-diff-viewer {
   background:
-    linear-gradient(180deg, rgb(250 252 255 / 0.98), rgb(242 247 252 / 1)),
-    linear-gradient(135deg, rgb(37 99 235 / 0.03), transparent 48%);
+    linear-gradient(180deg, rgb(255 252 248 / 0.98), rgb(244 248 255 / 1)),
+    linear-gradient(135deg, rgb(59 130 246 / 0.04), rgb(251 146 60 / 0.035) 42%, transparent 76%);
   border-color: var(--cr-border-default);
 }
 
 html[data-theme="cr-light"] .cr-diff-viewer__file {
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(246 249 253 / 0.98));
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(248 249 253 / 0.98)),
+    linear-gradient(135deg, rgb(255 255 255 / 0.3), rgb(59 130 246 / 0.02));
   border-color: var(--cr-border-default);
 }
 
 html[data-theme="cr-light"] .cr-diff-viewer__code {
-  background: rgb(248 250 252 / 0.98);
-  color: rgb(15 23 42 / 0.92);
+  background: linear-gradient(180deg, rgb(252 252 250 / 0.98), rgb(245 248 252 / 0.98));
+  color: rgb(17 24 39 / 0.92);
 }
 
 html[data-theme="cr-light"] .cr-diff-viewer__row[data-kind="insert"] {
-  background: rgb(220 252 231 / 0.8);
+  background: rgb(220 252 231 / 0.92);
 }
 
 html[data-theme="cr-light"] .cr-diff-viewer__row[data-kind="delete"] {
-  background: rgb(254 226 226 / 0.8);
+  background: rgb(255 228 230 / 0.92);
 }
 
 html[data-theme="cr-light"] .cr-diff-viewer__row[data-kind="header"],
 html[data-theme="cr-light"] .cr-diff-viewer__gap {
-  background: rgb(226 232 240 / 0.9);
+  background: linear-gradient(180deg, rgb(236 241 248 / 0.96), rgb(228 235 246 / 0.96));
   color: rgb(71 85 105 / 0.9);
 }
 
 html[data-theme="cr-light"] .cr-discussion-composer {
-  background: linear-gradient(180deg, rgb(250 252 255 / 0.99), rgb(241 246 252 / 1));
+  background:
+    linear-gradient(180deg, rgb(255 253 248 / 0.99), rgb(243 247 255 / 1)),
+    linear-gradient(135deg, rgb(59 130 246 / 0.03), rgb(251 146 60 / 0.025));
   border-color: var(--cr-border-default);
 }
 
 html[data-theme="cr-light"] .cr-discussion-thread,
 html[data-theme="cr-light"] .cr-discussion-reply {
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.99), rgb(245 248 253 / 1));
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.99), rgb(247 249 253 / 1)),
+    linear-gradient(135deg, rgb(59 130 246 / 0.02), rgb(255 255 255 / 0));
   border-color: var(--cr-border-default);
 }
 
 html[data-theme="cr-light"] .cr-discussion-feed__empty {
-  background: rgb(37 99 235 / 0.03);
+  background: linear-gradient(135deg, rgb(59 130 246 / 0.05), rgb(251 146 60 / 0.05));
   border-color: var(--cr-border-default);
 }
 
@@ -1357,13 +1437,40 @@ html[data-theme="cr-light"] .cr-discussion-message__author-line {
   color: rgb(71 85 105 / 0.84);
 }
 
-html[data-theme="cr-light"] .cr-discussion-thread__title,
 html[data-theme="cr-light"] .cr-discussion-message__author {
   color: rgb(15 23 42 / 0.92);
 }
 
 html[data-theme="cr-light"] .cr-discussion-thread__location {
-  color: rgb(30 64 175 / 0.92);
+  color: rgb(29 78 216 / 0.92);
+}
+
+html[data-theme="cr-light"] .cr-discussion-thread__meta-item[data-first="false"]::before {
+  background: rgb(71 85 105 / 0.32);
+}
+
+html[data-theme="cr-light"] .cr-discussion-thread__action {
+  border-color: rgb(15 23 42 / 0.09);
+  color: rgb(30 41 59 / 0.88);
+}
+
+html[data-theme="cr-light"] .cr-discussion-thread__action:hover {
+  border-color: rgb(59 130 246 / 0.28);
+  color: rgb(15 23 42 / 0.96);
+}
+
+html[data-theme="cr-light"] .cr-discussion-thread__action--secondary {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(242 244 248 / 0.92));
+}
+
+html[data-theme="cr-light"] .cr-discussion-thread__action--secondary:hover {
+  background: linear-gradient(180deg, rgb(255 254 251 / 1), rgb(236 242 250 / 0.98));
+}
+
+html[data-theme="cr-light"] .cr-discussion-thread__action--primary {
+  background: linear-gradient(180deg, rgb(59 130 246 / 0.16), rgb(14 165 233 / 0.1));
+  border-color: rgb(59 130 246 / 0.24);
+  color: rgb(29 78 216 / 0.96);
 }
 
 html[data-theme="cr-light"] .cr-discussion-message__bubble {
@@ -1375,47 +1482,49 @@ html[data-theme="cr-light"] .cr-discussion-message__link {
 }
 
 html[data-theme="cr-light"] .cr-side-rail__toggle {
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(241 245 249 / 0.98));
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(242 246 252 / 0.98)),
+    linear-gradient(135deg, rgb(59 130 246 / 0.04), rgb(251 146 60 / 0.035));
   border-color: var(--cr-border-elevated);
   box-shadow: var(--cr-shadow-2);
   color: rgb(51 65 85 / 0.88);
 }
 
 html[data-theme="cr-light"] .cr-side-rail__toggle:hover {
-  border-color: rgb(15 23 42 / 0.18);
+  border-color: rgb(59 130 246 / 0.26);
   color: rgb(15 23 42 / 0.96);
 }
 
 html[data-theme="cr-light"] .cr-markdown :not(pre) > code {
-  background: rgb(15 23 42 / 0.06);
-  border-color: rgb(15 23 42 / 0.1);
-  color: rgb(30 64 175 / 0.88);
+  background: rgb(59 130 246 / 0.08);
+  border-color: rgb(59 130 246 / 0.12);
+  color: rgb(29 78 216 / 0.9);
 }
 
 html[data-theme="cr-light"] .cr-markdown pre {
-  background: rgb(15 23 42 / 0.04);
-  border-color: rgb(15 23 42 / 0.1);
+  background: linear-gradient(180deg, rgb(248 249 251 / 1), rgb(241 244 248 / 1));
+  border-color: rgb(71 85 105 / 0.12);
 }
 
 html[data-theme="cr-light"] .cr-markdown pre code {
-  color: rgb(15 23 42 / 0.88);
+  color: rgb(17 24 39 / 0.88);
 }
 
 html[data-theme="cr-light"] .cr-markdown blockquote {
-  border-left-color: rgb(37 99 235 / 0.38);
+  border-left-color: rgb(59 130 246 / 0.42);
   color: rgb(71 85 105 / 0.88);
 }
 
 html[data-theme="cr-light"] .cr-markdown hr {
-  border-top-color: rgb(15 23 42 / 0.1);
+  border-top-color: rgb(71 85 105 / 0.12);
 }
 
 html[data-theme="cr-light"] .cr-markdown :is(th, td) {
-  border-color: rgb(15 23 42 / 0.1);
+  border-color: rgb(71 85 105 / 0.12);
 }
 
 html[data-theme="cr-light"] .cr-markdown th {
-  background: rgb(15 23 42 / 0.04);
+  background: linear-gradient(180deg, rgb(245 248 252 / 1), rgb(239 243 249 / 1));
 }
 
 html[data-theme="cr-light"] .cr-diff-viewer__comment-button {
@@ -1423,8 +1532,8 @@ html[data-theme="cr-light"] .cr-diff-viewer__comment-button {
 }
 
 html[data-theme="cr-light"] .cr-diff-viewer__comment-button:hover {
-  background: rgb(15 23 42 / 0.05);
-  color: rgb(15 23 42 / 0.85);
+  background: rgb(59 130 246 / 0.08);
+  color: rgb(17 24 39 / 0.85);
 }
 
 /* ── Unified empty state ────────────────────────── */
@@ -1448,8 +1557,10 @@ html[data-theme="cr-light"] .cr-diff-viewer__comment-button:hover {
 
 .cr-empty-state__title {
   color: var(--color-base-content);
+  font-family: var(--cr-font-display);
   font-size: 0.875rem;
   font-weight: 600;
+  letter-spacing: -0.015em;
   opacity: 0.72;
 }
 
@@ -1582,5 +1693,7 @@ html[data-theme="cr-light"] .cr-diff-viewer__comment-button:hover {
 .cr-status-dot--missing { background: oklch(var(--er)); }
 
 html[data-theme="cr-light"] .cr-overview-card {
-  background: linear-gradient(180deg, rgb(253 254 255 / 0.98), rgb(244 248 253 / 0.98));
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(246 249 255 / 0.98)),
+    linear-gradient(145deg, rgb(59 130 246 / 0.03), rgb(251 146 60 / 0.025));
 }

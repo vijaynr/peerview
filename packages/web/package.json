@@ -15,7 +15,7 @@
     ".": "./src/index.ts"
   },
   "devDependencies": {
-    "@fontsource/inter": "^5.2.8",
+    "@fontsource/manrope": "^5.2.5",
     "@tailwindcss/vite": "^4.2.2",
     "daisyui": "^5.5.19",
     "tailwindcss": "^4.2.2"

@@ -26,6 +26,9 @@ export type CRConfig = {
   gitlabEnabled?: boolean;
   githubEnabled?: boolean;
   reviewboardEnabled?: boolean;
+  gitlabWebhookEnabled?: boolean;
+  githubWebhookEnabled?: boolean;
+  reviewboardWebhookEnabled?: boolean;
 };
 
 export const defaultConfig: Pick<CRConfig, "openaiApiUrl" | "openaiModel" | "gitlabUrl" | "rbUrl"> =

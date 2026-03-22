@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   Settings2,
   ShieldCheck,
-  Waypoints,
   Workflow,
   type IconNode,
 } from "lucide";
@@ -17,6 +16,7 @@ import {
   type DashboardSection,
   type UITheme,
 } from "../types.js";
+import { WEB_APP_ICON_ROUTE } from "../brand.js";
 import "./cr-icon.js";
 import "./cr-theme-toggle.js";
 
@@ -90,15 +90,13 @@ export class CrSidebarNav extends LitElement {
       >
         <!-- Brand -->
         <div class="flex items-center gap-2 pt-1 pb-2 border-b border-base-300">
-          <div
-            class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0"
-          >
-            <cr-icon
-              .icon=${Waypoints}
-              .size=${16}
-              class="text-primary"
-            ></cr-icon>
-          </div>
+          <img
+            src=${WEB_APP_ICON_ROUTE}
+            alt="CR"
+            width="40"
+            height="40"
+            class="h-10 w-10 shrink-0 rounded-xl ring-1 ring-white/10 shadow-sm"
+          />
           <div>
             <div class="font-bold text-sm tracking-tight">
               Code Review Platform

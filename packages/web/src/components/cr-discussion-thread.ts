@@ -1,7 +1,9 @@
 import { LitElement, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { ArrowUpRight, Reply, X } from "lucide";
 import type { ReviewDiscussionMessage, ReviewDiscussionThread } from "../types.js";
 import { renderMarkdown } from "./render-markdown.js";
+import "./cr-icon.js";
 
 @customElement("cr-discussion-thread")
 export class CrDiscussionThread extends LitElement {
@@ -47,6 +49,44 @@ export class CrDiscussionThread extends LitElement {
     );
   }
 
+  private formatRelativeTime(value: string) {
+    const timestamp = Date.parse(value);
+    if (Number.isNaN(timestamp)) {
+      return value;
+    }
+
+    const diffMs = timestamp - Date.now();
+    const absMs = Math.abs(diffMs);
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+    const week = 7 * day;
+    const month = 30 * day;
+    const year = 365 * day;
+    const formatter = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+    if (absMs < minute) {
+      return "just now";
+    }
+    if (absMs < hour) {
+      return formatter.format(Math.round(diffMs / minute), "minute");
+    }
+    if (absMs < day) {
+      return formatter.format(Math.round(diffMs / hour), "hour");
+    }
+    if (absMs < week) {
+      return formatter.format(Math.round(diffMs / day), "day");
+    }
+    if (absMs < month) {
+      return formatter.format(Math.round(diffMs / week), "week");
+    }
+    if (absMs < year) {
+      return formatter.format(Math.round(diffMs / month), "month");
+    }
+
+    return formatter.format(Math.round(diffMs / year), "year");
+  }
+
   render() {
     const thread = this.thread;
     const replying = this.isReplying;
@@ -55,47 +95,51 @@ export class CrDiscussionThread extends LitElement {
     const location = this.discussionLocationLabel(
       thread.messages.find((m) => m.inline)?.inline
     );
+    const relativeUpdated = lastUpdated
+      ? `Updated ${this.formatRelativeTime(lastUpdated)}`
+      : "";
+    const metaItems = [
+      { label: starter, kind: "default" },
+      relativeUpdated ? { label: relativeUpdated, kind: "default" } : null,
+      location ? { label: location, kind: "location" } : null,
+      thread.resolved ? { label: "Resolved", kind: "default" } : null,
+    ].filter((item): item is { label: string; kind: "default" | "location" } => item !== null);
 
     return html`
       <section class="cr-discussion-thread">
         <div class="cr-discussion-thread__header">
           <div class="min-w-0">
-            ${thread.kind !== "general"
-              ? html`<h4 class="cr-discussion-thread__title">
-                  ${thread.title}
-                </h4>`
-              : ""}
             <div class="cr-discussion-thread__meta">
-              <span>${starter}</span>
-              ${lastUpdated
-                ? html`<span>Updated ${lastUpdated}</span>`
-                : ""}
-              ${location
-                ? html`<span class="cr-discussion-thread__location"
-                    >${location}</span
-                  >`
-                : ""}
-              ${thread.resolved ? html`<span>Resolved</span>` : ""}
+              ${metaItems.map((item, index) => html`
+                <span
+                  class=${item.kind === "location"
+                    ? "cr-discussion-thread__meta-item cr-discussion-thread__location"
+                    : "cr-discussion-thread__meta-item"}
+                  data-first=${index === 0 ? "true" : "false"}
+                >
+                  ${item.label}
+                </span>
+              `)}
             </div>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="cr-discussion-thread__actions">
             ${thread.messages[0]?.url
               ? html`
                   <a
-                    class="cr-discussion-message__link btn btn-ghost btn-xs rounded-[0.7rem] no-underline"
+                    class="cr-discussion-thread__action cr-discussion-thread__action--secondary"
                     href=${thread.messages[0].url}
                     target="_blank"
                     rel="noreferrer"
-                    >Open</a
+                    ><cr-icon .icon=${ArrowUpRight} .size=${12}></cr-icon>Open</a
                   >
                 `
               : ""}
             ${thread.replyable
               ? html`
                   <button
-                    class="btn ${replying
-                      ? "btn-primary"
-                      : "btn-ghost"} btn-xs rounded-[0.7rem]"
+                    class="cr-discussion-thread__action ${replying
+                      ? "cr-discussion-thread__action--primary"
+                      : "cr-discussion-thread__action--secondary"}"
                     type="button"
                     @click=${() => {
                       if (replying) {
@@ -105,6 +149,7 @@ export class CrDiscussionThread extends LitElement {
                       }
                     }}
                   >
+                    <cr-icon .icon=${replying ? X : Reply} .size=${12}></cr-icon>
                     ${replying ? "Close reply" : "Reply"}
                   </button>
                 `

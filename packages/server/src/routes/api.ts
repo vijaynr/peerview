@@ -115,6 +115,9 @@ function getBaseConfig(existing: Partial<CRConfig>): CRConfig {
     gitlabEnabled: existing.gitlabEnabled,
     githubEnabled: existing.githubEnabled,
     reviewboardEnabled: existing.reviewboardEnabled,
+    gitlabWebhookEnabled: existing.gitlabWebhookEnabled,
+    githubWebhookEnabled: existing.githubWebhookEnabled,
+    reviewboardWebhookEnabled: existing.reviewboardWebhookEnabled,
   };
 }
 

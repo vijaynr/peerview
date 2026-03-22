@@ -107,6 +107,8 @@ export function makeCoreMock(overrides: Record<string, unknown> = {}): Record<st
     saveCRConfig: mock(async () => {}),
     readCRConfigContents: mock(async () => ""),
     envOrConfig: (_key: string, value: string | undefined, fallback: string) => value ?? fallback,
+    envOrConfigBoolean: (_key: string, value: boolean | undefined, fallback: boolean) =>
+      value ?? fallback,
     CR_CONF_PATH: "/mock/.cr.conf",
     defaultConfig: {},
     loadDashboardData: mock(async () => ({
@@ -117,7 +119,17 @@ export function makeCoreMock(overrides: Record<string, unknown> = {}): Record<st
         gitlab: { configured: false },
         github: { configured: false, url: "https://github.com" },
         reviewboard: { configured: false },
-        webhook: { sslEnabled: false, concurrency: 3, queueLimit: 50, jobTimeoutMs: 600000 },
+        webhook: {
+          sslEnabled: false,
+          concurrency: 3,
+          queueLimit: 50,
+          jobTimeoutMs: 600000,
+          providers: {
+            gitlab: { enabled: true },
+            github: { enabled: true },
+            reviewboard: { enabled: true },
+          },
+        },
         defaultReviewAgents: ["general"],
       },
       providers: {
@@ -313,7 +325,7 @@ export function makeWorkflowsMock(
     }),
     maybePostReviewComment: mock(async () => null),
     createWorkflowPhaseReporter: mock(() => ({})),
-    extractJsonObject: mock((text: string) => ({})),
+    extractJsonObject: mock((_text: string) => ({})),
     injectMergeRequestContextIntoTemplate: mock((template: string) => template),
     applyReviewTemplate: mock((template: string) => template),
     buildChatPrompt: mock(() => ""),

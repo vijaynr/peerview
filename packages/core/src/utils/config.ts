@@ -33,6 +33,9 @@ const configSchema = z.object({
   gitlabEnabled: z.boolean().optional(),
   githubEnabled: z.boolean().optional(),
   reviewboardEnabled: z.boolean().optional(),
+  gitlabWebhookEnabled: z.boolean().optional(),
+  githubWebhookEnabled: z.boolean().optional(),
+  reviewboardWebhookEnabled: z.boolean().optional(),
 });
 
 const crSection = "cr";
@@ -82,6 +85,27 @@ function toIni(data: Record<string, Record<string, string>>): string {
 
 function isEncryptedSecret(value: string | undefined): value is string {
   return Boolean(value?.startsWith(`${ENCRYPTED_SECRET_PREFIX}:`));
+}
+
+function parseBooleanValue(value: string | undefined): boolean | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return undefined;
+  }
+
+  if (["true", "1", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+
+  if (["false", "0", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return undefined;
 }
 
 export function encryptConfigSecret(value: string, key: Buffer): string {
@@ -206,9 +230,12 @@ export async function loadCRConfig(): Promise<Partial<CRConfig>> {
       ? Number.parseInt(section.webhook_job_timeout_ms, 10)
       : undefined,
     terminalTheme: section.terminal_theme as "auto" | "dark" | "light" | undefined,
-    gitlabEnabled: section.gitlab_enabled !== undefined ? section.gitlab_enabled.toLowerCase() !== "false" : undefined,
-    githubEnabled: section.github_enabled !== undefined ? section.github_enabled.toLowerCase() !== "false" : undefined,
-    reviewboardEnabled: section.reviewboard_enabled !== undefined ? section.reviewboard_enabled.toLowerCase() !== "false" : undefined,
+    gitlabEnabled: parseBooleanValue(section.gitlab_enabled),
+    githubEnabled: parseBooleanValue(section.github_enabled),
+    reviewboardEnabled: parseBooleanValue(section.reviewboard_enabled),
+    gitlabWebhookEnabled: parseBooleanValue(section.gitlab_webhook_enabled),
+    githubWebhookEnabled: parseBooleanValue(section.github_webhook_enabled),
+    reviewboardWebhookEnabled: parseBooleanValue(section.reviewboard_webhook_enabled),
   };
 
   return configSchema.partial().parse(parsed);
@@ -275,6 +302,15 @@ export async function saveCRConfig(config: CRConfig): Promise<void> {
       ...(parsed.gitlabEnabled !== undefined && { gitlab_enabled: String(parsed.gitlabEnabled) }),
       ...(parsed.githubEnabled !== undefined && { github_enabled: String(parsed.githubEnabled) }),
       ...(parsed.reviewboardEnabled !== undefined && { reviewboard_enabled: String(parsed.reviewboardEnabled) }),
+      ...(parsed.gitlabWebhookEnabled !== undefined && {
+        gitlab_webhook_enabled: String(parsed.gitlabWebhookEnabled),
+      }),
+      ...(parsed.githubWebhookEnabled !== undefined && {
+        github_webhook_enabled: String(parsed.githubWebhookEnabled),
+      }),
+      ...(parsed.reviewboardWebhookEnabled !== undefined && {
+        reviewboard_webhook_enabled: String(parsed.reviewboardWebhookEnabled),
+      }),
     },
   });
 
@@ -291,4 +327,19 @@ export function envOrConfig(
     return envValue;
   }
   return configValue ?? fallback;
+}
+
+export function envOrConfigBoolean(
+  envKey: string,
+  configValue: boolean | undefined,
+  fallback = true
+): boolean {
+  const envValue = parseBooleanValue(process.env[envKey]);
+  if (envValue !== undefined) {
+    return envValue;
+  }
+  if (configValue !== undefined) {
+    return configValue;
+  }
+  return fallback;
 }

@@ -15,6 +15,9 @@ const loadCRConfigMock = mock(async () => ({
   rbUrl: "https://reviews.example.com",
   rbToken: "rb-token",
   defaultReviewAgents: ["general"],
+  gitlabWebhookEnabled: true,
+  githubWebhookEnabled: false,
+  reviewboardWebhookEnabled: true,
 }));
 const saveCRConfigMock = mock(async (_config: unknown) => {});
 const listMergeRequestsMock = mock(async () => [{ iid: 7, title: "MR 7" }]);
@@ -234,6 +237,7 @@ describe("API routes", () => {
     expect(await getResponse.json()).toMatchObject({
       gitlabUrl: "https://gitlab.example.com",
       githubToken: "github-token",
+      githubWebhookEnabled: false,
     });
 
     const putResponse = await fetch(`http://localhost:${port}/api/config`, {
@@ -242,6 +246,7 @@ describe("API routes", () => {
       body: JSON.stringify({
         openaiModel: "gpt-5",
         gitlabKey: "new-gitlab-key",
+        githubWebhookEnabled: true,
       }),
     });
 
@@ -251,6 +256,7 @@ describe("API routes", () => {
       openaiModel: "gpt-5",
       gitlabKey: "new-gitlab-key",
       gitlabUrl: "https://gitlab.example.com",
+      githubWebhookEnabled: true,
     });
   });
 

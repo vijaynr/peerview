@@ -82,6 +82,9 @@ export class CrOverviewPage extends LitElement {
 
     const webhook = this.dashboard?.config?.webhook;
     const openai = this.dashboard?.config?.openai;
+    const enabledWebhookProviders = providerOrder.filter(
+      (provider) => this.dashboard?.config?.webhook?.providers?.[provider]?.enabled
+    ).length;
 
     return html`
       <div class="cr-fade-in flex flex-col gap-7">
@@ -132,7 +135,7 @@ export class CrOverviewPage extends LitElement {
           <div class="cr-card-enter">
             <cr-stat-card
               .eyebrow=${"Routing"}
-              .value=${String(activeRouting) + " active"}
+              .value=${`${String(activeRouting)} active`}
               .note=${"Repositories selected for workspace"}
               .tone=${activeRouting > 0 ? "accent" : "default"}
               .icon=${FolderSearch}
@@ -195,8 +198,8 @@ export class CrOverviewPage extends LitElement {
           <div class="cr-card-enter" style="animation-delay:480ms">
             <cr-config-card
               .label=${"Webhook"}
-              .value=${`${webhook?.concurrency ?? 3} workers · ${webhook?.queueLimit ?? 50} queue`}
-              .note=${`${webhook?.jobTimeoutMs ?? 600000}ms timeout${webhook?.sslEnabled ? " · SSL" : ""}`}
+              .value=${`${enabledWebhookProviders}/${providerOrder.length} live · ${webhook?.concurrency ?? 3} workers`}
+              .note=${`${webhook?.queueLimit ?? 50} queue · ${webhook?.jobTimeoutMs ?? 600000}ms timeout${webhook?.sslEnabled ? " · SSL" : ""}`}
             ></cr-config-card>
           </div>
         </div>

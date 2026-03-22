@@ -3,7 +3,7 @@ import { createGitLabClient, type GitLabClient } from "../clients/gitlabClient.j
 import { createLlmClient, type LlmClient } from "../clients/llmClient.js";
 import { createReviewBoardClient, type ReviewBoardClient } from "../clients/reviewBoardClient.js";
 import { createSvnClient, type SvnClient } from "../clients/svnClient.js";
-import { envOrConfig, loadCRConfig } from "./config.js";
+import { envOrConfig, envOrConfigBoolean, loadCRConfig } from "./config.js";
 import { logger } from "./logger.js";
 
 export type WorkflowRuntime = {
@@ -18,6 +18,9 @@ export type WorkflowRuntime = {
   gitlabWebhookSecret?: string;
   githubWebhookSecret?: string;
   rbWebhookSecret?: string;
+  gitlabWebhookEnabled: boolean;
+  githubWebhookEnabled: boolean;
+  reviewboardWebhookEnabled: boolean;
   sslCertPath?: string;
   sslKeyPath?: string;
   sslCaPath?: string;
@@ -56,6 +59,21 @@ export async function loadWorkflowRuntime(): Promise<WorkflowRuntime> {
     gitlabWebhookSecret: envOrConfig("GITLAB_WEBHOOK_SECRET", config.gitlabWebhookSecret, ""),
     githubWebhookSecret: envOrConfig("GITHUB_WEBHOOK_SECRET", config.githubWebhookSecret, ""),
     rbWebhookSecret: envOrConfig("RB_WEBHOOK_SECRET", config.rbWebhookSecret, ""),
+    gitlabWebhookEnabled: envOrConfigBoolean(
+      "GITLAB_WEBHOOK_ENABLED",
+      config.gitlabWebhookEnabled,
+      true
+    ),
+    githubWebhookEnabled: envOrConfigBoolean(
+      "GITHUB_WEBHOOK_ENABLED",
+      config.githubWebhookEnabled,
+      true
+    ),
+    reviewboardWebhookEnabled: envOrConfigBoolean(
+      "REVIEWBOARD_WEBHOOK_ENABLED",
+      config.reviewboardWebhookEnabled,
+      true
+    ),
     sslCertPath: envOrConfig("SSL_CERT_PATH", config.sslCertPath, ""),
     sslKeyPath: envOrConfig("SSL_KEY_PATH", config.sslKeyPath, ""),
     sslCaPath: envOrConfig("SSL_CA_PATH", config.sslCaPath, ""),
@@ -89,7 +107,11 @@ export async function loadWorkflowRuntime(): Promise<WorkflowRuntime> {
     rbUrl: runtime.rbUrl,
     rbToken: runtime.rbToken ? "***" : "(not set)",
     gitlabWebhookSecret: runtime.gitlabWebhookSecret ? "***" : "(not set)",
+    gitlabWebhookEnabled: runtime.gitlabWebhookEnabled,
+    githubWebhookSecret: runtime.githubWebhookSecret ? "***" : "(not set)",
+    githubWebhookEnabled: runtime.githubWebhookEnabled,
     rbWebhookSecret: runtime.rbWebhookSecret ? "***" : "(not set)",
+    reviewboardWebhookEnabled: runtime.reviewboardWebhookEnabled,
     openaiApiUrl: runtime.openaiApiUrl,
     openaiApiKey: runtime.openaiApiKey ? "***" : "(not set)",
     openaiModel: runtime.openaiModel,

@@ -13,9 +13,7 @@ import {
   setupSpecs,
 } from "@cr/core";
 import {
-  COLORS,
   createSpinner,
-  DOT,
   type LiveController,
   printDivider,
   printEmptyLine,
@@ -36,7 +34,11 @@ type WebhookSetupAnswers = {
   gitlabUrl?: string;
   gitlabKey?: string;
   gitlabWebhookSecret?: string;
+  githubWebhookSecret?: string;
   rbWebhookSecret?: string;
+  gitlabWebhookEnabled?: boolean;
+  githubWebhookEnabled?: boolean;
+  reviewboardWebhookEnabled?: boolean;
   sslCertPath?: string;
   sslKeyPath?: string;
   sslCaPath?: string;
@@ -323,7 +325,7 @@ async function runWebhookSetup(_args: string[] = []): Promise<void> {
 
       printEmptyLine();
       printInfo(
-        "This sets up one shared server for both providers. Use /webhook/gitlab for GitLab and /webhook/reviewboard for Review Board."
+        "This sets up one shared server for GitLab, GitHub, and Review Board. Use /webhook/gitlab, /webhook/github, and /webhook/reviewboard for provider-specific automation."
       );
       printWarning(
         "Review Board webhook support is summary-only today. Configure only the review_request_published event and use the same HMAC secret in Review Board and CR."
@@ -349,6 +351,12 @@ async function runWebhookSetup(_args: string[] = []): Promise<void> {
           initial: existing.gitlabWebhookSecret ?? "",
         },
         {
+          type: "password",
+          name: "githubWebhookSecret",
+          message: "GitHub Webhook Secret (X-Hub-Signature-256)",
+          initial: existing.githubWebhookSecret ?? "",
+        },
+        {
           type: "text",
           name: "rbUrl",
           message: "Review Board URL",
@@ -365,6 +373,30 @@ async function runWebhookSetup(_args: string[] = []): Promise<void> {
           name: "rbWebhookSecret",
           message: "Review Board Webhook Secret (HMAC signing secret)",
           initial: existing.rbWebhookSecret ?? "",
+        },
+        {
+          type: "toggle",
+          name: "gitlabWebhookEnabled",
+          message: "Enable GitLab webhook route",
+          initial: existing.gitlabWebhookEnabled ?? true,
+          active: "on",
+          inactive: "off",
+        },
+        {
+          type: "toggle",
+          name: "githubWebhookEnabled",
+          message: "Enable GitHub webhook route",
+          initial: existing.githubWebhookEnabled ?? true,
+          active: "on",
+          inactive: "off",
+        },
+        {
+          type: "toggle",
+          name: "reviewboardWebhookEnabled",
+          message: "Enable Review Board webhook route",
+          initial: existing.reviewboardWebhookEnabled ?? true,
+          active: "on",
+          inactive: "off",
         },
       ];
 
@@ -426,9 +458,14 @@ async function runWebhookSetup(_args: string[] = []): Promise<void> {
         gitlabUrl: answers.gitlabUrl || existing.gitlabUrl || defaultConfig.gitlabUrl,
         gitlabKey: answers.gitlabKey || existing.gitlabKey || "",
         gitlabWebhookSecret: answers.gitlabWebhookSecret || undefined,
+        githubWebhookSecret: answers.githubWebhookSecret || undefined,
         rbUrl: answers.rbUrl || undefined,
         rbToken: answers.rbToken || undefined,
         rbWebhookSecret: answers.rbWebhookSecret || undefined,
+        gitlabWebhookEnabled: answers.gitlabWebhookEnabled ?? existing.gitlabWebhookEnabled ?? true,
+        githubWebhookEnabled: answers.githubWebhookEnabled ?? existing.githubWebhookEnabled ?? true,
+        reviewboardWebhookEnabled:
+          answers.reviewboardWebhookEnabled ?? existing.reviewboardWebhookEnabled ?? true,
         sslCertPath: answers.sslCertPath || undefined,
         sslKeyPath: answers.sslKeyPath || undefined,
         sslCaPath: answers.sslCaPath || undefined,

@@ -87,8 +87,15 @@ function logServerStartup(context: ServerContext, port: number): void {
     );
   }
   if (context.enableWebhook) {
-    console.log(`[SERVER]   POST ${context.protocol}://localhost:${port}/webhook/gitlab`);
-    console.log(`[SERVER]   POST ${context.protocol}://localhost:${port}/webhook/reviewboard`);
+    if (context.runtime.gitlabWebhookEnabled) {
+      console.log(`[SERVER]   POST ${context.protocol}://localhost:${port}/webhook/gitlab`);
+    }
+    if (context.runtime.githubWebhookEnabled) {
+      console.log(`[SERVER]   POST ${context.protocol}://localhost:${port}/webhook/github`);
+    }
+    if (context.runtime.reviewboardWebhookEnabled) {
+      console.log(`[SERVER]   POST ${context.protocol}://localhost:${port}/webhook/reviewboard`);
+    }
   }
   console.log(`[SERVER]   GET  ${context.protocol}://localhost:${port}${STATUS_PATH}`);
 }
@@ -108,6 +115,11 @@ export async function startServer(port = 3000, options?: ServerOptions): Promise
   runtime.gitlabWebhookSecret = envOrConfig(
     "GITLAB_WEBHOOK_SECRET",
     runtime.gitlabWebhookSecret,
+    ""
+  );
+  runtime.githubWebhookSecret = envOrConfig(
+    "GITHUB_WEBHOOK_SECRET",
+    runtime.githubWebhookSecret,
     ""
   );
   runtime.rbWebhookSecret = envOrConfig("RB_WEBHOOK_SECRET", runtime.rbWebhookSecret, "");

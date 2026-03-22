@@ -1,5 +1,6 @@
 import { logger, repoRootFromModule, type WorkflowRuntime } from "@cr/core";
 import {
+  maybePostGitHubReviewComment,
   maybePostReviewBoardComment,
   maybePostReviewComment,
   runReviewBoardWorkflow,
@@ -16,7 +17,7 @@ export class WorkQueue {
   constructor(private runtime: WorkflowRuntime) {}
 
   public enqueue(
-    provider: "gitlab" | "reviewboard",
+    provider: "gitlab" | "github" | "reviewboard",
     projectId: number | string,
     mrIid: number
   ): string | null {
@@ -99,7 +100,30 @@ export class WorkQueue {
           });
           await maybePostReviewBoardComment(result, "ci", true, this.runtime.rbToken);
           return result;
-        } else {
+        }
+
+        if (job.provider === "github") {
+          const repoPath = String(job.projectId);
+          const result = await runReviewWorkflow({
+            repoPath: process.cwd(),
+            repoRoot,
+            mode: "ci",
+            workflow: "review",
+            local: false,
+            provider: "github",
+            prNumber: Number(job.mrIid),
+            url: `https://github.com/${repoPath}/pull/${job.mrIid}`,
+            state: "opened",
+            inlineComments: false,
+            agentNames,
+            agentMode,
+          });
+
+          await maybePostGitHubReviewComment(result, "ci", true, this.runtime.githubToken);
+          return result;
+        }
+
+        {
           const projectPath = String(job.projectId);
           const gitlabUrl = this.runtime.gitlabUrl;
           const result = await runReviewWorkflow({
@@ -108,6 +132,7 @@ export class WorkQueue {
             mode: "ci",
             workflow: "review",
             local: false,
+            provider: "gitlab",
             mrIid: Number(job.mrIid),
             url: `${gitlabUrl}/${projectPath}/-/merge_requests/${job.mrIid}`,
             state: "opened",

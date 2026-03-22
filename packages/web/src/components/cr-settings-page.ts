@@ -38,6 +38,9 @@ type ConfigDraft = {
   gitlabEnabled: boolean;
   githubEnabled: boolean;
   reviewboardEnabled: boolean;
+  gitlabWebhookEnabled: boolean;
+  githubWebhookEnabled: boolean;
+  reviewboardWebhookEnabled: boolean;
 };
 
 type TestResults = Partial<
@@ -186,6 +189,46 @@ export class CrSettingsPage extends LitElement {
               `
             )}
           </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderWebhookToggle(
+    name: string,
+    key:
+      | "gitlabWebhookEnabled"
+      | "githubWebhookEnabled"
+      | "reviewboardWebhookEnabled",
+    route: string,
+    note: string
+  ) {
+    const enabled = this.configDraft[key];
+
+    return html`
+      <div
+        class="rounded-xl border border-base-300 bg-base-100/60 px-4 py-4 flex flex-col gap-3"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex flex-col gap-1">
+            <div class="text-sm font-semibold">${name}</div>
+            <div class="text-xs text-base-content/55">${note}</div>
+          </div>
+          <input
+            type="checkbox"
+            class="toggle toggle-sm toggle-primary"
+            .checked=${enabled}
+            @change=${(e: Event) =>
+              this.handleField(key, (e.target as HTMLInputElement).checked)}
+          />
+        </div>
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <code class="text-xs px-2.5 py-1.5 rounded-lg bg-base-300/60"
+            >${route}</code
+          >
+          <span class="badge ${enabled ? "badge-success" : "badge-ghost"} badge-sm">
+            ${enabled ? "Enabled" : "Disabled"}
+          </span>
         </div>
       </div>
     `;
@@ -487,6 +530,39 @@ export class CrSettingsPage extends LitElement {
           <div
             class="rounded-xl border border-base-300 bg-base-200 divide-y divide-base-300"
           >
+            <!-- Webhook secrets -->
+            <div class="px-6 py-5 flex flex-col gap-5">
+              <div>
+                <div class="text-sm font-semibold">Webhook routes</div>
+                <div class=${sectionEyebrowClass}>
+                  Turn incoming automation on or off per provider without
+                  disabling the provider workspace itself
+                </div>
+              </div>
+              <div
+                class="grid grid-cols-1 lg:grid-cols-3 gap-4"
+              >
+                ${this.renderWebhookToggle(
+                  "GitLab webhook",
+                  "gitlabWebhookEnabled",
+                  "/webhook/gitlab",
+                  "Accept merge request events from GitLab."
+                )}
+                ${this.renderWebhookToggle(
+                  "GitHub webhook",
+                  "githubWebhookEnabled",
+                  "/webhook/github",
+                  "Accept pull request events from GitHub or GitHub Enterprise."
+                )}
+                ${this.renderWebhookToggle(
+                  "Review Board webhook",
+                  "reviewboardWebhookEnabled",
+                  "/webhook/reviewboard",
+                  "Accept review_request_published events from Review Board."
+                )}
+              </div>
+            </div>
+
             <!-- Webhook secrets -->
             <div class="px-6 py-5 flex flex-col gap-5">
               <div>

@@ -6,9 +6,15 @@ import { startServer } from "../packages/server/src/server.js";
 import { makeCoreMock, makeWorkflowsMock } from "./mocks.ts";
 
 const REVIEW_BOARD_WEBHOOK_SECRET = "rb-webhook-secret";
+const GITHUB_WEBHOOK_SECRET = "github-webhook-secret";
 const runtime = {
   gitlabUrl: "https://gitlab.example.com",
   gitlabKey: "mock-key",
+  githubToken: "github-token",
+  githubWebhookSecret: GITHUB_WEBHOOK_SECRET,
+  gitlabWebhookEnabled: true,
+  githubWebhookEnabled: true,
+  reviewboardWebhookEnabled: true,
   rbUrl: "https://reviews.example.com",
   rbToken: "rb-token",
   rbWebhookSecret: REVIEW_BOARD_WEBHOOK_SECRET,
@@ -38,6 +44,7 @@ const runReviewBoardWorkflowMock = mock(async (input: unknown) => ({
 }));
 
 const maybePostReviewBoardCommentMock = mock(async () => null);
+const maybePostGitHubReviewCommentMock = mock(async () => null);
 const loadDashboardDataMock = mock(async () => ({
   generatedAt: "2025-01-01T00:00:00.000Z",
   repository: {
@@ -67,6 +74,11 @@ const loadDashboardDataMock = mock(async () => ({
       concurrency: 1,
       queueLimit: 50,
       jobTimeoutMs: 600000,
+      providers: {
+        gitlab: { enabled: true },
+        github: { enabled: true },
+        reviewboard: { enabled: true },
+      },
     },
     defaultReviewAgents: ["general", "security"],
   },
@@ -105,6 +117,7 @@ mock.module("@cr/workflows", () =>
     maybePostReviewComment: async () => null,
     runReviewBoardWorkflow: runReviewBoardWorkflowMock,
     maybePostReviewBoardComment: maybePostReviewBoardCommentMock,
+    maybePostGitHubReviewComment: maybePostGitHubReviewCommentMock,
   })
 );
 
@@ -141,12 +154,18 @@ afterEach(() => {
   }
   runtime.gitlabUrl = "https://gitlab.example.com";
   runtime.gitlabKey = "mock-key";
+  runtime.githubToken = "github-token";
+  runtime.githubWebhookSecret = GITHUB_WEBHOOK_SECRET;
+  runtime.gitlabWebhookEnabled = true;
+  runtime.githubWebhookEnabled = true;
+  runtime.reviewboardWebhookEnabled = true;
   runtime.rbUrl = "https://reviews.example.com";
   runtime.rbToken = "rb-token";
   runtime.rbWebhookSecret = REVIEW_BOARD_WEBHOOK_SECRET;
   runReviewWorkflowMock.mockClear();
   runReviewBoardWorkflowMock.mockClear();
   maybePostReviewBoardCommentMock.mockClear();
+  maybePostGitHubReviewCommentMock.mockClear();
   loadDashboardDataMock.mockClear();
 });
 
@@ -158,6 +177,17 @@ function buildReviewBoardHeaders(body: string, extraHeaders: Record<string, stri
   return {
     "Content-Type": "application/json",
     "X-ReviewBoard-Signature": `sha256=${signature}`,
+    ...extraHeaders,
+  };
+}
+
+function buildGitHubHeaders(body: string, extraHeaders: Record<string, string> = {}) {
+  const signature = createHmac("sha256", GITHUB_WEBHOOK_SECRET).update(body, "utf8").digest("hex");
+
+  return {
+    "Content-Type": "application/json",
+    "X-GitHub-Event": "pull_request",
+    "X-Hub-Signature-256": `sha256=${signature}`,
     ...extraHeaders,
   };
 }
@@ -236,6 +266,81 @@ describe("Webhook Server", () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("Ignored non-merge-request event");
+  });
+
+  it("should accept a signed GitHub pull_request event", async () => {
+    const { port } = await startTestServer();
+
+    const body = JSON.stringify({
+      action: "opened",
+      number: 12,
+      pull_request: {
+        number: 12,
+        state: "open",
+      },
+      repository: {
+        full_name: "octo/demo",
+      },
+    });
+
+    const response = await fetch(`http://localhost:${port}/webhook/github`, {
+      method: "POST",
+      headers: buildGitHubHeaders(body),
+      body,
+    });
+
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({
+      status: "accepted",
+      message: "Review queued for processing",
+    });
+  });
+
+  it("should reject GitHub events with an invalid signature", async () => {
+    const { port } = await startTestServer();
+
+    const body = JSON.stringify({
+      action: "opened",
+      number: 12,
+      pull_request: { number: 12, state: "open" },
+      repository: { full_name: "octo/demo" },
+    });
+
+    const response = await fetch(`http://localhost:${port}/webhook/github`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-GitHub-Event": "pull_request",
+        "X-Hub-Signature-256": "sha256=deadbeef",
+      },
+      body,
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.text()).toBe("Forbidden");
+  });
+
+  it("should reject GitHub events when the signature is missing", async () => {
+    const { port } = await startTestServer();
+
+    const body = JSON.stringify({
+      action: "opened",
+      number: 12,
+      pull_request: { number: 12, state: "open" },
+      repository: { full_name: "octo/demo" },
+    });
+
+    const response = await fetch(`http://localhost:${port}/webhook/github`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-GitHub-Event": "pull_request",
+      },
+      body,
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.text()).toBe("Forbidden");
   });
 
   it("should accept a signed Review Board review_request_published event without requesting inline comments", async () => {
@@ -410,6 +515,26 @@ describe("Webhook Server", () => {
     expect(gitlabResponse.status).toBe(202);
   });
 
+  it("should return 404 for disabled provider webhooks", async () => {
+    runtime.githubWebhookEnabled = false;
+    const { port } = await startTestServer();
+
+    const body = JSON.stringify({
+      action: "opened",
+      number: 12,
+      pull_request: { number: 12, state: "open" },
+      repository: { full_name: "octo/demo" },
+    });
+
+    const response = await fetch(`http://localhost:${port}/webhook/github`, {
+      method: "POST",
+      headers: buildGitHubHeaders(body),
+      body,
+    });
+
+    expect(response.status).toBe(404);
+  });
+
   it("should return 405 for non-POST provider requests", async () => {
     const { port } = await startTestServer();
 
@@ -430,6 +555,7 @@ describe("Webhook Server", () => {
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json.routes.gitlab).toBe("/webhook/gitlab");
+    expect(json.routes.github).toBe("/webhook/github");
     expect(json.routes.reviewboard).toBe("/webhook/reviewboard");
   });
 

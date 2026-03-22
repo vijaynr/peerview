@@ -35,6 +35,7 @@ describe("serveCommand help", () => {
     expect(options).not.toContain("--webhook");
     expect(examples).toContain("cr serve");
     expect(examples).toContain("/webhook/gitlab");
+    expect(examples).toContain("/webhook/github");
     expect(examples).toContain("/webhook/reviewboard");
     expect(examples).toContain("http://host:3000/web");
     expect(examples).toContain("http://host:3000/");

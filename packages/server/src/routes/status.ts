@@ -13,8 +13,15 @@ export function createStatusRoutes(context: ServerContext): Hono {
       routes: {
         ...(context.enableWebhook
           ? {
-              gitlab: "/webhook/gitlab",
-              reviewboard: "/webhook/reviewboard",
+              ...(context.runtime.gitlabWebhookEnabled
+                ? { gitlab: "/webhook/gitlab" }
+                : {}),
+              ...(context.runtime.githubWebhookEnabled
+                ? { github: "/webhook/github" }
+                : {}),
+              ...(context.runtime.reviewboardWebhookEnabled
+                ? { reviewboard: "/webhook/reviewboard" }
+                : {}),
             }
           : {}),
         ...(context.enableWeb

@@ -76,6 +76,7 @@ export type DashboardData = {
       concurrency: number;
       queueLimit: number;
       jobTimeoutMs?: number;
+      providers: Record<ProviderId, { enabled: boolean }>;
     };
   };
   providers: Record<ProviderId, ProviderDashboard>;
@@ -213,6 +214,9 @@ export type CRConfigRecord = {
   gitlabEnabled?: boolean;
   githubEnabled?: boolean;
   reviewboardEnabled?: boolean;
+  gitlabWebhookEnabled?: boolean;
+  githubWebhookEnabled?: boolean;
+  reviewboardWebhookEnabled?: boolean;
 };
 
 export type ParsedDiffLine = {
