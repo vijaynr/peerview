@@ -7,6 +7,7 @@ import type {
   TerminalTheme,
 } from "../types.js";
 import type { TestConnectionResult } from "../api.js";
+import { isDesktop } from "../desktop-bridge.js";
 import "./cr-icon.js";
 import "./cr-config-input.js";
 
@@ -511,7 +512,8 @@ export class CrSettingsPage extends LitElement {
           )}
         </section>
 
-        <!-- Automation Section -->
+        <!-- Automation Section (hidden in desktop mode) -->
+        ${isDesktop() ? html`` : html`
         <section class="flex flex-col gap-5">
           <div class="flex items-center gap-2.5">
             <cr-icon .icon=${Webhook} .size=${18}></cr-icon>
@@ -676,11 +678,13 @@ export class CrSettingsPage extends LitElement {
             </div>
           </div>
         </section>
+        `}
       </div>
 
       <!-- Sticky footer -->
       <div
-        class="fixed bottom-0 left-0 right-0 lg:left-64 bg-base-200/95 backdrop-blur-sm border-t border-base-300 z-20"
+        class="fixed bottom-0 left-0 right-0 bg-base-200/95 backdrop-blur-sm border-t border-base-300 z-20"
+        style="left: var(--cr-sidebar-shell-width, 16rem)"
       >
         <div
           class="max-w-screen-2xl mx-auto px-4 lg:px-6 xl:px-8 py-5 flex items-center justify-between gap-4"

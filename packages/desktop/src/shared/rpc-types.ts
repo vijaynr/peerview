@@ -18,6 +18,17 @@ export type AppState = {
   preferences: AppPreferences
 }
 
+export type ApiRequestParams = {
+  method: string
+  path: string
+  body?: unknown
+}
+
+export type ApiResponse = {
+  status: number
+  body: unknown
+}
+
 export type DesktopRPCSchema = {
   bun: RPCSchema<{
     requests: {
@@ -36,6 +47,10 @@ export type DesktopRPCSchema = {
       savePreference: {
         params: { key: string; value: string }
         response: boolean
+      }
+      apiRequest: {
+        params: ApiRequestParams
+        response: ApiResponse
       }
     }
     messages: {

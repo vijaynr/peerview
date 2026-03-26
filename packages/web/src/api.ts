@@ -17,11 +17,24 @@ import type {
   ReviewTarget,
   ReviewWorkflowResult,
 } from "./types.js";
+import { isDesktop, desktopFetch, initBridge } from "./desktop-bridge.js";
 
 type JsonObject = Record<string, unknown>;
 
+// Initialise the desktop RPC bridge once (no-op if not in desktop mode)
+if (isDesktop()) {
+  initBridge().catch((err) =>
+    console.error("[api] Failed to initialise desktop bridge:", err),
+  );
+}
+
+/**
+ * Transport-aware fetch wrapper.
+ * In desktop mode routes through Electrobun RPC; otherwise uses standard HTTP.
+ */
 async function fetchJson<T>(input: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, {
+  const doFetch = isDesktop() ? desktopFetch : fetch;
+  const response = await doFetch(input, {
     headers: {
       "Content-Type": "application/json",
       ...(init?.headers ?? {}),

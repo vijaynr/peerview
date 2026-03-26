@@ -7,6 +7,7 @@ import {
   type ProviderId,
   type ProviderRepositoryOption,
 } from "../types.js";
+import { isDesktop } from "../desktop-bridge.js";
 import "./cr-icon.js";
 import "./cr-stat-card.js";
 import "./cr-config-card.js";
@@ -195,6 +196,7 @@ export class CrOverviewPage extends LitElement {
               .note=${"Profiles for new workflow runs"}
             ></cr-config-card>
           </div>
+          ${isDesktop() ? html`` : html`
           <div class="cr-card-enter" style="animation-delay:480ms">
             <cr-config-card
               .label=${"Webhook"}
@@ -202,6 +204,7 @@ export class CrOverviewPage extends LitElement {
               .note=${`${webhook?.queueLimit ?? 50} queue · ${webhook?.jobTimeoutMs ?? 600000}ms timeout${webhook?.sslEnabled ? " · SSL" : ""}`}
             ></cr-config-card>
           </div>
+          `}
         </div>
       </div>
     `;

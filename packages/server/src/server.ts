@@ -27,6 +27,8 @@ export type ServerHandle = {
   close: () => void;
   stop: (closeActiveConnections?: boolean) => void;
   readonly bunServer: Bun.Server<undefined>;
+  /** Direct access to the Hono app's fetch — bypasses HTTP for in-process callers. */
+  fetch: (request: Request) => Response | Promise<Response>;
 };
 
 async function createServerApp(context: ServerContext): Promise<Hono> {
@@ -183,5 +185,6 @@ export async function startServer(port = 3000, options?: ServerOptions): Promise
     get bunServer() {
       return bunServer;
     },
+    fetch: app.fetch.bind(app),
   };
 }
