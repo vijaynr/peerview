@@ -1,5 +1,5 @@
 import type { DashboardData, DashboardProviderData } from "../types/web.js";
-import { envOrConfig, envOrConfigBoolean, loadCRConfig } from "./config.js";
+import { envOrConfig, envOrConfigBoolean, loadPVConfig } from "./config.js";
 import { getOriginRemoteUrl } from "./git.js";
 import { isGitHubRemote, listGitHubPullRequests, looksLikeConfiguredGitHub, remoteToGitHubRepoPath } from "./github.js";
 import { listMergeRequests, remoteToProjectPath } from "./gitlab.js";
@@ -253,7 +253,7 @@ async function loadReviewBoardDashboardProvider(args: {
 export async function loadDashboardData(
   args: { repoPath?: string; remoteUrl?: string } = {}
 ): Promise<DashboardData> {
-  const config = await loadCRConfig();
+  const config = await loadPVConfig();
   const repository = await loadRepositorySummary(args);
 
   const gitlabUrl = envOrConfig("GITLAB_URL", config.gitlabUrl, "");

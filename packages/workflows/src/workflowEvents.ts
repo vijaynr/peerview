@@ -1,4 +1,4 @@
-import type { WorkflowEventReporter, WorkflowName, WorkflowPhaseMap } from "@cr/core";
+import type { WorkflowEventReporter, WorkflowName, WorkflowPhaseMap } from "@pv/core";
 
 type WorkflowPhaseReporter<K extends WorkflowName> = {
   started: (phase: WorkflowPhaseMap[K], message: string) => void;

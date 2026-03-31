@@ -1,4 +1,4 @@
-import { printBanner, printHeaderBox } from "@cr/tui";
+import { printBanner, printHeaderBox } from "@pv/tui";
 
 export async function runCommand(args: string[]): Promise<void> {
   const [command = "help", ...rest] = args;

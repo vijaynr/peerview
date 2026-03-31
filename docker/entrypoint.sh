@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-TLS_MODE="${CR_WEBHOOK_TLS_MODE:-auto}"
-PORT="${CR_WEBHOOK_PORT:-3000}"
+TLS_MODE="${PV_WEBHOOK_TLS_MODE:-auto}"
+PORT="${PV_WEBHOOK_PORT:-3000}"
 SSL_CERT_PATH_VALUE="${SSL_CERT_PATH:-}"
 SSL_KEY_PATH_VALUE="${SSL_KEY_PATH:-}"
 SSL_CA_PATH_VALUE="${SSL_CA_PATH:-}"
@@ -18,18 +18,18 @@ require_file() {
   fi
 }
 
-set -- cr serve --webhook --port "$PORT"
+set -- pv serve --webhook --port "$PORT"
 
-if [ -n "${CR_WEBHOOK_CONCURRENCY:-}" ]; then
-  set -- "$@" --concurrency "$CR_WEBHOOK_CONCURRENCY"
+if [ -n "${PV_WEBHOOK_CONCURRENCY:-}" ]; then
+  set -- "$@" --concurrency "$PV_WEBHOOK_CONCURRENCY"
 fi
 
-if [ -n "${CR_WEBHOOK_QUEUE_LIMIT:-}" ]; then
-  set -- "$@" --queue-limit "$CR_WEBHOOK_QUEUE_LIMIT"
+if [ -n "${PV_WEBHOOK_QUEUE_LIMIT:-}" ]; then
+  set -- "$@" --queue-limit "$PV_WEBHOOK_QUEUE_LIMIT"
 fi
 
-if [ -n "${CR_WEBHOOK_TIMEOUT_MS:-}" ]; then
-  set -- "$@" --timeout "$CR_WEBHOOK_TIMEOUT_MS"
+if [ -n "${PV_WEBHOOK_TIMEOUT_MS:-}" ]; then
+  set -- "$@" --timeout "$PV_WEBHOOK_TIMEOUT_MS"
 fi
 
 case "$TLS_MODE" in
@@ -56,7 +56,7 @@ case "$TLS_MODE" in
     fi
     ;;
   *)
-    echo "Unsupported CR_WEBHOOK_TLS_MODE: $TLS_MODE. Use http, https, or auto." >&2
+    echo "Unsupported PV_WEBHOOK_TLS_MODE: $TLS_MODE. Use http, https, or auto." >&2
     exit 1
     ;;
 esac

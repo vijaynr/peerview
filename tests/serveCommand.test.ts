@@ -5,14 +5,14 @@ const printCommandHelpMock = mock(() => {});
 const printErrorMock = mock(() => {});
 const startServerMock = mock(async () => ({}));
 
-mock.module("@cr/tui", () =>
+mock.module("@pv/tui", () =>
   makeUiMock({
     printCommandHelp: printCommandHelpMock,
     printError: printErrorMock,
   })
 );
 
-mock.module("@cr/server", () => ({
+mock.module("@pv/server", () => ({
   startServer: startServerMock,
 }));
 
@@ -33,7 +33,7 @@ describe("serveCommand help", () => {
 
     expect(options).not.toContain("--web");
     expect(options).not.toContain("--webhook");
-    expect(examples).toContain("cr serve");
+    expect(examples).toContain("pv serve");
     expect(examples).toContain("/webhook/gitlab");
     expect(examples).toContain("/webhook/github");
     expect(examples).toContain("/webhook/reviewboard");

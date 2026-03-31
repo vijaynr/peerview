@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-import { formatKnownNetworkError } from "@cr/core";
-import { printAlert, printError, printWarning } from "@cr/tui";
+import { formatKnownNetworkError } from "@pv/core";
+import { printAlert, printError, printWarning } from "@pv/tui";
 import { runCommand } from "./commands/index.js";
 
 async function main(): Promise<void> {
@@ -23,7 +23,7 @@ main().catch((error) => {
       tone: "error",
     });
   } else {
-    printError(`cr error: ${message}`);
+    printError(`pv error: ${message}`);
   }
   process.exitCode = 1;
 });

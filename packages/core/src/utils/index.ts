@@ -6,8 +6,8 @@ export { initializeCRHome } from "./bootstrap.js";
 export {
   envOrConfig,
   envOrConfigBoolean,
-  loadCRConfig,
-  readCRConfigContents,
+  loadPVConfig,
+  readPVConfigContents,
   saveCRConfig,
 } from "./config.js";
 export { loadDashboardData } from "./dashboard.js";
@@ -75,7 +75,7 @@ export {
 // LLM exports
 export { generateTextWithLlm } from "./llm.js";
 export { type LogLevel, logger } from "./logger.js";
-export { CR_CONF_PATH, repoRootFromModule } from "./paths.js";
+export { PV_CONF_PATH, repoRootFromModule } from "./paths.js";
 
 // Prompts exports
 export {

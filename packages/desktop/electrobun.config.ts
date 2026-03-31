@@ -2,8 +2,8 @@ import type { ElectrobunConfig } from "electrobun"
 
 export default {
   app: {
-    name: "CR",
-    identifier: "dev.cr.desktop",
+    name: "PeerView",
+    identifier: "dev.peerview.desktop",
     version: "0.1.0",
   },
   build: {

@@ -3,7 +3,7 @@ import { createGitLabClient, type GitLabClient } from "../clients/gitlabClient.j
 import { createLlmClient, type LlmClient } from "../clients/llmClient.js";
 import { createReviewBoardClient, type ReviewBoardClient } from "../clients/reviewBoardClient.js";
 import { createSvnClient, type SvnClient } from "../clients/svnClient.js";
-import { envOrConfig, envOrConfigBoolean, loadCRConfig } from "./config.js";
+import { envOrConfig, envOrConfigBoolean, loadPVConfig } from "./config.js";
 import { logger } from "./logger.js";
 
 export type WorkflowRuntime = {
@@ -35,7 +35,7 @@ export type WorkflowRuntime = {
 };
 
 export async function loadWorkflowRuntime(): Promise<WorkflowRuntime> {
-  const config = await loadCRConfig();
+  const config = await loadPVConfig();
 
   const envCustomStreaming = process.env.USE_CUSTOM_STREAMING;
   const useCustomStreaming =

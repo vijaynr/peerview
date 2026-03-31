@@ -145,17 +145,14 @@ export class CrSidebarNav extends LitElement {
           <div class="cr-app-sidebar__brand">
             <img
               src=${WEB_APP_ICON_ROUTE}
-              alt="CR"
+              alt="PeerView"
               width="40"
               height="40"
               class="cr-app-sidebar__brand-mark"
             />
             <div class="cr-app-sidebar__brand-copy">
               <div class="cr-app-sidebar__brand-title">
-                Code Review Platform
-              </div>
-              <div class="cr-app-sidebar__brand-subtitle">
-                Review Command Center
+                PeerView
               </div>
             </div>
           </div>

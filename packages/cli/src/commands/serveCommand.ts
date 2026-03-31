@@ -1,5 +1,5 @@
-import { printCommandHelp, printError } from "@cr/tui";
-import { startServer } from "@cr/server";
+import { printCommandHelp, printError } from "@pv/tui";
+import { startServer } from "@pv/server";
 import { getFlag } from "../cliHelpers.js";
 
 export async function runServeCommand(args: string[]): Promise<void> {
@@ -7,7 +7,7 @@ export async function runServeCommand(args: string[]): Promise<void> {
     printCommandHelp([
       {
         title: "USAGE",
-        lines: ["cr serve [options]"],
+        lines: ["pv serve [options]"],
       },
       {
         title: "OPTIONS",
@@ -24,10 +24,10 @@ export async function runServeCommand(args: string[]): Promise<void> {
       {
         title: "EXAMPLES",
         lines: [
-          "cr serve",
-          "cr serve --port 4173",
-          "cr serve --concurrency 5 --timeout 300000",
-          "cr serve --port 8443 --ssl-cert ./cert.crt --ssl-key ./cert.key --ssl-ca ./ca.crt",
+          "pv serve",
+          "pv serve --port 4173",
+          "pv serve --concurrency 5 --timeout 300000",
+          "pv serve --port 8443 --ssl-cert ./cert.crt --ssl-key ./cert.key --ssl-ca ./ca.crt",
           "Web app:                 http://host:3000/",
           "Alt web app URL:         http://host:3000/web",
           "GitLab webhook URL:      https://host:3000/webhook/gitlab",

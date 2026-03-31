@@ -7,17 +7,17 @@ const tempRoot = path.join(
   os.tmpdir(),
   `cr-prompts-test-${Date.now()}-${Math.random().toString(16).slice(2)}`
 );
-const crDir = path.join(tempRoot, ".cr");
+const crDir = path.join(tempRoot, ".pv");
 const promptsDir = path.join(crDir, "prompts");
 
 mock.module("../packages/core/src/utils/paths.js", () => ({
   HOME_DIR: tempRoot,
-  CR_DIR: crDir,
-  CR_PROMPTS_DIR: promptsDir,
-  CR_ASSETS_DIR: path.join(crDir, "assets"),
-  CR_LOGS_DIR: path.join(crDir, "logs"),
-  CR_CONF_PATH: path.join(tempRoot, ".cr.conf"),
-  CR_CONF_KEY_PATH: path.join(crDir, "config.key"),
+  PV_DIR: crDir,
+  PV_PROMPTS_DIR: promptsDir,
+  PV_ASSETS_DIR: path.join(crDir, "assets"),
+  PV_LOGS_DIR: path.join(crDir, "logs"),
+  PV_CONF_PATH: path.join(tempRoot, ".pv.conf"),
+  PV_CONF_KEY_PATH: path.join(crDir, "config.key"),
   repoRootFromModule: () => tempRoot,
   resourcesPathFromRepoRoot: (repoRoot: string) => path.join(repoRoot, "resources"),
 }));

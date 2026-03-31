@@ -13,7 +13,7 @@ import path from "node:path";
  */
 function getConfigTheme(): "dark" | "light" | null {
   try {
-    const configPath = path.join(os.homedir(), ".cr.conf");
+    const configPath = path.join(os.homedir(), ".pv.conf");
     if (!fs.existsSync(configPath)) {
       return null;
     }
@@ -36,13 +36,13 @@ function getConfigTheme(): "dark" | "light" | null {
  * Uses environment variables and terminal-specific heuristics.
  *
  * Manual override options (in order of precedence):
- * 1. CR_TERMINAL_THEME env var: "dark" or "light"
- * 2. Config file: terminal_theme = "dark" or "light" in ~/.cr.conf
+ * 1. PV_TERMINAL_THEME env var: "dark" or "light"
+ * 2. Config file: terminal_theme = "dark" or "light" in ~/.pv.conf
  * 3. Auto-detection via terminal environment variables
  */
 function isDarkBackground(): boolean {
-  // 1. Check CR_TERMINAL_THEME environment variable override
-  const themeOverride = process.env.CR_TERMINAL_THEME;
+  // 1. Check PV_TERMINAL_THEME environment variable override
+  const themeOverride = process.env.PV_TERMINAL_THEME;
   if (themeOverride === "light") {
     return false;
   }

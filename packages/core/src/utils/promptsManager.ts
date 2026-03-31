@@ -2,13 +2,13 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { bundledPrompts } from "../resources/index.js";
-import { CR_PROMPTS_DIR } from "./paths.js";
+import { PV_PROMPTS_DIR } from "./paths.js";
 
 export const DEFAULT_REVIEW_AGENT_NAME = "general";
 const REVIEW_AGENT_PROMPT_DIR = "review-agents";
 
 export async function loadPrompt(promptFileName: string, _repoRoot: string): Promise<string> {
-  const userPrompt = path.join(CR_PROMPTS_DIR, promptFileName);
+  const userPrompt = path.join(PV_PROMPTS_DIR, promptFileName);
   if (existsSync(userPrompt)) {
     return fs.readFile(userPrompt, "utf-8");
   }

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { makeCoreMock } from "./mocks.ts";
 
-const loadCRConfigMock = mock(async () => ({
+const loadPVConfigMock = mock(async () => ({
   defaultReviewAgents: ["general", "security"],
   gitlabUrl: "https://gitlab.example.com",
   gitlabKey: "gitlab-key",
@@ -25,7 +25,7 @@ const runInteractiveReviewWorkflowMock = mock((input: any) =>
   })()
 );
 
-mock.module("@cr/core", () =>
+mock.module("@pv/core", () =>
   makeCoreMock({
     envOrConfig: (_key: string, value: string | undefined, fallback: string) => value || fallback,
     getCurrentUser: async () => ({ username: "demo" }),
@@ -33,7 +33,7 @@ mock.module("@cr/core", () =>
     listGitHubPullRequests: listGitHubPullRequestsMock,
     listMergeRequests: listMergeRequestsMock,
     listReviewRequests: async () => [],
-    loadCRConfig: loadCRConfigMock,
+    loadPVConfig: loadPVConfigMock,
     rbRequest: async () => ({ review_requests: [] }),
     remoteToGitHubRepoPath: () => "owner/repo",
     remoteToProjectPath: () => "group/project",

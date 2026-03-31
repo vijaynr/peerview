@@ -1,10 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { CR_LOGS_DIR } from "./paths.js";
+import { PV_LOGS_DIR } from "./paths.js";
 
 export type LogLevel = "TRACE" | "DEBUG" | "INFO" | "WARN" | "ERROR";
 
-const LOG_PATH = path.join(CR_LOGS_DIR, "cr.log");
+const LOG_PATH = path.join(PV_LOGS_DIR, "pv.log");
 
 function formatEntry(level: LogLevel, context: string, message: string, data?: unknown): string {
   const ts = new Date().toISOString();
@@ -35,7 +35,7 @@ class Logger {
     this.queue = this.queue
       .then(async () => {
         if (!this.dirReady) {
-          await fs.mkdir(CR_LOGS_DIR, { recursive: true });
+          await fs.mkdir(PV_LOGS_DIR, { recursive: true });
           this.dirReady = true;
         }
         await fs.appendFile(LOG_PATH, entry, "utf-8");

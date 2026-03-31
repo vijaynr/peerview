@@ -10,7 +10,7 @@ import type {
   WorkflowEventReporter,
   WorkflowMode,
   WorkflowName,
-} from "@cr/core";
+} from "@pv/core";
 import { printChatAnswer, printDivider, printReviewSummary, printWarning } from "./console.js";
 import { COLORS, DOT } from "./constants.js";
 import { abortOnCancel, askForOptionalFeedback, promptWithFrame } from "./prompt.js";

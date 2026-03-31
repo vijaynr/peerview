@@ -13,15 +13,15 @@
     "types": ["node", "bun"],
     "outDir": "dist-ts",
     "paths": {
-      "@cr/core": ["./packages/core/src/index.ts"],
-      "@cr/workflows": ["./packages/workflows/src/index.ts"],
-      "@cr/tui": ["./packages/cli/src/tui/index.ts"],
-      "@cr/web": ["./packages/web/src/index.ts"],
-      "@cr/server": ["./packages/server/src/index.ts"],
-      "@cr/vcs/github": ["./packages/vcs/src/github/index.ts"],
-      "@cr/vcs/gitlab": ["./packages/vcs/src/gitlab/index.ts"],
-      "@cr/vcs/reviewboard": ["./packages/vcs/src/reviewboard/index.ts"],
-      "@cr/desktop": ["./packages/desktop/src/bun/index.ts"]
+      "@pv/core": ["./packages/core/src/index.ts"],
+      "@pv/workflows": ["./packages/workflows/src/index.ts"],
+      "@pv/tui": ["./packages/cli/src/tui/index.ts"],
+      "@pv/web": ["./packages/web/src/index.ts"],
+      "@pv/server": ["./packages/server/src/index.ts"],
+      "@pv/vcs/github": ["./packages/vcs/src/github/index.ts"],
+      "@pv/vcs/gitlab": ["./packages/vcs/src/gitlab/index.ts"],
+      "@pv/vcs/reviewboard": ["./packages/vcs/src/reviewboard/index.ts"],
+      "@pv/desktop": ["./packages/desktop/src/bun/index.ts"]
     }
   },
   "include": ["packages/*/src/**/*"]

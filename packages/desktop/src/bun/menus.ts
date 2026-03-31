@@ -3,15 +3,15 @@ import { ApplicationMenu } from "electrobun/bun"
 export function createApplicationMenu() {
   ApplicationMenu.setApplicationMenu([
     {
-      label: "CR",
+      label: "PeerView",
       submenu: [
-        { label: "About CR", role: "about" },
+        { label: "About PeerView", role: "about" },
         { type: "separator" },
-        { label: "Hide CR", role: "hide" },
+        { label: "Hide PeerView", role: "hide" },
         { label: "Hide Others", role: "hideOthers" },
         { label: "Show All", role: "showAll" },
         { type: "separator" },
-        { label: "Quit CR", role: "quit" },
+        { label: "Quit PeerView", role: "quit" },
       ],
     },
     {

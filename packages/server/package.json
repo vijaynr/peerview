@@ -1,5 +1,5 @@
 {
-  "name": "@cr/server",
+  "name": "@pv/server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,9 +7,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@cr/core": "workspace:*",
-    "@cr/web": "workspace:*",
-    "@cr/workflows": "workspace:*",
+    "@pv/core": "workspace:*",
+    "@pv/web": "workspace:*",
+    "@pv/workflows": "workspace:*",
     "hono": "^4.9.8"
   }
 }

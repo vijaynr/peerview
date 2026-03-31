@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { envOrConfig, loadDashboardData, loadWorkflowRuntime, logger } from "@cr/core";
-import { createWebRoutes, WEB_APP_DASHBOARD_ROUTE, WEB_APP_ROOT_ROUTE } from "@cr/web";
+import { envOrConfig, loadDashboardData, loadWorkflowRuntime, logger } from "@pv/core";
+import { createWebRoutes, WEB_APP_DASHBOARD_ROUTE, WEB_APP_ROOT_ROUTE } from "@pv/web";
 import { createApiRoutes } from "./routes/api.js";
 import { createStatusRoutes, STATUS_PATH } from "./routes/status.js";
 import { createWebhookRoutes } from "./routes/webhooks.js";

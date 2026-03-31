@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { startServer } from "../packages/server/src/server.js";
 import { makeCoreMock, makeWorkflowsMock } from "./mocks.ts";
 
-const loadCRConfigMock = mock(async () => ({
+const loadPVConfigMock = mock(async () => ({
   openaiApiUrl: "https://api.example.com/v1",
   openaiApiKey: "openai-key",
   openaiModel: "gpt-4o",
@@ -96,7 +96,7 @@ const maybePostReviewCommentMock = mock(async () => ({
   inlineNoteIds: ["inline-1"],
 }));
 
-mock.module("@cr/workflows", () =>
+mock.module("@pv/workflows", () =>
   makeWorkflowsMock({
     runReviewWorkflow: runReviewWorkflowMock,
     runReviewSummarizeWorkflow: runReviewSummarizeWorkflowMock,
@@ -106,9 +106,9 @@ mock.module("@cr/workflows", () =>
   })
 );
 
-mock.module("@cr/core", () =>
+mock.module("@pv/core", () =>
   makeCoreMock({
-    loadCRConfig: loadCRConfigMock,
+    loadPVConfig: loadPVConfigMock,
     saveCRConfig: saveCRConfigMock,
     loadWorkflowRuntime: async () => ({
       gitlabUrl: "https://gitlab.example.com",
@@ -162,7 +162,7 @@ afterEach(() => {
   while (servers.length > 0) {
     servers.pop()?.close();
   }
-  loadCRConfigMock.mockClear();
+  loadPVConfigMock.mockClear();
   saveCRConfigMock.mockClear();
   listMergeRequestsMock.mockClear();
   getMergeRequestMock.mockClear();

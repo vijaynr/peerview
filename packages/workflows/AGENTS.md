@@ -1,8 +1,8 @@
-# @cr/workflows — Agent Guidelines
+# @pv/workflows — Agent Guidelines
 
 ## Package Role
 
-Stateless workflow implementations. Each workflow takes structured input and returns structured output; UI and transport side effects are injected via callbacks or delegated to `@cr/core`.
+Stateless workflow implementations. Each workflow takes structured input and returns structured output; UI and transport side effects are injected via callbacks or delegated to `@pv/core`.
 
 ## Structure
 
@@ -20,7 +20,7 @@ Stateless workflow implementations. Each workflow takes structured input and ret
 
 ## Dependencies
 
-- `@cr/core` — all types, clients, LLM helpers, GitLab helpers, workflow step runner.
+- `@pv/core` — all types, clients, LLM helpers, GitLab helpers, workflow step runner.
 
 ## Key Rules
 

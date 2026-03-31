@@ -57,14 +57,14 @@ export function getWebAppHtml(styles: string, options?: { desktop?: boolean }): 
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CR Review Command Center</title>
+    <title>PeerView</title>
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#000000" />
     <link rel="icon" type="image/svg+xml" href="${WEB_APP_FAVICON_ROUTE}" />
     <script>
 (() => {
   try {
-    const storedTheme = window.localStorage.getItem("cr:web-theme");
+    const storedTheme = window.localStorage.getItem("pv:web-theme");
     if (storedTheme === "light") {
       document.documentElement.setAttribute("data-theme", "cr-light");
       document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#f3f7fc");
@@ -77,7 +77,7 @@ ${styles}
 body { margin: 0; }
 cr-dashboard-app { display: block; min-height: 100vh; }
 cr-stat-card, cr-review-list, cr-request-item, cr-provider-card, cr-config-card, cr-diff-viewer, cr-dashboard-header, cr-overview-page, cr-provider-page, cr-settings-page, cr-theme-toggle, cr-queue-rail, cr-workspace-panel, cr-analysis-rail, cr-review-panel, cr-summary-panel, cr-chat-panel, cr-comments-workspace, cr-inline-comment-popover, cr-commits-list, cr-discussion-thread, cr-config-input, cr-provider-summary-card, cr-provider-icon, cr-toast-notification { display: contents; }
-cr-sidebar-nav { display: flex; flex-direction: column; min-height: 100vh; width: 16rem; }
+cr-sidebar-nav { display: flex; flex-direction: column; min-height: 100vh; width: min(18.5rem, calc(100vw - 1rem)); }
 @media (min-width: 1024px) {
   cr-sidebar-nav {
     transition: width 220ms ease;
@@ -110,7 +110,7 @@ async function readGeneratedWebAppAssets(): Promise<WebAppAssets> {
 
 async function buildWebAppAssets(): Promise<WebAppAssets> {
   if (typeof Bun === "undefined") {
-    throw new Error("CR web bundling requires Bun runtime.");
+    throw new Error("PeerView web bundling requires Bun runtime.");
   }
 
   const { build } = await import("vite");

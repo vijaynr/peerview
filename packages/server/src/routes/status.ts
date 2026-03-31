@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { WEB_APP_DASHBOARD_ROUTE, WEB_APP_ROOT_ROUTE } from "@cr/web";
+import { WEB_APP_DASHBOARD_ROUTE, WEB_APP_ROOT_ROUTE } from "@pv/web";
 import type { ServerContext } from "../types.js";
 
 export const STATUS_PATH = "/status";

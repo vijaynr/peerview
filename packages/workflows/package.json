@@ -1,5 +1,5 @@
 {
-  "name": "@cr/workflows",
+  "name": "@pv/workflows",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,6 +7,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@cr/core": "workspace:*"
+    "@pv/core": "workspace:*"
   }
 }

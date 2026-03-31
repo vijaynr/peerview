@@ -1,4 +1,4 @@
-import type { WorkflowKind } from "@cr/core";
+import type { WorkflowKind } from "@pv/core";
 
 export type ReviewWorkflowKind = WorkflowKind;
 

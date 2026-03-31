@@ -15,7 +15,7 @@ const runLiveTaskMock = mock(
   }
 );
 
-mock.module("@cr/tui", () =>
+mock.module("@pv/tui", () =>
   makeUiMock({
     promptWithFrame: mock(async (questions: PromptQuestion[]) => {
       lastQuestions = questions;
@@ -61,9 +61,9 @@ mock.module("@cr/tui", () =>
   })
 );
 
-mock.module("@cr/core", () =>
+mock.module("@pv/core", () =>
   makeCoreMock({
-    loadCRConfig: mock(async () => mockConfig),
+    loadPVConfig: mock(async () => mockConfig),
     saveCRConfig: mock(async (config: Record<string, unknown>) => {
       lastSavedConfig = config;
     }),
@@ -71,7 +71,7 @@ mock.module("@cr/core", () =>
     setupRpi: setupRpiMock,
     setupSpecs: setupSpecsMock,
     repoRootFromModule: () => "/mock/root",
-    CR_CONF_PATH: "/mock/cr.conf",
+    PV_CONF_PATH: "/mock/cr.conf",
     defaultConfig: {
       openaiApiUrl: "https://api.openai.com/v1",
       openaiModel: "gpt-4",
@@ -109,7 +109,7 @@ describe("initCommand - specialized setup flows", () => {
     expect(options).toContain("--webhook");
     expect(options).toContain("--sdd");
     expect(options).toContain("--rpi");
-    expect(examples).toContain("cr init --rpi --path .");
+    expect(examples).toContain("pv init --rpi --path .");
     expect(modes).toContain("research-plan-implement");
   });
 

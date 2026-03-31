@@ -4,7 +4,7 @@ import { makeCoreMock } from "./mocks.ts";
 let capturedGitLabUrl = "";
 let githubClientInitialized = false;
 
-mock.module("@cr/core", () =>
+mock.module("@pv/core", () =>
   makeCoreMock({
     DEFAULT_REVIEW_AGENT_NAME: "general",
     getCurrentBranch: async () => "feature/demo",

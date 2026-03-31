@@ -5,14 +5,14 @@ import type {
   ReviewBoardRepository,
   ReviewBoardRequest,
   ReviewBoardReview,
-} from "@cr/vcs/reviewboard";
+} from "@pv/vcs/reviewboard";
 import {
   createReviewBoardClient,
   getCurrentUser,
   normalizeBaseUrl,
   rbRequest,
   reviewBoardToRequestId,
-} from "@cr/vcs/reviewboard";
+} from "@pv/vcs/reviewboard";
 
 export { getCurrentUser, normalizeBaseUrl, rbRequest, reviewBoardToRequestId };
 

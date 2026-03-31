@@ -76,7 +76,7 @@ const rbClient = {
   }),
 };
 
-mock.module("@cr/core", () =>
+mock.module("@pv/core", () =>
   makeCoreMock({
     remoteToProjectPath: (remoteUrl: string) => remoteUrl,
     getCurrentBranch: mock(async () => "feature/test"),

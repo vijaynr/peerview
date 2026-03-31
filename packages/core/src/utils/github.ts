@@ -1,19 +1,19 @@
 /**
  * GitHub API utility functions.
- * Implementation lives in @cr/github (GitHubClient); this module provides
- * backward-compatible free-function wrappers for @cr/core consumers.
+ * Implementation lives in @pv/github (GitHubClient); this module provides
+ * backward-compatible free-function wrappers for @pv/core consumers.
  */
-import { GitHubClient } from "@cr/vcs/github";
+import { GitHubClient } from "@pv/vcs/github";
 
-export type { GitHubInlineComment, GitHubIssueComment } from "@cr/vcs/github";
-export { isGitHubRemote, looksLikeConfiguredGitHub } from "@cr/vcs/github";
+export type { GitHubInlineComment, GitHubIssueComment } from "@pv/vcs/github";
+export { isGitHubRemote, looksLikeConfiguredGitHub } from "@pv/vcs/github";
 
 function client(token: string, baseUrl?: string): GitHubClient {
   return new GitHubClient(token, baseUrl);
 }
 
-/** @deprecated Use remoteToRepoPath from @cr/github instead */
-export { remoteToRepoPath as remoteToGitHubRepoPath } from "@cr/vcs/github";
+/** @deprecated Use remoteToRepoPath from @pv/github instead */
+export { remoteToRepoPath as remoteToGitHubRepoPath } from "@pv/vcs/github";
 
 export function listGitHubBranches(token: string, repoPath: string): Promise<string[]> {
   return client(token).listBranches(repoPath);
@@ -103,7 +103,7 @@ export function listGitHubIssueComments(
   token: string,
   repoPath: string,
   prNumber: number
-): Promise<import("@cr/vcs/github").GitHubIssueComment[]> {
+): Promise<import("@pv/vcs/github").GitHubIssueComment[]> {
   return client(token).listIssueComments(repoPath, prNumber);
 }
 
@@ -111,7 +111,7 @@ export function listGitHubReviewComments(
   token: string,
   repoPath: string,
   prNumber: number
-): Promise<import("@cr/vcs/github").GitHubInlineComment[]> {
+): Promise<import("@pv/vcs/github").GitHubInlineComment[]> {
   return client(token).listReviewComments(repoPath, prNumber);
 }
 

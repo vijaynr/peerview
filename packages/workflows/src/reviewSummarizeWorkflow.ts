@@ -1,4 +1,4 @@
-import type { ReviewWorkflowInput, ReviewWorkflowResult } from "@cr/core";
+import type { ReviewWorkflowInput, ReviewWorkflowResult } from "@pv/core";
 import {
   createRuntimeGitHubClient,
   createRuntimeGitLabClient,
@@ -14,7 +14,7 @@ import {
   remoteToProjectPath,
   runWorkflow,
   type WorkflowRuntime,
-} from "@cr/core";
+} from "@pv/core";
 import {
   injectMergeRequestContextIntoTemplate,
   resolveGitLabBaseUrl,
@@ -166,7 +166,7 @@ async function validateLlmConfigNode(state: {
   const runtime = assertRuntime(state.runtime);
   if (!runtime.openaiApiKey || !runtime.openaiApiUrl) {
     throw new Error(
-      "Missing LLM configuration. Run `cr init` or set OPENAI_API_KEY/OPENAI_API_URL."
+      "Missing LLM configuration. Run `pv init` or set OPENAI_API_KEY/OPENAI_API_URL."
     );
   }
   return {};
@@ -183,7 +183,7 @@ async function initializeGitLabClientNode(state: { runtime: WorkflowRuntime | nu
 }> {
   const runtime = assertRuntime(state.runtime);
   if (!runtime.gitlabUrl || !runtime.gitlabKey) {
-    throw new Error("Missing GitLab configuration. Run `cr init` or set GITLAB_URL/GITLAB_KEY.");
+    throw new Error("Missing GitLab configuration. Run `pv init` or set GITLAB_URL/GITLAB_KEY.");
   }
   return { gitlab: createRuntimeGitLabClient(runtime) };
 }
@@ -261,11 +261,11 @@ export async function runReviewSummarizeWorkflow(
     const runtime = await loadWorkflowRuntime();
     if (!runtime.openaiApiKey || !runtime.openaiApiUrl) {
       throw new Error(
-        "Missing LLM configuration. Run `cr init` or set OPENAI_API_KEY/OPENAI_API_URL."
+        "Missing LLM configuration. Run `pv init` or set OPENAI_API_KEY/OPENAI_API_URL."
       );
     }
     if (!runtime.githubToken) {
-      throw new Error("Missing GitHub configuration. Run `cr init --github` or set GITHUB_TOKEN.");
+      throw new Error("Missing GitHub configuration. Run `pv init --github` or set GITHUB_TOKEN.");
     }
     const llm = createRuntimeLlmClient(runtime);
     const github = createRuntimeGitHubClient(runtime);

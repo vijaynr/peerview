@@ -3,7 +3,7 @@ import { BANNER_COLOR, BORDERS, COLORS, DOT } from "./constants.js";
 import { renderMarkdownForTerminal } from "./markdown.js";
 
 let cachedBannerText: string | null = null;
-const BINARY_BANNER_LABEL = "cr-cli";
+const BINARY_BANNER_LABEL = "peerview";
 const BANNER_SCRAMBLE_CHARS = "10101010010101010010101010101010101010";
 
 function getTerminalWidth(): number {
@@ -18,7 +18,7 @@ function loadBannerText(): string {
   try {
     cachedBannerText = BANNER_TEXT;
   } catch {
-    cachedBannerText = "CodeReviewer CLI";
+    cachedBannerText = "PeerView CLI";
   }
 
   return cachedBannerText;
@@ -211,7 +211,7 @@ export function printHeaderBox(): void {
 
   const GAP = "  ";
   const RIGHT_PAD = 6;
-  const title = `cr  ⬤  code reviewer`;
+  const title = `pv  ⬤  peerview`;
   const desc = `vibecheck your codebase`;
   const version = `v0.1.0`;
 
@@ -337,30 +337,30 @@ export function printCommandHelp(sections: { title: string; lines: string[] }[])
 export function printHelpView(): void {
   const commandRows = formatHelpRows([
     {
-      cmd: "cr init",
+      cmd: "pv init",
       desc: "Initialize configuration. Use --sdd or --webhook for specific setups.",
     },
-    { cmd: "cr config", desc: "View or edit complete configuration." },
-    { cmd: "cr review", desc: "Run review, summarize, or chat workflows." },
+    { cmd: "pv config", desc: "View or edit complete configuration." },
+    { cmd: "pv review", desc: "Run review, summarize, or chat workflows." },
     {
-      cmd: "cr create-review",
+      cmd: "pv create-review",
       desc: "Generate or update a merge request or review request draft.",
     },
-    { cmd: "cr serve", desc: "Start the unified web and API server." },
-    { cmd: "cr help", desc: "Show this help screen." },
+    { cmd: "pv serve", desc: "Start the unified web and API server." },
+    { cmd: "pv help", desc: "Show this help screen." },
   ]);
 
   const workflowRows = formatHelpRows([
-    { cmd: "cr review --workflow default", desc: "Code review for a merge request." },
-    { cmd: "cr review --workflow summarize", desc: "Summary of merge request changes." },
-    { cmd: "cr review --workflow chat", desc: "Interactive Q&A over MR context." },
+    { cmd: "pv review --workflow default", desc: "Code review for a merge request." },
+    { cmd: "pv review --workflow summarize", desc: "Summary of merge request changes." },
+    { cmd: "pv review --workflow chat", desc: "Interactive Q&A over MR context." },
   ]);
 
   const exampleRows = [
-    "cr review --path .",
-    "cr review --workflow summarize --path .",
-    "cr create-review --target-branch main",
-    "git diff | cr review --local",
+    "pv review --path .",
+    "pv review --workflow summarize --path .",
+    "pv create-review --target-branch main",
+    "git diff | pv review --local",
   ];
 
   console.log();
@@ -387,7 +387,7 @@ export function printHelpView(): void {
 
   console.log("TIP");
   console.log();
-  console.log("  Use `cr review --help` for complete review options.");
+  console.log("  Use `pv review --help` for complete review options.");
   console.log();
 }
 

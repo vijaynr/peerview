@@ -1,17 +1,17 @@
 import path from "node:path";
 import {
-  CR_CONF_PATH,
+  PV_CONF_PATH,
   type CRConfig,
   defaultConfig,
   initializeCRHome,
-  loadCRConfig,
+  loadPVConfig,
   repoRootFromModule,
   type RpiTarget,
   type SpecTarget,
   saveCRConfig,
   setupRpi,
   setupSpecs,
-} from "@cr/core";
+} from "@pv/core";
 import {
   createSpinner,
   type LiveController,
@@ -25,7 +25,7 @@ import {
   printWorkflowOutput,
   promptWithFrame,
   runLiveTask,
-} from "@cr/tui";
+} from "@pv/tui";
 import { getFlag, hasFlag } from "../cliHelpers.js";
 
 type WebhookSetupAnswers = {
@@ -86,7 +86,7 @@ export async function runInitCommand(args: string[] = []): Promise<void> {
     printCommandHelp([
       {
         title: "USAGE",
-        lines: ["cr init [options]"],
+        lines: ["pv init [options]"],
       },
       {
         title: "OPTIONS",
@@ -106,14 +106,14 @@ export async function runInitCommand(args: string[] = []): Promise<void> {
       {
         title: "EXAMPLES",
         lines: [
-          "cr init",
-          "cr init --gitlab",
-          "cr init --github",
-          "cr init --reviewboard",
-          "cr init --subversion",
-          "cr init --webhook",
-          "cr init --sdd --path .",
-          "cr init --rpi --path .",
+          "pv init",
+          "pv init --gitlab",
+          "pv init --github",
+          "pv init --reviewboard",
+          "pv init --subversion",
+          "pv init --webhook",
+          "pv init --sdd --path .",
+          "pv init --rpi --path .",
         ],
       },
       {
@@ -200,7 +200,7 @@ async function bootstrap(_args: string[] = []): Promise<void> {
       const repoRoot = repoRootFromModule(import.meta.url);
       await initializeCRHome(repoRoot);
       spinner.stop();
-      ui.setResult("Workflow: Initialization", `Configuration path: ${CR_CONF_PATH}`);
+      ui.setResult("Workflow: Initialization", `Configuration path: ${PV_CONF_PATH}`);
     }
   );
 }
@@ -319,7 +319,7 @@ async function runWebhookSetup(_args: string[] = []): Promise<void> {
     "Webhook Configuration",
     "Configure webhook endpoints, secrets, and optional SSL settings for CR automation.",
     async (ui) => {
-      const existing = await loadCRConfig();
+      const existing = await loadPVConfig();
 
       createSpinner("Loading settings...").start().stop();
 
@@ -404,13 +404,13 @@ async function runWebhookSetup(_args: string[] = []): Promise<void> {
         {
           type: "text",
           name: "sslCertPath",
-          message: "SSL Certificate Path (for cr serve)",
+          message: "SSL Certificate Path (for pv serve)",
           initial: existing.sslCertPath ?? "",
         },
         {
           type: "text",
           name: "sslKeyPath",
-          message: "SSL Private Key Path (for cr serve)",
+          message: "SSL Private Key Path (for pv serve)",
           initial: existing.sslKeyPath ?? "",
         },
         {
@@ -477,9 +477,9 @@ async function runWebhookSetup(_args: string[] = []): Promise<void> {
       await saveCRConfig(nextConfig);
 
       printDivider();
-      printSuccess(`Webhook configuration updated in ${CR_CONF_PATH}`);
+      printSuccess(`Webhook configuration updated in ${PV_CONF_PATH}`);
       printDivider();
-      ui.setResult("Workflow: Webhook Configuration", `Saved to: ${CR_CONF_PATH}`);
+      ui.setResult("Workflow: Webhook Configuration", `Saved to: ${PV_CONF_PATH}`);
     }
   );
 }
@@ -489,7 +489,7 @@ async function runSubversionSetup(_args: string[] = []): Promise<void> {
     "Subversion Configuration",
     "Store SVN repository and credential settings for workflows that read from Subversion.",
     async (ui) => {
-      const existing = await loadCRConfig();
+      const existing = await loadPVConfig();
 
       createSpinner("Loading settings...").start().stop();
 
@@ -548,9 +548,9 @@ async function runSubversionSetup(_args: string[] = []): Promise<void> {
       await saveCRConfig(nextConfig);
 
       printDivider();
-      printSuccess(`Subversion configuration updated in ${CR_CONF_PATH}`);
+      printSuccess(`Subversion configuration updated in ${PV_CONF_PATH}`);
       printDivider();
-      ui.setResult("Workflow: Subversion Configuration", `Saved to: ${CR_CONF_PATH}`);
+      ui.setResult("Workflow: Subversion Configuration", `Saved to: ${PV_CONF_PATH}`);
     }
   );
 }
@@ -560,7 +560,7 @@ async function runGitLabSetup(_args: string[] = []): Promise<void> {
     "GitLab Configuration",
     "Configure the OpenAI and GitLab credentials used for merge request workflows.",
     async (ui) => {
-      const existing = await loadCRConfig();
+      const existing = await loadPVConfig();
 
       const answers = (await promptWithFrame(
         [
@@ -625,9 +625,9 @@ async function runGitLabSetup(_args: string[] = []): Promise<void> {
       await saveCRConfig(nextConfig);
 
       printDivider();
-      printSuccess(`Configuration saved to ${CR_CONF_PATH}`);
+      printSuccess(`Configuration saved to ${PV_CONF_PATH}`);
       printDivider();
-      ui.setResult("Workflow: GitLab Configuration", `Saved to: ${CR_CONF_PATH}`);
+      ui.setResult("Workflow: GitLab Configuration", `Saved to: ${PV_CONF_PATH}`);
     }
   );
 }
@@ -637,7 +637,7 @@ async function runGitHubSetup(_args: string[] = []): Promise<void> {
     "GitHub Configuration",
     "Configure the OpenAI and GitHub credentials used for pull request workflows.",
     async (ui) => {
-      const existing = await loadCRConfig();
+      const existing = await loadPVConfig();
 
       const answers = (await promptWithFrame(
         [
@@ -697,9 +697,9 @@ async function runGitHubSetup(_args: string[] = []): Promise<void> {
       await saveCRConfig(nextConfig);
 
       printDivider();
-      printSuccess(`Configuration saved to ${CR_CONF_PATH}`);
+      printSuccess(`Configuration saved to ${PV_CONF_PATH}`);
       printDivider();
-      ui.setResult("Workflow: GitHub Configuration", `Saved to: ${CR_CONF_PATH}`);
+      ui.setResult("Workflow: GitHub Configuration", `Saved to: ${PV_CONF_PATH}`);
     }
   );
 }
@@ -709,7 +709,7 @@ async function runRbSetup(_args: string[] = []): Promise<void> {
     "Review Board Configuration",
     "Configure the OpenAI, Review Board, and optional SVN settings used for review request workflows.",
     async (ui) => {
-      const existing = await loadCRConfig();
+      const existing = await loadPVConfig();
 
       createSpinner("Loading settings...").start().stop();
 
@@ -793,9 +793,9 @@ async function runRbSetup(_args: string[] = []): Promise<void> {
       await saveCRConfig(nextConfig);
 
       printDivider();
-      printSuccess(`Review Board configuration updated in ${CR_CONF_PATH}`);
+      printSuccess(`Review Board configuration updated in ${PV_CONF_PATH}`);
       printDivider();
-      ui.setResult("Workflow: Review Board Configuration", `Saved to: ${CR_CONF_PATH}`);
+      ui.setResult("Workflow: Review Board Configuration", `Saved to: ${PV_CONF_PATH}`);
     }
   );
 }

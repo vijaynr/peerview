@@ -1,5 +1,5 @@
 {
-  "name": "@cr/core",
+  "name": "@pv/core",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@cr/vcs": "workspace:*",
+    "@pv/vcs": "workspace:*",
     "openai": "^6.6.0",
     "zod": "^4.1.12"
   }

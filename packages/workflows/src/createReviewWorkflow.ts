@@ -6,7 +6,7 @@ import type {
   CreateReviewWorkflowResponse,
   CreateReviewWorkflowResult,
   StatusLevel,
-} from "@cr/core";
+} from "@pv/core";
 import {
   createRuntimeGitLabClient,
   createRuntimeLlmClient,
@@ -26,7 +26,7 @@ import {
   type ReviewBoardRepository,
   remoteToProjectPath,
   type WorkflowRuntime,
-} from "@cr/core";
+} from "@pv/core";
 import { createWorkflowPhaseReporter } from "./workflowEvents.js";
 
 type CreateReviewWorkflowResponseInput = CreateReviewWorkflowResponse | undefined;
@@ -143,7 +143,7 @@ async function initializeGitLabClients(runtime: WorkflowRuntime): Promise<{
   llm: LlmClient;
 }> {
   if (!runtime.gitlabUrl || !runtime.gitlabKey) {
-    throw new Error("Missing GitLab configuration. Run `cr init` or set GITLAB_URL/GITLAB_KEY.");
+    throw new Error("Missing GitLab configuration. Run `pv init` or set GITLAB_URL/GITLAB_KEY.");
   }
   return {
     gitlab: createRuntimeGitLabClient(runtime),
@@ -157,7 +157,7 @@ async function initializeReviewBoardClients(runtime: WorkflowRuntime): Promise<{
 }> {
   if (!runtime.rbUrl || !runtime.rbToken) {
     throw new Error(
-      "Missing Review Board configuration. Run `cr init --rb` or set RB_URL/RB_TOKEN."
+      "Missing Review Board configuration. Run `pv init --rb` or set RB_URL/RB_TOKEN."
     );
   }
   return {

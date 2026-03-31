@@ -4,8 +4,8 @@ import type {
   ReviewSessionResponse,
   ReviewSessionResult,
   WorkflowMode,
-} from "@cr/core";
-import { envOrConfig, loadCRConfig, repoRootFromModule } from "@cr/core";
+} from "@pv/core";
+import { envOrConfig, loadPVConfig, repoRootFromModule } from "@pv/core";
 import {
   abortOnCancel,
   askForOptionalFeedback,
@@ -19,7 +19,7 @@ import {
   promptWithFrame,
   runLiveChatLoop,
   runLiveTask,
-} from "@cr/tui";
+} from "@pv/tui";
 import {
   answerReviewChatQuestion,
   maybePostGitHubReviewComment,
@@ -28,7 +28,7 @@ import {
   type ReviewWorkflowInput,
   runInteractiveReviewSession,
   type runReviewWorkflow,
-} from "@cr/workflows";
+} from "@pv/workflows";
 import {
   getFlag,
   getWorkflowHeadingAndDescription,
@@ -53,7 +53,7 @@ async function maybePostReviewNotes(args: {
     return { postedInlineCount: 0 };
   }
 
-  const config = await loadCRConfig();
+  const config = await loadPVConfig();
 
   if (args.input.provider === "reviewboard") {
     const rbToken = envOrConfig("RB_TOKEN", config.rbToken, "");
@@ -316,7 +316,7 @@ export async function runReviewCommand(args: string[]): Promise<void> {
     printCommandHelp([
       {
         title: "USAGE",
-        lines: ["cr review [options]"],
+        lines: ["pv review [options]"],
       },
       {
         title: "OPTIONS",
@@ -340,17 +340,17 @@ export async function runReviewCommand(args: string[]): Promise<void> {
       {
         title: "EXAMPLES",
         lines: [
-          "cr review",
-          "cr review --workflow summarize",
-          "cr review --workflow chat",
-          "cr review --reviewboard",
-          "cr review --reviewboard --from username",
-          "cr review --path /path/to/repo",
-          "cr review --url https://gitlab.com/org/repo/-/merge_requests/123",
-          "cr review --reviewboard --url https://reviews.example.com/r/123/",
-          "cr review --local",
-          "git diff | cr review --local",
-          "cr review --state all",
+          "pv review",
+          "pv review --workflow summarize",
+          "pv review --workflow chat",
+          "pv review --reviewboard",
+          "pv review --reviewboard --from username",
+          "pv review --path /path/to/repo",
+          "pv review --url https://gitlab.com/org/repo/-/merge_requests/123",
+          "pv review --reviewboard --url https://reviews.example.com/r/123/",
+          "pv review --local",
+          "git diff | pv review --local",
+          "pv review --state all",
         ],
       },
       {

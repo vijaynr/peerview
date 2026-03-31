@@ -1,5 +1,5 @@
 {
-  "name": "@cr/desktop",
+  "name": "@pv/desktop",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -16,8 +16,8 @@
     "dev:watch": "bun run icons && electrobun dev --watch"
   },
   "dependencies": {
-    "@cr/core": "workspace:*",
-    "@cr/server": "workspace:*",
+    "@pv/core": "workspace:*",
+    "@pv/server": "workspace:*",
     "electrobun": "^1.16.0"
   }
 }

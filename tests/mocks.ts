@@ -1,12 +1,12 @@
 /**
- * Shared mock factories for @cr/tui and @cr/core.
+ * Shared mock factories for @pv/tui and @pv/core.
  *
  * Bun 1.3.x shares the module-mock registry within a test worker — when one
  * test file sets a partial mock for a package, subsequent test files cannot
  * add export names that were absent from the previous mock (Bun validates new
  * mocks against the currently-registered export list and throws a SyntaxError).
  *
- * Solution: every test that calls mock.module() for @cr/tui or @cr/core must
+ * Solution: every test that calls mock.module() for @pv/tui or @pv/core must
  * provide the FULL union of exports that any test may ever need. These factory
  * functions return that comprehensive base object, with the caller's overrides
  * applied on top so individual tests can still inject their own spy functions.
@@ -15,7 +15,7 @@
 import { mock } from "bun:test";
 
 // ---------------------------------------------------------------------------
-// @cr/tui
+// @pv/tui
 // ---------------------------------------------------------------------------
 
 export function makeUiMock(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -97,19 +97,19 @@ export function makeUiMock(overrides: Record<string, unknown> = {}): Record<stri
 }
 
 // ---------------------------------------------------------------------------
-// @cr/core
+// @pv/core
 // ---------------------------------------------------------------------------
 
 export function makeCoreMock(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     // config
-    loadCRConfig: mock(async () => ({})),
+    loadPVConfig: mock(async () => ({})),
     saveCRConfig: mock(async () => {}),
-    readCRConfigContents: mock(async () => ""),
+    readPVConfigContents: mock(async () => ""),
     envOrConfig: (_key: string, value: string | undefined, fallback: string) => value ?? fallback,
     envOrConfigBoolean: (_key: string, value: boolean | undefined, fallback: boolean) =>
       value ?? fallback,
-    CR_CONF_PATH: "/mock/.cr.conf",
+    PV_CONF_PATH: "/mock/.pv.conf",
     defaultConfig: {},
     loadDashboardData: mock(async () => ({
       generatedAt: "2025-01-01T00:00:00.000Z",
@@ -143,10 +143,10 @@ export function makeCoreMock(overrides: Record<string, unknown> = {}): Record<st
     setupRpi: mock(async () => []),
     setupSpecs: mock(async () => {}),
     repoRootFromModule: mock(() => "/mock/root"),
-    CR_ASSETS_DIR: "/mock/.cr",
-    CR_DIR: "/mock/.cr",
-    CR_PROMPTS_DIR: "/mock/.cr/prompts",
-    CR_LOGS_DIR: "/mock/.cr/logs",
+    PV_ASSETS_DIR: "/mock/.cr",
+    PV_DIR: "/mock/.cr",
+    PV_PROMPTS_DIR: "/mock/.pv/prompts",
+    PV_LOGS_DIR: "/mock/.pv/logs",
     HOME_DIR: "/mock",
     resourcesPathFromRepoRoot: mock(() => ""),
     // logging
@@ -274,7 +274,7 @@ export function makeCoreMock(overrides: Record<string, unknown> = {}): Record<st
 }
 
 // ---------------------------------------------------------------------------
-// @cr/workflows
+// @pv/workflows
 // ---------------------------------------------------------------------------
 
 export function makeWorkflowsMock(

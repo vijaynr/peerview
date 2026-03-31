@@ -33,7 +33,7 @@ import {
   listMergeRequestDiscussions,
   listRepositories,
   listReviewRequests,
-  loadCRConfig,
+  loadPVConfig,
   listBundledReviewAgentNames,
   normalizeReviewAgentNames,
   publishReview,
@@ -49,14 +49,14 @@ import {
   updateMergeRequestDiscussionNote,
   updateReviewRequestDraft,
   uploadReviewRequestDiff,
-} from "@cr/core";
+} from "@pv/core";
 import type {
   CRConfig,
   MergeRequestState,
   ReviewChatContext,
   ReviewChatHistoryEntry,
   ReviewWorkflowResult,
-} from "@cr/core";
+} from "@pv/core";
 import {
   answerReviewChatQuestion,
   maybePostGitHubReviewComment,
@@ -65,7 +65,7 @@ import {
   runReviewChatWorkflow,
   runReviewSummarizeWorkflow,
   runReviewWorkflow,
-} from "@cr/workflows";
+} from "@pv/workflows";
 import type { ServerContext } from "../types.js";
 
 const API_PREFIX = "/api";
@@ -128,7 +128,7 @@ function getBaseConfig(existing: Partial<CRConfig>): CRConfig {
 }
 
 async function requireGitLabConfig() {
-  const config = await loadCRConfig();
+  const config = await loadPVConfig();
   if (!config.gitlabUrl || !config.gitlabKey) {
     throw new Error("Missing GitLab configuration.");
   }
@@ -136,7 +136,7 @@ async function requireGitLabConfig() {
 }
 
 async function requireGitHubConfig() {
-  const config = await loadCRConfig();
+  const config = await loadPVConfig();
   if (!config.githubToken) {
     throw new Error("Missing GitHub configuration.");
   }
@@ -144,7 +144,7 @@ async function requireGitHubConfig() {
 }
 
 async function requireReviewBoardConfig() {
-  const config = await loadCRConfig();
+  const config = await loadPVConfig();
   if (!config.rbUrl || !config.rbToken) {
     throw new Error("Missing Review Board configuration.");
   }
@@ -578,13 +578,13 @@ export function createApiRoutes(context: ServerContext): Hono {
   });
 
   app.get(`${API_PREFIX}/config`, async (c) => {
-    const config = await loadCRConfig();
+    const config = await loadPVConfig();
     return c.json(config);
   });
 
   app.put(`${API_PREFIX}/config`, async (c) => {
     const body = (await c.req.json()) as Partial<CRConfig>;
-    const existing = await loadCRConfig();
+    const existing = await loadPVConfig();
     const nextConfig = {
       ...getBaseConfig(existing),
       ...body,
@@ -598,7 +598,7 @@ export function createApiRoutes(context: ServerContext): Hono {
   app.post(`${API_PREFIX}/test/gitlab`, async (c) => {
     try {
       const body = (await c.req.json().catch(() => ({}))) as { url?: string; token?: string };
-      const config = await loadCRConfig();
+      const config = await loadPVConfig();
       const baseUrl = (body.url || config.gitlabUrl || "").replace(/\/+$/, "");
       const token = body.token || config.gitlabKey || "";
       if (!baseUrl || !token) {
@@ -622,7 +622,7 @@ export function createApiRoutes(context: ServerContext): Hono {
   app.post(`${API_PREFIX}/test/github`, async (c) => {
     try {
       const body = (await c.req.json().catch(() => ({}))) as { url?: string; token?: string };
-      const config = await loadCRConfig();
+      const config = await loadPVConfig();
       const token = body.token || config.githubToken || "";
       if (!token) {
         return c.json({ ok: false, message: "GitHub token is required." });
@@ -650,7 +650,7 @@ export function createApiRoutes(context: ServerContext): Hono {
   app.post(`${API_PREFIX}/test/reviewboard`, async (c) => {
     try {
       const body = (await c.req.json().catch(() => ({}))) as { url?: string; token?: string };
-      const config = await loadCRConfig();
+      const config = await loadPVConfig();
       const baseUrl = (body.url || config.rbUrl || "").replace(/\/+$/, "");
       const token = body.token || config.rbToken || "";
       if (!baseUrl || !token) {
@@ -675,7 +675,7 @@ export function createApiRoutes(context: ServerContext): Hono {
   app.post(`${API_PREFIX}/test/openai`, async (c) => {
     try {
       const body = (await c.req.json().catch(() => ({}))) as { url?: string; token?: string };
-      const config = await loadCRConfig();
+      const config = await loadPVConfig();
       const apiUrl = (body.url || config.openaiApiUrl || "").replace(/\/+$/, "");
       const apiKey = body.token || config.openaiApiKey || "";
       if (!apiUrl || !apiKey) {
@@ -699,7 +699,7 @@ export function createApiRoutes(context: ServerContext): Hono {
 
   app.get(`${API_PREFIX}/review/agents`, async (c) => {
     try {
-      const config = await loadCRConfig();
+      const config = await loadPVConfig();
       const defaultAgents = normalizeReviewAgentNames(config.defaultReviewAgents);
       const availableAgents = Array.from(
         new Set([...listBundledReviewAgentNames(), ...defaultAgents])

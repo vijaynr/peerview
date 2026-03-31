@@ -111,7 +111,7 @@ const loadDashboardDataMock = mock(async () => ({
   },
 }));
 
-mock.module("@cr/workflows", () =>
+mock.module("@pv/workflows", () =>
   makeWorkflowsMock({
     runReviewWorkflow: runReviewWorkflowMock,
     maybePostReviewComment: async () => null,
@@ -121,7 +121,7 @@ mock.module("@cr/workflows", () =>
   })
 );
 
-mock.module("@cr/core", () =>
+mock.module("@pv/core", () =>
   makeCoreMock({
     loadWorkflowRuntime: async () => ({ ...runtime }),
     envOrConfig: (_key: string, value: string | undefined, fallback: string) => value || fallback,

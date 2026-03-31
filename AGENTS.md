@@ -2,17 +2,17 @@
 
 ## Project Structure & Module Organization
 
-`cr-cli` is a TypeScript monorepo running on Bun with seven packages under `packages/`:
+`peerview-cli` is a TypeScript monorepo running on Bun with seven packages under `packages/`:
 
 | Package            | Path                     | Role                                                               |
 | ------------------ | ------------------------ | ------------------------------------------------------------------ |
-| `@cr/cli`          | `packages/cli/`          | Binary entrypoint, command handlers, and terminal UI (TUI)         |
-| `@cr/core`         | `packages/core/`         | Shared business logic, types, resource loading, and integrations   |
-| `@cr/vcs`          | `packages/vcs/`          | VCS provider adapters (GitHub, GitLab, Review Board) used by `@cr/core` |
-| `@cr/workflows`    | `packages/workflows/`    | Review, summarize, chat, MR/PR draft creation, and Review Board workflows |
-| `@cr/server`       | `packages/server/`       | Unified server for webhook endpoints, web shell, and API routes    |
-| `@cr/web`          | `packages/web/`          | Lit dashboard UI and route helpers served by `@cr/server`          |
-| `@cr/desktop`      | `packages/desktop/`      | Electrobun desktop app wrapper                                     |
+| `@pv/cli`          | `packages/cli/`          | Binary entrypoint, command handlers, and terminal UI (TUI)         |
+| `@pv/core`         | `packages/core/`         | Shared business logic, types, resource loading, and integrations   |
+| `@pv/vcs`          | `packages/vcs/`          | VCS provider adapters (GitHub, GitLab, Review Board) used by `@pv/core` |
+| `@pv/workflows`    | `packages/workflows/`    | Review, summarize, chat, MR/PR draft creation, and Review Board workflows |
+| `@pv/server`       | `packages/server/`       | Unified server for webhook endpoints, web shell, and API routes    |
+| `@pv/web`          | `packages/web/`          | Lit dashboard UI and route helpers served by `@pv/server`          |
+| `@pv/desktop`      | `packages/desktop/`      | Electrobun desktop app wrapper                                     |
 
 Package-specific `AGENTS.md` files exist in `packages/cli`, `packages/core`, `packages/workflows`, `packages/server`, and `packages/web`. If a package has no local guide, follow this root file.
 
@@ -49,7 +49,7 @@ Package-specific `AGENTS.md` files exist in `packages/cli`, `packages/core`, `pa
 - 2-space indentation; semicolons optional — stay consistent with the file you're editing.
 - Files and functions in `kebab-case` / `camelCase`; types/interfaces in `PascalCase`.
 - Prefer focused helpers over large monolithic functions.
-- Preserve package boundaries: CLI wiring in `@cr/cli`, terminal output in `@cr/tui`, shared logic in `@cr/core`, workflows in `@cr/workflows`, HTTP/server orchestration in `@cr/server`, and browser UI in `@cr/web`.
+- Preserve package boundaries: CLI wiring in `@pv/cli`, terminal output in `@pv/tui`, shared logic in `@pv/core`, workflows in `@pv/workflows`, HTTP/server orchestration in `@pv/server`, and browser UI in `@pv/web`.
 
 ## Testing Guidelines
 
@@ -71,6 +71,6 @@ Package-specific `AGENTS.md` files exist in `packages/cli`, `packages/core`, `pa
 ## Security & Configuration Tips
 
 - Never commit secrets.
-- Runtime config is stored at `~/.cr.conf`.
-- Prompt overrides are loaded from `~/.cr/prompts`.
-- Spec template overrides and generated spec content live under `~/.cr/specs`.
+- Runtime config is stored at `~/.pv.conf`.
+- Prompt overrides are loaded from `~/.pv/prompts`.
+- Spec template overrides and generated spec content live under `~/.pv/specs`.

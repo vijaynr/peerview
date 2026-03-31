@@ -2,30 +2,30 @@
 set -e
 
 echo "========================================"
-echo "CR CLI Installer"
+echo "PeerView CLI Installer"
 echo "========================================"
 echo
 
 LOCAL_BIN_DIR="$HOME/.local/bin"
 
-echo "[1/3] Checking for cr binary..."
+echo "[1/3] Checking for pv binary..."
 
-if [ ! -f "cr" ]; then
+if [ ! -f "pv" ]; then
     echo
-    echo "ERROR: cr binary not found in current directory"
-    echo "Please run this script from the directory containing the cr binary"
+    echo "ERROR: pv binary not found in current directory"
+    echo "Please run this script from the directory containing the pv binary"
     echo
     exit 1
 fi
 
-echo "     Found cr binary"
+echo "     Found pv binary"
 echo
 
 echo "[2/3] Installing to $LOCAL_BIN_DIR..."
 
 mkdir -p "$LOCAL_BIN_DIR"
-cp cr "$LOCAL_BIN_DIR/cr"
-chmod +x "$LOCAL_BIN_DIR/cr"
+cp pv "$LOCAL_BIN_DIR/pv"
+chmod +x "$LOCAL_BIN_DIR/pv"
 
 echo "     Installed successfully"
 echo
@@ -53,7 +53,7 @@ if grep -q "export PATH=\"\$LOCAL_BIN_DIR:\$PATH\"" "$SHELL_PROFILE" 2>/dev/null
     echo "     Already in PATH ($SHELL_PROFILE)"
 else
     echo >> "$SHELL_PROFILE"
-    echo "# Added by CR CLI installer" >> "$SHELL_PROFILE"
+    echo "# Added by PeerView CLI installer" >> "$SHELL_PROFILE"
     echo "export PATH=\"$LOCAL_BIN_DIR:\$PATH\"" >> "$SHELL_PROFILE"
     echo "     Added to PATH ($SHELL_PROFILE)"
 fi
@@ -67,5 +67,5 @@ echo "IMPORTANT: Restart your terminal or run:"
 echo "  source $SHELL_PROFILE"
 echo
 echo "To verify installation, run:"
-echo "  cr help"
+echo "  pv help"
 echo

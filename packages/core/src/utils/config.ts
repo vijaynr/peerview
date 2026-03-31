@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import type { CRConfig } from "../types/config.js";
-import { CR_CONF_KEY_PATH, CR_CONF_PATH } from "./paths.js";
+import { PV_CONF_KEY_PATH, PV_CONF_PATH } from "./paths.js";
 
 const configSchema = z.object({
   openaiApiUrl: z.string(),
@@ -141,8 +141,8 @@ export function decryptConfigSecret(value: string, key: Buffer): string {
 }
 
 async function loadOrCreateConfigEncryptionKey(): Promise<Buffer> {
-  if (existsSync(CR_CONF_KEY_PATH)) {
-    const key = Buffer.from((await fs.readFile(CR_CONF_KEY_PATH, "utf-8")).trim(), "base64");
+  if (existsSync(PV_CONF_KEY_PATH)) {
+    const key = Buffer.from((await fs.readFile(PV_CONF_KEY_PATH, "utf-8")).trim(), "base64");
     if (key.length !== ENCRYPTION_KEY_BYTES) {
       throw new Error("Invalid CR config encryption key.");
     }
@@ -150,8 +150,8 @@ async function loadOrCreateConfigEncryptionKey(): Promise<Buffer> {
   }
 
   const key = randomBytes(ENCRYPTION_KEY_BYTES);
-  await fs.mkdir(path.dirname(CR_CONF_KEY_PATH), { recursive: true });
-  await fs.writeFile(CR_CONF_KEY_PATH, key.toString("base64"), { encoding: "utf-8", mode: 0o600 });
+  await fs.mkdir(path.dirname(PV_CONF_KEY_PATH), { recursive: true });
+  await fs.writeFile(PV_CONF_KEY_PATH, key.toString("base64"), { encoding: "utf-8", mode: 0o600 });
   return key;
 }
 
@@ -174,12 +174,12 @@ async function maybeEncryptConfigSecret(value: string | undefined): Promise<stri
   return encryptConfigSecret(value, await loadOrCreateConfigEncryptionKey());
 }
 
-export async function loadCRConfig(): Promise<Partial<CRConfig>> {
-  if (!existsSync(CR_CONF_PATH)) {
+export async function loadPVConfig(): Promise<Partial<CRConfig>> {
+  if (!existsSync(PV_CONF_PATH)) {
     return {};
   }
 
-  const raw = await fs.readFile(CR_CONF_PATH, "utf-8");
+  const raw = await fs.readFile(PV_CONF_PATH, "utf-8");
   const ini = parseIni(raw);
   const section = ini[crSection] ?? {};
 
@@ -241,12 +241,12 @@ export async function loadCRConfig(): Promise<Partial<CRConfig>> {
   return configSchema.partial().parse(parsed);
 }
 
-export async function readCRConfigContents(): Promise<string | null> {
-  if (!existsSync(CR_CONF_PATH)) {
+export async function readPVConfigContents(): Promise<string | null> {
+  if (!existsSync(PV_CONF_PATH)) {
     return null;
   }
 
-  return fs.readFile(CR_CONF_PATH, "utf-8");
+  return fs.readFile(PV_CONF_PATH, "utf-8");
 }
 
 export async function saveCRConfig(config: CRConfig): Promise<void> {
@@ -314,7 +314,7 @@ export async function saveCRConfig(config: CRConfig): Promise<void> {
     },
   });
 
-  await fs.writeFile(CR_CONF_PATH, output, "utf-8");
+  await fs.writeFile(PV_CONF_PATH, output, "utf-8");
 }
 
 export function envOrConfig(

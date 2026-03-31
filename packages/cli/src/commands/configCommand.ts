@@ -1,13 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { CR_CONF_PATH, readCRConfigContents } from "@cr/core";
-import { COLORS, createSpinner, DOT, printInfo, printRawOutput, printWarning } from "@cr/tui";
+import { PV_CONF_PATH, readPVConfigContents } from "@pv/core";
+import { COLORS, createSpinner, DOT, printInfo, printRawOutput, printWarning } from "@pv/tui";
 
 function resolveEditor(): string | undefined {
-  return process.env.CR_EDITOR || process.env.VISUAL || process.env.EDITOR;
+  return process.env.PV_EDITOR || process.env.VISUAL || process.env.EDITOR;
 }
 
 function openConfigInEditor(editor: string): void {
-  const result = spawnSync(`${editor} "${CR_CONF_PATH}"`, {
+  const result = spawnSync(`${editor} "${PV_CONF_PATH}"`, {
     stdio: "inherit",
     shell: true,
   });
@@ -34,17 +34,17 @@ export async function runConfigCommand(args: string[] = []): Promise<void> {
   if (editMode) {
     const editor = resolveEditor();
     if (!editor) {
-      throw new Error("No terminal editor configured. Set CR_EDITOR, VISUAL, or EDITOR and retry.");
+      throw new Error("No terminal editor configured. Set PV_EDITOR, VISUAL, or EDITOR and retry.");
     }
 
-    printInfo(`Opening ${CR_CONF_PATH} with ${editor}`);
+    printInfo(`Opening ${PV_CONF_PATH} with ${editor}`);
     openConfigInEditor(editor);
     return;
   }
 
-  const contents = await readCRConfigContents();
+  const contents = await readPVConfigContents();
   if (contents === null) {
-    printWarning(`Configuration file not found at ${CR_CONF_PATH}`);
+    printWarning(`Configuration file not found at ${PV_CONF_PATH}`);
     return;
   }
 

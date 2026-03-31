@@ -18,15 +18,15 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY --from=build /app/dist/cr /usr/local/bin/cr
-COPY docker/entrypoint.sh /usr/local/bin/cr-server-entrypoint
+COPY --from=build /app/dist/pv /usr/local/bin/pv
+COPY docker/entrypoint.sh /usr/local/bin/pv-server-entrypoint
 
-RUN sed -i 's/\r$//' /usr/local/bin/cr-server-entrypoint \
-  && chmod +x /usr/local/bin/cr /usr/local/bin/cr-server-entrypoint
+RUN sed -i 's/\r$//' /usr/local/bin/pv-server-entrypoint \
+  && chmod +x /usr/local/bin/pv /usr/local/bin/pv-server-entrypoint
 
-ENV CR_WEBHOOK_PORT=3000
-ENV CR_WEBHOOK_TLS_MODE=auto
+ENV PV_WEBHOOK_PORT=3000
+ENV PV_WEBHOOK_TLS_MODE=auto
 
 EXPOSE 3000
 
-ENTRYPOINT ["sh", "/usr/local/bin/cr-server-entrypoint"]
+ENTRYPOINT ["sh", "/usr/local/bin/pv-server-entrypoint"]

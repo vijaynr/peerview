@@ -13,9 +13,9 @@ const printInfoMock = mock(() => {});
 const printRawOutputMock = mock(() => {});
 const printWarningMock = mock(() => {});
 const spawnSyncMock = mock(() => ({ status: 0 }));
-const readCRConfigContentsMock = mock(async () => "[cr]\nopenai_model = gpt-4.1\n");
+const readPVConfigContentsMock = mock(async () => "[cr]\nopenai_model = gpt-4.1\n");
 
-mock.module("@cr/tui", () =>
+mock.module("@pv/tui", () =>
   makeUiMock({
     createSpinner: createSpinnerMock,
     printInfo: printInfoMock,
@@ -24,10 +24,10 @@ mock.module("@cr/tui", () =>
   })
 );
 
-mock.module("@cr/core", () =>
+mock.module("@pv/core", () =>
   makeCoreMock({
-    CR_CONF_PATH: "/mock/.cr.conf",
-    readCRConfigContents: readCRConfigContentsMock,
+    PV_CONF_PATH: "/mock/.pv.conf",
+    readPVConfigContents: readPVConfigContentsMock,
   })
 );
 
@@ -44,8 +44,8 @@ describe("configCommand", () => {
     printRawOutputMock.mockClear();
     printWarningMock.mockClear();
     spawnSyncMock.mockClear();
-    readCRConfigContentsMock.mockClear();
-    delete process.env.CR_EDITOR;
+    readPVConfigContentsMock.mockClear();
+    delete process.env.PV_EDITOR;
     delete process.env.VISUAL;
     delete process.env.EDITOR;
   });
@@ -53,7 +53,7 @@ describe("configCommand", () => {
   it("prints raw config contents by default", async () => {
     await runConfigCommand([]);
 
-    expect(readCRConfigContentsMock).toHaveBeenCalledTimes(1);
+    expect(readPVConfigContentsMock).toHaveBeenCalledTimes(1);
     expect(printRawOutputMock).toHaveBeenCalledWith("[cr]\nopenai_model = gpt-4.1\n");
     expect(spawnSyncMock).not.toHaveBeenCalled();
   });
@@ -63,19 +63,19 @@ describe("configCommand", () => {
 
     await runConfigCommand(["--edit"]);
 
-    expect(printInfoMock).toHaveBeenCalledWith("Opening /mock/.cr.conf with vim");
-    expect(spawnSyncMock).toHaveBeenCalledWith('vim "/mock/.cr.conf"', {
+    expect(printInfoMock).toHaveBeenCalledWith("Opening /mock/.pv.conf with vim");
+    expect(spawnSyncMock).toHaveBeenCalledWith('vim "/mock/.pv.conf"', {
       stdio: "inherit",
       shell: true,
     });
-    expect(readCRConfigContentsMock).not.toHaveBeenCalled();
+    expect(readPVConfigContentsMock).not.toHaveBeenCalled();
   });
 
   it("warns when the config file does not exist", async () => {
-    readCRConfigContentsMock.mockImplementationOnce(async () => null);
+    readPVConfigContentsMock.mockImplementationOnce(async () => null);
 
     await runConfigCommand([]);
 
-    expect(printWarningMock).toHaveBeenCalledWith("Configuration file not found at /mock/.cr.conf");
+    expect(printWarningMock).toHaveBeenCalledWith("Configuration file not found at /mock/.pv.conf");
   });
 });

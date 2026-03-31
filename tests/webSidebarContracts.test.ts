@@ -28,7 +28,7 @@ describe("web sidebar contracts", () => {
     const source = await Bun.file(dashboardAppPath).text();
 
     expect(source).toContain('@state() sidebarCollapsed = true;');
-    expect(source).toContain('window.localStorage.getItem("cr:web-sidebar-collapsed")');
+    expect(source).toContain('window.localStorage.getItem("pv:web-sidebar-collapsed")');
     expect(source).toContain('window.localStorage.setItem(');
     expect(source).toContain("@toggle-sidebar=${() => this.toggleSidebarCollapsed()}");
     expect(source).toContain("--cr-sidebar-shell-width:");

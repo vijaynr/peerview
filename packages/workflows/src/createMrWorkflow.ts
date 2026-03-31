@@ -3,7 +3,7 @@ import type {
   CreateMrWorkflowInput,
   CreateMrWorkflowResponse,
   CreateMrWorkflowResult,
-} from "@cr/core";
+} from "@pv/core";
 import { runCreateReviewWorkflow } from "./createReviewWorkflow.js";
 
 export async function* runCreateMrWorkflow(

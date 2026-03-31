@@ -17,7 +17,7 @@ import {
   type ReviewWorkflowResult,
   runWorkflow,
   type WorkflowRuntime,
-} from "@cr/core";
+} from "@pv/core";
 import { injectMergeRequestContextIntoTemplate } from "./reviewWorkflowHelper.js";
 import { createWorkflowPhaseReporter } from "./workflowEvents.js";
 

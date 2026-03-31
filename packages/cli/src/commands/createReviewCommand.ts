@@ -1,13 +1,13 @@
 import path from "node:path";
-import type { CreateReviewProvider, WorkflowMode } from "@cr/core";
-import { repoRootFromModule } from "@cr/core";
+import type { CreateReviewProvider, WorkflowMode } from "@pv/core";
+import { repoRootFromModule } from "@pv/core";
 import {
   createWorkflowStatusController,
   printCommandHelp,
   runLiveCreateReviewTask,
   runLiveTask,
-} from "@cr/tui";
-import { runCreateReviewWorkflow } from "@cr/workflows";
+} from "@pv/tui";
+import { runCreateReviewWorkflow } from "@pv/workflows";
 import { getFlag, hasFlag } from "../cliHelpers.js";
 
 function resolveProvider(args: string[]): CreateReviewProvider {
@@ -30,7 +30,7 @@ export async function runCreateReviewCommand(args: string[]): Promise<void> {
     printCommandHelp([
       {
         title: "USAGE",
-        lines: ["cr create-review [options]"],
+        lines: ["pv create-review [options]"],
       },
       {
         title: "OPTIONS",
@@ -45,10 +45,10 @@ export async function runCreateReviewCommand(args: string[]): Promise<void> {
       {
         title: "EXAMPLES",
         lines: [
-          "cr create-review",
-          "cr create-review --gl --target-branch main",
-          "cr create-review --reviewboard --path /path/to/svn/wc",
-          "cr create-review --mode ci --gl --target-branch main",
+          "pv create-review",
+          "pv create-review --gl --target-branch main",
+          "pv create-review --reviewboard --path /path/to/svn/wc",
+          "pv create-review --mode ci --gl --target-branch main",
         ],
       },
     ]);

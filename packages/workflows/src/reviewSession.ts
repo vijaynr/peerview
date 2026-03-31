@@ -4,7 +4,7 @@ import {
   listGitHubPullRequests,
   listBundledReviewAgentNames,
   listMergeRequests,
-  loadCRConfig,
+  loadPVConfig,
   type MergeRequestState,
   normalizeReviewAgentNames,
   type ReviewAgentSelectionOption,
@@ -20,7 +20,7 @@ import {
   rbRequest,
   remoteToGitHubRepoPath,
   remoteToProjectPath,
-} from "@cr/core";
+} from "@pv/core";
 import { runInteractiveReviewBoardWorkflow } from "./reviewBoardWorkflow.js";
 import { answerReviewChatQuestion, runReviewChatWorkflow } from "./reviewChatWorkflow.js";
 import { runReviewSummarizeWorkflow } from "./reviewSummarizeWorkflow.js";
@@ -78,7 +78,7 @@ function getReviewAgentDescription(name: string): string {
 async function loadReviewAgentSelectionOptions(
   input: ReviewWorkflowInput
 ): Promise<ReviewAgentSelectionOption[]> {
-  const config = await loadCRConfig();
+  const config = await loadPVConfig();
   const defaultAgents = normalizeReviewAgentNames(input.agentNames ?? config.defaultReviewAgents);
   const availableAgents = Array.from(
     new Set([...listBundledReviewAgentNames(), ...defaultAgents])
@@ -95,12 +95,12 @@ async function loadReviewAgentSelectionOptions(
 async function loadReviewBoardSelectionOptions(
   input: ReviewWorkflowInput
 ): Promise<ReviewSelectionOption[]> {
-  const config = await loadCRConfig();
+  const config = await loadPVConfig();
   const rbUrl = envOrConfig("RB_URL", config.rbUrl, "");
   const rbToken = envOrConfig("RB_TOKEN", config.rbToken, "");
   if (!rbUrl || !rbToken) {
     throw new Error(
-      "Missing Review Board configuration. Run `cr init --rb` or set RB_URL/RB_TOKEN."
+      "Missing Review Board configuration. Run `pv init --rb` or set RB_URL/RB_TOKEN."
     );
   }
 
@@ -152,11 +152,11 @@ async function loadReviewBoardSelectionOptions(
 async function loadGitLabSelectionOptions(
   input: ReviewWorkflowInput
 ): Promise<ReviewSelectionOption[]> {
-  const config = await loadCRConfig();
+  const config = await loadPVConfig();
   const gitlabUrl = envOrConfig("GITLAB_URL", config.gitlabUrl, "");
   const gitlabKey = envOrConfig("GITLAB_KEY", config.gitlabKey, "");
   if (!gitlabUrl || !gitlabKey) {
-    throw new Error("Missing GitLab configuration. Run `cr init` or set GITLAB_URL/GITLAB_KEY.");
+    throw new Error("Missing GitLab configuration. Run `pv init` or set GITLAB_URL/GITLAB_KEY.");
   }
 
   const repoUrl = input.url ?? (await getOriginRemoteUrl(input.repoPath));
@@ -191,10 +191,10 @@ function getGitHubPullRequestState(
 async function loadGitHubSelectionOptions(
   input: ReviewWorkflowInput
 ): Promise<ReviewSelectionOption[]> {
-  const config = await loadCRConfig();
+  const config = await loadPVConfig();
   const githubToken = envOrConfig("GITHUB_TOKEN", config.githubToken, "");
   if (!githubToken) {
-    throw new Error("Missing GitHub configuration. Run `cr init --github` or set GITHUB_TOKEN.");
+    throw new Error("Missing GitHub configuration. Run `pv init --github` or set GITHUB_TOKEN.");
   }
 
   const repoUrl = input.url ?? (await getOriginRemoteUrl(input.repoPath));
@@ -342,7 +342,7 @@ export async function* runInteractiveReviewSession(
       }
       resolvedInput.agentNames = normalizeReviewAgentNames(selectedAgents.agentNames);
     } else {
-      const config = await loadCRConfig();
+      const config = await loadPVConfig();
       resolvedInput.agentNames = normalizeReviewAgentNames(
         resolvedInput.agentNames ?? config.defaultReviewAgents
       );

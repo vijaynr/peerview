@@ -1,8 +1,8 @@
-# @cr/server — Agent Guidelines
+# @pv/server — Agent Guidelines
 
 ## Package Role
 
-HTTP/server surface for CR. Owns Hono route wiring, Bun server startup, webhook intake, and background queue orchestration. Review logic and provider behavior should stay in `@cr/workflows` and `@cr/core`.
+HTTP/server surface for CR. Owns Hono route wiring, Bun server startup, webhook intake, and background queue orchestration. Review logic and provider behavior should stay in `@pv/workflows` and `@pv/core`.
 
 ## Structure
 
@@ -16,15 +16,15 @@ HTTP/server surface for CR. Owns Hono route wiring, Bun server startup, webhook 
 
 ## Dependencies
 
-- `@cr/core` — runtime config, dashboard loading, provider helpers, and logging.
-- `@cr/workflows` — review execution and comment-posting helpers.
-- `@cr/web` — web dashboard HTML, script bundling, and route helpers.
+- `@pv/core` — runtime config, dashboard loading, provider helpers, and logging.
+- `@pv/workflows` — review execution and comment-posting helpers.
+- `@pv/web` — web dashboard HTML, script bundling, and route helpers.
 - `hono` — HTTP routing.
 
 ## Key Rules
 
 - Keep HTTP concerns here: request parsing, route composition, webhook auth/validation, and queue orchestration.
-- Push provider and review business logic down into `@cr/core` or `@cr/workflows` instead of reimplementing it in route handlers.
-- Prefer structured logging via `@cr/core`'s `logger`; if direct `console.*` output is kept for server lifecycle or webhook operations, keep it localized and operational.
-- When changing API or dashboard payloads, update `@cr/web` consumers and relevant tests in the same change.
+- Push provider and review business logic down into `@pv/core` or `@pv/workflows` instead of reimplementing it in route handlers.
+- Prefer structured logging via `@pv/core`'s `logger`; if direct `console.*` output is kept for server lifecycle or webhook operations, keep it localized and operational.
+- When changing API or dashboard payloads, update `@pv/web` consumers and relevant tests in the same change.
 - Validate with `bun run typecheck` and `bun run lint`; run `bun run test` for route, webhook, or queue-behavior changes.

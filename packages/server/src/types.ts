@@ -1,4 +1,4 @@
-import type { loadWorkflowRuntime } from "@cr/core";
+import type { loadWorkflowRuntime } from "@pv/core";
 import type { WorkQueue } from "./workQueue.js";
 
 export type WebhookProvider = "gitlab" | "github" | "reviewboard";

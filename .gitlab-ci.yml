@@ -6,13 +6,13 @@ stages:
   - build
   - review
 
-build-cr-cli:
+build-pv-cli:
   stage: build
   image: oven/bun:1
   script:
     - |
-      if [ -d "$CI_PROJECT_DIR/cr-cli" ] && [ -f "$CI_PROJECT_DIR/cr-cli/build.sh" ]; then
-        PROJECT_ROOT="$CI_PROJECT_DIR/cr-cli"
+      if [ -d "$CI_PROJECT_DIR/pv-cli" ] && [ -f "$CI_PROJECT_DIR/pv-cli/build.sh" ]; then
+        PROJECT_ROOT="$CI_PROJECT_DIR/pv-cli"
       else
         PROJECT_ROOT="$CI_PROJECT_DIR"
       fi
@@ -21,24 +21,24 @@ build-cr-cli:
       bash build.sh
   artifacts:
     paths:
-      - cr-cli-*.tar.gz
-      - dist/cr
-      - dist/cr.exe
-      - cr-cli/cr-cli-*.tar.gz
-      - cr-cli/dist/cr
-      - cr-cli/dist/cr.exe
+      - pv-cli-*.tar.gz
+      - dist/pv
+      - dist/pv.exe
+      - pv-cli/pv-cli-*.tar.gz
+      - pv-cli/dist/pv
+      - pv-cli/dist/pv.exe
     expire_in: 1 week
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
-cr-review:
+pv-review:
   stage: review
   image: oven/bun:1
   needs:
-    - job: build-cr-cli
+    - job: build-pv-cli
       artifacts: true
   variables:
-    CR_BIN_DIR: "$CI_PROJECT_DIR/.cr-bin"
+    PV_BIN_DIR: "$CI_PROJECT_DIR/.pv-bin"
     OPENAI_API_URL: "https://codeassist.cr.otxlab.net/v1"
     OPENAI_MODEL: "gpt-4o"
     USE_CUSTOM_STREAMING: "false"
@@ -49,27 +49,27 @@ cr-review:
     - rm -rf /var/lib/apt/lists/*
     - test -n "$OPENAI_API_KEY" || (echo "OPENAI_API_KEY is required" && exit 1)
     - test -n "$GITLAB_KEY" || (echo "GITLAB_KEY is required" && exit 1)
-    - mkdir -p "$CR_BIN_DIR"
+    - mkdir -p "$PV_BIN_DIR"
     - |
-      if [ -f "$CI_PROJECT_DIR/dist/cr" ]; then
-        CR_BUILD_BIN="$CI_PROJECT_DIR/dist/cr"
-      elif [ -f "$CI_PROJECT_DIR/cr-cli/dist/cr" ]; then
-        CR_BUILD_BIN="$CI_PROJECT_DIR/cr-cli/dist/cr"
+      if [ -f "$CI_PROJECT_DIR/dist/pv" ]; then
+        PV_BUILD_BIN="$CI_PROJECT_DIR/dist/pv"
+      elif [ -f "$CI_PROJECT_DIR/pv-cli/dist/pv" ]; then
+        PV_BUILD_BIN="$CI_PROJECT_DIR/pv-cli/dist/pv"
       else
-        echo "Could not find cr binary artifact."
+        echo "Could not find pv binary artifact."
         exit 1
       fi
-      cp "$CR_BUILD_BIN" "$CR_BIN_DIR/cr"
-    - chmod +x "$CR_BIN_DIR/cr"
-    - export PATH="$CR_BIN_DIR:$PATH"
+      cp "$PV_BUILD_BIN" "$PV_BIN_DIR/pv"
+    - chmod +x "$PV_BIN_DIR/pv"
+    - export PATH="$PV_BIN_DIR:$PATH"
   script:
     - |
-      if [ -d "$CI_PROJECT_DIR/cr-cli" ] && [ -f "$CI_PROJECT_DIR/cr-cli/src/cli.ts" ]; then
-        PROJECT_ROOT="$CI_PROJECT_DIR/cr-cli"
+      if [ -d "$CI_PROJECT_DIR/pv-cli" ] && [ -f "$CI_PROJECT_DIR/pv-cli/src/cli.ts" ]; then
+        PROJECT_ROOT="$CI_PROJECT_DIR/pv-cli"
       else
         PROJECT_ROOT="$CI_PROJECT_DIR"
       fi
       cd "$PROJECT_ROOT"
-      cr review --mode ci --path "$PROJECT_ROOT"
+      pv review --mode ci --path "$PROJECT_ROOT"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'

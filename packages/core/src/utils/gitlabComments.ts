@@ -1,11 +1,11 @@
 /**
  * GitLab merge request comment/discussion helpers.
- * Implementation lives in @cr/gitlab (GitLabClient); this module
+ * Implementation lives in @pv/gitlab (GitLabClient); this module
  * re-exports free-function wrappers for backward compatibility.
  */
 
-import type { GitLabDiscussion, GitLabInlineComment } from "@cr/vcs/gitlab";
-import { GitLabClient } from "@cr/vcs/gitlab";
+import type { GitLabDiscussion, GitLabInlineComment } from "@pv/vcs/gitlab";
+import { GitLabClient } from "@pv/vcs/gitlab";
 
 export type { GitLabDiscussion, GitLabInlineComment };
 
@@ -69,7 +69,7 @@ export function replyToMergeRequestDiscussion(
   mrIid: number,
   discussionId: string,
   body: string
-): Promise<import("@cr/vcs/gitlab").GitLabDiscussionNote> {
+): Promise<import("@pv/vcs/gitlab").GitLabDiscussionNote> {
   return client(baseUrl, token).replyToDiscussion(projectPath, mrIid, discussionId, body);
 }
 
@@ -81,7 +81,7 @@ export function updateMergeRequestDiscussionNote(
   discussionId: string,
   noteId: number,
   body: string
-): Promise<import("@cr/vcs/gitlab").GitLabDiscussionNote> {
+): Promise<import("@pv/vcs/gitlab").GitLabDiscussionNote> {
   return client(baseUrl, token).updateDiscussionNote(
     projectPath,
     mrIid,

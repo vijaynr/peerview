@@ -20,7 +20,7 @@ const runReviewBoardWorkflowMock = mock(async () => ({
 }));
 const maybePostReviewBoardCommentMock = mock(async () => null);
 
-mock.module("@cr/workflows", () =>
+mock.module("@pv/workflows", () =>
   makeWorkflowsMock({
     runReviewWorkflow: runReviewWorkflowMock,
     maybePostReviewComment: maybePostReviewCommentMock,
@@ -29,7 +29,7 @@ mock.module("@cr/workflows", () =>
   })
 );
 
-mock.module("@cr/core", () =>
+mock.module("@pv/core", () =>
   makeCoreMock({
     logger: {
       success: () => {},

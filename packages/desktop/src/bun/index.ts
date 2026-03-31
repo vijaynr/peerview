@@ -15,7 +15,7 @@ const APP_VERSION = "0.1.0"
 let serverFetch: ((request: Request) => Response | Promise<Response>) | null = null
 
 async function startEmbeddedServer(): Promise<{ port: number; url: string; fetch: (req: Request) => Response | Promise<Response> }> {
-  const { startServer } = await import("@cr/server")
+  const { startServer } = await import("@pv/server")
   const handle = await startServer(0, {
     enableWeb: true,
     enableWebhook: false,
@@ -63,10 +63,10 @@ async function main() {
 
   const server = await startEmbeddedServer()
   serverFetch = server.fetch
-  console.log(`[CR Desktop] Server started at ${server.url}`)
+  console.log(`[PeerView Desktop] Server started at ${server.url}`)
 
   const win = new BrowserWindow({
-    title: "CR Review Command Center",
+    title: "PeerView",
     url: server.url,
     titleBarStyle: "hiddenInset",
     frame: {
@@ -99,6 +99,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("[CR Desktop] Fatal error:", err)
+  console.error("[PeerView Desktop] Fatal error:", err)
   process.exit(1)
 })

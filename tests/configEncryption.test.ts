@@ -7,23 +7,23 @@ const tempRoot = path.join(
   os.tmpdir(),
   `cr-config-test-${Date.now()}-${Math.random().toString(16).slice(2)}`
 );
-const confPath = path.join(tempRoot, ".cr.conf");
-const crDir = path.join(tempRoot, ".cr");
+const confPath = path.join(tempRoot, ".pv.conf");
+const crDir = path.join(tempRoot, ".pv");
 const keyPath = path.join(crDir, "config.key");
 
 mock.module("../packages/core/src/utils/paths.js", () => ({
   HOME_DIR: tempRoot,
-  CR_DIR: crDir,
-  CR_PROMPTS_DIR: path.join(crDir, "prompts"),
-  CR_ASSETS_DIR: path.join(crDir, "assets"),
-  CR_LOGS_DIR: path.join(crDir, "logs"),
-  CR_CONF_PATH: confPath,
-  CR_CONF_KEY_PATH: keyPath,
+  PV_DIR: crDir,
+  PV_PROMPTS_DIR: path.join(crDir, "prompts"),
+  PV_ASSETS_DIR: path.join(crDir, "assets"),
+  PV_LOGS_DIR: path.join(crDir, "logs"),
+  PV_CONF_PATH: confPath,
+  PV_CONF_KEY_PATH: keyPath,
   repoRootFromModule: () => tempRoot,
   resourcesPathFromRepoRoot: (repoRoot: string) => path.join(repoRoot, "resources"),
 }));
 
-const { decryptConfigSecret, encryptConfigSecret, loadCRConfig, saveCRConfig } = await import(
+const { decryptConfigSecret, encryptConfigSecret, loadPVConfig, saveCRConfig } = await import(
   "../packages/core/src/utils/config.js"
 );
 
@@ -90,7 +90,7 @@ describe("config encryption", () => {
     expect(raw.includes("reviewboard_webhook_enabled = false")).toBe(true);
     expect(raw.includes("default_review_agents = general,security")).toBe(true);
 
-    const loaded = await loadCRConfig();
+    const loaded = await loadPVConfig();
     expect(loaded.defaultReviewAgents).toEqual(["general", "security"]);
     expect(loaded.openaiApiKey).toBe("openai-key");
     expect(loaded.gitlabKey).toBe("gitlab-key");

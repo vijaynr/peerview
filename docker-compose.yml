@@ -2,17 +2,17 @@ services:
   server:
     build:
       context: .
-    image: cr-server
-    container_name: cr-server
+    image: pv-server
+    container_name: pv-server
     restart: unless-stopped
     ports:
-      - "${WEBHOOK_HOST_PORT:-3000}:${CR_WEBHOOK_PORT:-3000}"
+      - "${WEBHOOK_HOST_PORT:-3000}:${PV_WEBHOOK_PORT:-3000}"
     environment:
-      CR_WEBHOOK_TLS_MODE: ${CR_WEBHOOK_TLS_MODE:-http}
-      CR_WEBHOOK_PORT: ${CR_WEBHOOK_PORT:-3000}
-      CR_WEBHOOK_CONCURRENCY: ${CR_WEBHOOK_CONCURRENCY:-3}
-      CR_WEBHOOK_QUEUE_LIMIT: ${CR_WEBHOOK_QUEUE_LIMIT:-50}
-      CR_WEBHOOK_TIMEOUT_MS: ${CR_WEBHOOK_TIMEOUT_MS:-600000}
+      PV_WEBHOOK_TLS_MODE: ${PV_WEBHOOK_TLS_MODE:-http}
+      PV_WEBHOOK_PORT: ${PV_WEBHOOK_PORT:-3000}
+      PV_WEBHOOK_CONCURRENCY: ${PV_WEBHOOK_CONCURRENCY:-3}
+      PV_WEBHOOK_QUEUE_LIMIT: ${PV_WEBHOOK_QUEUE_LIMIT:-50}
+      PV_WEBHOOK_TIMEOUT_MS: ${PV_WEBHOOK_TIMEOUT_MS:-600000}
       GITLAB_URL: ${GITLAB_URL:-}
       GITLAB_KEY: ${GITLAB_KEY:-}
       GITLAB_WEBHOOK_SECRET: ${GITLAB_WEBHOOK_SECRET:-}

@@ -4,7 +4,7 @@
     "composite": true,
     "outDir": "dist",
     "paths": {
-      "@cr/core": ["../core/src/index.ts"]
+      "@pv/core": ["../core/src/index.ts"]
     }
   },
   "references": [

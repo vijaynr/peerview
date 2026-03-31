@@ -1,4 +1,4 @@
-import type { ReviewChatContext, ReviewChatHistoryEntry } from "@cr/core";
+import type { ReviewChatContext, ReviewChatHistoryEntry } from "@pv/core";
 
 export { type DiffHunk, parseDiffHunks } from "./diffUtils.js";
 export { buildInlineReviewPrompt, resolveInlinePosition } from "./reviewWorkflowInlineHelper.js";

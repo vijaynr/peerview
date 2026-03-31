@@ -1,6 +1,6 @@
 /**
  * GitLab client interface and factory.
- * Implementation lives in @cr/gitlab; this module re-exports for backward compatibility.
+ * Implementation lives in @pv/gitlab; this module re-exports for backward compatibility.
  */
 export type {
   CreateMergeRequestParams,
@@ -13,11 +13,11 @@ export type {
   GitLabNote,
   MergeRequestState,
   UpdateMergeRequestParams,
-} from "@cr/vcs/gitlab";
-export { createGitLabClient, GitLabClient, remoteToProjectPath } from "@cr/vcs/gitlab";
+} from "@pv/vcs/gitlab";
+export { createGitLabClient, GitLabClient, remoteToProjectPath } from "@pv/vcs/gitlab";
 
 // Re-export a legacy-compatible interface alias so existing call-sites that
 // type-annotate with `GitLabClient` continue to compile unchanged.
-import type { GitLabClient as _GitLabClient } from "@cr/vcs/gitlab";
+import type { GitLabClient as _GitLabClient } from "@pv/vcs/gitlab";
 
 export type { _GitLabClient as GitLabClientInterface };

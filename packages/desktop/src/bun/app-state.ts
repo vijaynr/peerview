@@ -4,8 +4,8 @@ import { homedir } from "node:os"
 import path from "node:path"
 import type { AppPreferences, AppState, WindowGeometry } from "../shared/rpc-types.js"
 
-const CR_DIR = path.join(homedir(), ".cr")
-const DB_PATH = path.join(CR_DIR, "desktop.db")
+const PV_DIR = path.join(homedir(), ".pv")
+const DB_PATH = path.join(PV_DIR, "desktop.db")
 
 const DEFAULT_GEOMETRY: WindowGeometry = {
   x: 100,
@@ -19,8 +19,8 @@ let db: Database | null = null
 function getDb(): Database {
   if (db) return db
 
-  if (!existsSync(CR_DIR)) {
-    mkdirSync(CR_DIR, { recursive: true })
+  if (!existsSync(PV_DIR)) {
+    mkdirSync(PV_DIR, { recursive: true })
   }
 
   db = new Database(DB_PATH, { create: true })

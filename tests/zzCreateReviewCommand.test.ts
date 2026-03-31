@@ -40,7 +40,7 @@ const runCreateReviewWorkflowMock = mock((input: any) =>
   })()
 );
 
-mock.module("@cr/tui", () =>
+mock.module("@pv/tui", () =>
   makeUiMock({
     printCommandHelp: printCommandHelpMock,
     runLiveTask: runLiveTaskMock,
@@ -49,13 +49,13 @@ mock.module("@cr/tui", () =>
   })
 );
 
-mock.module("@cr/core", () =>
+mock.module("@pv/core", () =>
   makeCoreMock({
     repoRootFromModule: () => "/mock/root",
   })
 );
 
-mock.module("@cr/workflows", () =>
+mock.module("@pv/workflows", () =>
   makeWorkflowsMock({
     runCreateReviewWorkflow: runCreateReviewWorkflowMock,
   })
@@ -83,7 +83,7 @@ describe("create review command", () => {
 
     expect(options).toContain("--gl");
     expect(options).toContain("--reviewboard");
-    expect(examples).toContain("cr create-review --reviewboard");
+    expect(examples).toContain("pv create-review --reviewboard");
   });
 
   it("defaults create-review to GitLab", async () => {

@@ -22,7 +22,7 @@ const runLiveTaskMock = mock(async (_title: string, run: (ui: any) => Promise<vo
   });
 });
 
-mock.module("@cr/tui", () =>
+mock.module("@pv/tui", () =>
   makeUiMock({
     abortOnCancel: { onCancel: () => false },
     askForOptionalFeedback: mock(async () => null),
@@ -42,16 +42,16 @@ mock.module("@cr/tui", () =>
   })
 );
 
-mock.module("@cr/core", () =>
+mock.module("@pv/core", () =>
   makeCoreMock({
     envOrConfig: (_key: string, value: string | undefined, fallback: string) => value || fallback,
-    loadCRConfig: mock(async () => ({})),
+    loadPVConfig: mock(async () => ({})),
     repoRootFromModule: () => "/mock/root",
     getOriginRemoteUrl: mock(async () => "https://gitlab.example.com/group/project.git"),
   })
 );
 
-mock.module("@cr/workflows", () =>
+mock.module("@pv/workflows", () =>
   makeWorkflowsMock({
     maybePostReviewComment: mock(async () => null),
     maybePostReviewBoardComment: mock(async () => null),

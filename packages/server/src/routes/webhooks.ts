@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { Hono } from "hono";
-import { logger } from "@cr/core";
+import { logger } from "@pv/core";
 import type { ServerContext, WebhookProvider } from "../types.js";
 
 type GitLabWebhookEvent = {
@@ -187,13 +187,13 @@ function isWebhookProviderEnabled(context: ServerContext, provider: WebhookProvi
 
 function getConfigError(context: ServerContext, provider: WebhookProvider): string | null {
   if (provider === "gitlab" && (!context.runtime.gitlabUrl || !context.runtime.gitlabKey)) {
-    return "Missing GitLab configuration. Run `cr init --gitlab` or set GITLAB_URL/GITLAB_KEY.";
+    return "Missing GitLab configuration. Run `pv init --gitlab` or set GITLAB_URL/GITLAB_KEY.";
   }
   if (provider === "github" && !context.runtime.githubToken) {
-    return "Missing GitHub configuration. Run `cr init --github` or set GITHUB_TOKEN.";
+    return "Missing GitHub configuration. Run `pv init --github` or set GITHUB_TOKEN.";
   }
   if (provider === "reviewboard" && (!context.runtime.rbUrl || !context.runtime.rbToken)) {
-    return "Missing Review Board configuration. Run `cr init --rb` or set RB_URL/RB_TOKEN.";
+    return "Missing Review Board configuration. Run `pv init --rb` or set RB_URL/RB_TOKEN.";
   }
   return null;
 }

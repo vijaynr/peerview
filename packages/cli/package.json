@@ -1,15 +1,15 @@
 {
-  "name": "@cr/cli",
+  "name": "@pv/cli",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "bin": {
-    "cr": "./src/cli.ts"
+    "pv": "./src/cli.ts"
   },
   "dependencies": {
-    "@cr/core": "workspace:*",
-    "@cr/workflows": "workspace:*",
-    "@cr/server": "workspace:*",
+    "@pv/core": "workspace:*",
+    "@pv/workflows": "workspace:*",
+    "@pv/server": "workspace:*",
     "ora": "^8.2.0",
     "prompts": "^2.4.2",
     "marked": "^16.4.1",

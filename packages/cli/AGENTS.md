@@ -1,8 +1,8 @@
-# @cr/cli — Agent Guidelines
+# @pv/cli — Agent Guidelines
 
 ## Package Role
 
-Entry point for the `cr` binary. Parses CLI arguments and delegates to the appropriate command handler.
+Entry point for the `pv` binary. Parses CLI arguments and delegates to the appropriate command handler.
 
 ## Structure
 
@@ -10,7 +10,7 @@ Entry point for the `cr` binary. Parses CLI arguments and delegates to the appro
 - `src/cliHelpers.ts` — shared CLI-only helpers for parsing and command setup.
 - `src/commands/index.ts` — command router; also handles `--show-banner`.
 - `src/commands/initCommand.ts` — interactive setup/bootstrap flows for GitLab, GitHub, Review Board, SVN, webhook, SDD, and RPI.
-- `src/commands/configCommand.ts` — prints config contents or opens `~/.cr.conf` in the user's editor.
+- `src/commands/configCommand.ts` — prints config contents or opens `~/.pv.conf` in the user's editor.
 - `src/commands/reviewCommand.ts` — routes review, summarize, and chat workflows across supported providers.
 - `src/commands/createReviewCommand.ts` — generates GitLab merge request drafts or Review Board review requests.
 - `src/commands/createMrCommand.ts` — compatibility wrapper that forwards to `create-review --gl`.
@@ -19,16 +19,16 @@ Entry point for the `cr` binary. Parses CLI arguments and delegates to the appro
 
 ## Dependencies
 
-- `@cr/core` — config, git helpers, bootstrap.
-- `@cr/workflows` — workflow implementations.
-- `@cr/server` — server startup used by `serve`.
-- TUI code lives in `src/tui/` (imported as `@cr/tui` via tsconfig paths).
+- `@pv/core` — config, git helpers, bootstrap.
+- `@pv/workflows` — workflow implementations.
+- `@pv/server` — server startup used by `serve`.
+- TUI code lives in `src/tui/` (imported as `@pv/tui` via tsconfig paths).
 
 ## Key Rules
 
-- Keep this package thin: argument parsing, command routing, and CLI glue belong here; reusable business logic belongs in `@cr/core`, `@cr/workflows`, or `@cr/server`.
-- Prefer `@cr/tui` (`src/tui/`) for user-facing terminal output and prompts. If a direct `console.*` call is necessary for a narrow bootstrap or fatal-error path, keep it minimal and localized.
-- Spinners must be created via `createSpinner` from `@cr/tui`, not `ora` directly.
+- Keep this package thin: argument parsing, command routing, and CLI glue belong here; reusable business logic belongs in `@pv/core`, `@pv/workflows`, or `@pv/server`.
+- Prefer `@pv/tui` (`src/tui/`) for user-facing terminal output and prompts. If a direct `console.*` call is necessary for a narrow bootstrap or fatal-error path, keep it minimal and localized.
+- Spinners must be created via `createSpinner` from `@pv/tui`, not `ora` directly.
 - Keep command help text, aliases, and the `printHelpView()` summary aligned when commands or workflows change.
 - Prefer adding new behavior in dedicated files under `src/commands/` instead of expanding `src/commands/index.ts` inline.
 - Validate with `bun run typecheck` and `bun run lint`; run `bun run test` when command routing, help output, or serve behavior changes.

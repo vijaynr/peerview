@@ -1,6 +1,6 @@
 /**
  * GitHub API response types.
- * Implementation lives in @cr/github; this module re-exports for backward compatibility.
+ * Implementation lives in @pv/github; this module re-exports for backward compatibility.
  */
 export type {
   GitHubBranch,
@@ -12,4 +12,4 @@ export type {
   GitHubPrFile as GitHubPrFilesResponse,
   GitHubRepository,
   GitHubReviewComment as GitHubPrReviewComment,
-} from "@cr/vcs/github";
+} from "@pv/vcs/github";

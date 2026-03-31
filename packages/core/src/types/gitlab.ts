@@ -1,6 +1,6 @@
 /**
  * GitLab API response types.
- * Implementation lives in @cr/gitlab; this module re-exports for backward compatibility.
+ * Implementation lives in @pv/gitlab; this module re-exports for backward compatibility.
  */
 export type {
   GitLabBranch,
@@ -14,4 +14,4 @@ export type {
   GitLabMrDetails as GitLabMrWithBasics,
   GitLabNote,
   GitLabNotePosition,
-} from "@cr/vcs/gitlab";
+} from "@pv/vcs/gitlab";

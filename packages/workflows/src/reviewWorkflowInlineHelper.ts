@@ -1,4 +1,4 @@
-import type { GitLabInlineComment } from "@cr/core";
+import type { GitLabInlineComment } from "@pv/core";
 import type { DiffHunk } from "./diffUtils.js";
 
 function normalizeSnippet(text: string): string {

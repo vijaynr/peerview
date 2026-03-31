@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { bundledPrompts } from "../resources/index.js";
-import { CR_ASSETS_DIR, CR_DIR, CR_LOGS_DIR, CR_PROMPTS_DIR } from "./paths.js";
+import { PV_ASSETS_DIR, PV_DIR, PV_LOGS_DIR, PV_PROMPTS_DIR } from "./paths.js";
 
 async function writeBundledFiles(targetDir: string, files: Record<string, string>): Promise<void> {
   await fs.mkdir(targetDir, { recursive: true });
@@ -13,10 +13,10 @@ async function writeBundledFiles(targetDir: string, files: Record<string, string
 }
 
 export async function initializeCRHome(_repoRoot: string): Promise<void> {
-  await fs.mkdir(CR_DIR, { recursive: true });
-  await fs.mkdir(CR_PROMPTS_DIR, { recursive: true });
-  await fs.mkdir(CR_ASSETS_DIR, { recursive: true });
-  await fs.mkdir(CR_LOGS_DIR, { recursive: true });
+  await fs.mkdir(PV_DIR, { recursive: true });
+  await fs.mkdir(PV_PROMPTS_DIR, { recursive: true });
+  await fs.mkdir(PV_ASSETS_DIR, { recursive: true });
+  await fs.mkdir(PV_LOGS_DIR, { recursive: true });
 
-  await writeBundledFiles(CR_PROMPTS_DIR, bundledPrompts);
+  await writeBundledFiles(PV_PROMPTS_DIR, bundledPrompts);
 }

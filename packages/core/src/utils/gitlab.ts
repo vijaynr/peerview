@@ -1,14 +1,14 @@
-import { GitLabClient, GitLabHttpClient } from "@cr/vcs/gitlab";
+import { GitLabClient, GitLabHttpClient } from "@pv/vcs/gitlab";
 
-export type { GitLabInlineComment } from "@cr/vcs/gitlab";
-export { remoteToProjectPath } from "@cr/vcs/gitlab";
+export type { GitLabInlineComment } from "@pv/vcs/gitlab";
+export { remoteToProjectPath } from "@pv/vcs/gitlab";
 
 // ---------------------------------------------------------------------------
 // Legacy free-function API — thin wrappers around GitLabClient.
 //
-// These exports exist for backward compatibility with callers in @cr/core that
+// These exports exist for backward compatibility with callers in @pv/core that
 // still use the (baseUrl, token, ...) functional style.  New code should
-// instantiate GitLabClient directly via createGitLabClient from @cr/gitlab.
+// instantiate GitLabClient directly via createGitLabClient from @pv/gitlab.
 // ---------------------------------------------------------------------------
 
 function client(baseUrl: string, token: string): GitLabClient {

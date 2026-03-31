@@ -1,6 +1,6 @@
 /**
  * GitHub client interface and factory.
- * Implementation lives in @cr/github; this module re-exports for backward compatibility.
+ * Implementation lives in @pv/github; this module re-exports for backward compatibility.
  */
 export type {
   CreatePullRequestParams,
@@ -16,5 +16,5 @@ export type {
   ReviewComment,
   ReviewEvent,
   UpdatePullRequestParams,
-} from "@cr/vcs/github";
-export { createGitHubClient, GitHubClient, isGitHubRemote, remoteToRepoPath } from "@cr/vcs/github";
+} from "@pv/vcs/github";
+export { createGitHubClient, GitHubClient, isGitHubRemote, remoteToRepoPath } from "@pv/vcs/github";

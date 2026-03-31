@@ -1,11 +1,11 @@
-import type { ReviewWorkflowResult } from "@cr/core";
+import type { ReviewWorkflowResult } from "@pv/core";
 import {
   addGitHubInlinePullRequestComment,
   addGitHubPullRequestComment,
   createGitLabClient,
   runWorkflow,
   type WorkflowMode,
-} from "@cr/core";
+} from "@pv/core";
 
 export type PostReviewCommentResult = {
   summaryNoteId?: string;

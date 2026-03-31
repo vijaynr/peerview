@@ -1,8 +1,8 @@
-# @cr/core — Agent Guidelines
+# @pv/core — Agent Guidelines
 
 ## Package Role
 
-Shared business logic, types, resource loading, and infrastructure utilities used by the CLI, workflows, and server. This package is UI-free: never import from `@cr/tui` or `@cr/web`.
+Shared business logic, types, resource loading, and infrastructure utilities used by the CLI, workflows, and server. This package is UI-free: never import from `@pv/tui` or `@pv/web`.
 
 ## Structure
 
@@ -18,7 +18,7 @@ Shared business logic, types, resource loading, and infrastructure utilities use
 
 ## Key Rules
 
-- No TTY/UI concerns here: no `@cr/tui`, no `@cr/web`, no ANSI formatting, and no direct terminal rendering.
+- No TTY/UI concerns here: no `@pv/tui`, no `@pv/web`, no ANSI formatting, and no direct terminal rendering.
 - Keep provider-specific HTTP/API logic in focused helpers or clients instead of duplicating calls in CLI, workflow, or server code.
 - All public exports must go through `src/index.ts`.
 - When changing bundled prompts/templates or config-path behavior, keep bootstrap/setup helpers and override lookup behavior in sync.

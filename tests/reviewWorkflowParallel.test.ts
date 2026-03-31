@@ -34,7 +34,7 @@ async function waitForAgentStarts(): Promise<void> {
   }
 }
 
-mock.module("@cr/core", () =>
+mock.module("@pv/core", () =>
   makeCoreMock({
     DEFAULT_REVIEW_AGENT_NAME: "general",
     getCurrentBranch: async () => "feature/demo",

@@ -1,6 +1,6 @@
-# CR CLI
+# PeerView CLI
 
-CR CLI is a Bun + TypeScript command-line tool for GitLab merge request and GitHub pull request review workflows powered by LLMs.
+PeerView CLI is a Bun + TypeScript command-line tool for GitLab merge request and GitHub pull request review workflows powered by LLMs.
 
 ## Features
 
@@ -16,7 +16,7 @@ CR CLI is a Bun + TypeScript command-line tool for GitLab merge request and GitH
 ## Requirements
 
 - [Bun](https://bun.sh/) 1.x
-- Access to CR/OpenAI-compatible API
+- Access to PeerView/OpenAI-compatible API
 - GitLab token with `api` scope (for GitLab)
 - GitHub Personal Access Token with `repo` scope (for GitHub)
 
@@ -28,19 +28,19 @@ CR CLI is a Bun + TypeScript command-line tool for GitLab merge request and GitH
 
 ```powershell
 # 1. Create install directory
-New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\cr\bin"
+New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\pv\bin"
 
-# 2. Copy cr.exe to install directory
-Copy-Item cr.exe "$env:LOCALAPPDATA\cr\bin\cr.exe"
+# 2. Copy pv.exe to install directory
+Copy-Item pv.exe "$env:LOCALAPPDATA\pv\bin\pv.exe"
 
 # 3. Add to PATH (run as user, not admin)
 # Open "Edit environment variables for your account"
 # - Find "Path" variable and click Edit
-# - Click New and add: %LOCALAPPDATA%\cr\bin
+# - Click New and add: %LOCALAPPDATA%\pv\bin
 # - Click OK to save
 
 # 4. Restart terminal and verify
-cr help
+pv help
 ```
 
 **Linux/macOS:**
@@ -49,16 +49,16 @@ cr help
 # 1. Create install directory
 mkdir -p ~/.local/bin
 
-# 2. Copy cr binary
-cp cr ~/.local/bin/cr
-chmod +x ~/.local/bin/cr
+# 2. Copy pv binary
+cp pv ~/.local/bin/pv
+chmod +x ~/.local/bin/pv
 
 # 3. Add to PATH (if not already)
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc  # or ~/.zshrc
 source ~/.bashrc  # or source ~/.zshrc
 
 # 4. Verify
-cr help
+pv help
 ```
 
 ### Option 2: Automated Install Script
@@ -83,12 +83,12 @@ bash install.sh
 
 ```powershell
 # Remove binary
-Remove-Item "$env:LOCALAPPDATA\cr\bin\cr.exe"
+Remove-Item "$env:LOCALAPPDATA\pv\bin\pv.exe"
 
 # Remove from PATH
 # Open "Edit environment variables for your account"
 # - Find "Path" variable and click Edit
-# - Select %LOCALAPPDATA%\cr\bin and click Delete
+# - Select %LOCALAPPDATA%\pv\bin and click Delete
 # - Click OK
 ```
 
@@ -96,7 +96,7 @@ Remove-Item "$env:LOCALAPPDATA\cr\bin\cr.exe"
 
 ```bash
 # Remove binary
-rm ~/.local/bin/cr
+rm ~/.local/bin/pv
 
 # Remove from PATH (if added by install script)
 # Edit ~/.bashrc or ~/.zshrc and remove the line:
@@ -131,11 +131,11 @@ For GitLab integration:
 bun run init --gitlab
 ```
 
-Configuration is stored at `~/.cr.conf`.
+Configuration is stored at `~/.pv.conf`.
 
 ## Git Provider Auto-Detection
 
-CR CLI automatically detects whether you're working with GitHub or GitLab based on your git remote URL:
+PeerView CLI automatically detects whether you're working with GitHub or GitLab based on your git remote URL:
 
 - **GitHub**: Remotes like `git@github.com:owner/repo.git` or `https://github.com/owner/repo.git`
 - **GitLab**: Remotes pointing to `gitlab.com` or containing `gitlab` in the URL
@@ -145,16 +145,16 @@ CR CLI automatically detects whether you're working with GitHub or GitLab based 
 
 ```bash
 # Auto-detect provider from git remote
-cd /path/to/github-repo && cr review
-cd /path/to/gitlab-repo && cr review
+cd /path/to/github-repo && pv review
+cd /path/to/gitlab-repo && pv review
 
 # Force specific provider
-cr review --github --url https://github.com/owner/repo/pull/123
-cr review --gitlab --url https://gitlab.com/owner/repo/-/merge_requests/456
+pv review --github --url https://github.com/owner/repo/pull/123
+pv review --gitlab --url https://gitlab.com/owner/repo/-/merge_requests/456
 
 # Review a specific pull request or merge request
-cr review --url https://github.com/octocat/Hello-World/pull/1
-cr review --url https://gitlab.example.com/group/project/-/merge_requests/2
+pv review --url https://github.com/octocat/Hello-World/pull/1
+pv review --url https://gitlab.example.com/group/project/-/merge_requests/2
 ```
 
 ## Usage
@@ -179,8 +179,8 @@ bun run build
 
 Output:
 
-- `dist/cr` (Linux/macOS)
-- `dist/cr.exe` (Windows, when built on Windows)
+- `dist/pv` (Linux/macOS)
+- `dist/pv.exe` (Windows, when built on Windows)
 
 You can also use:
 
@@ -188,17 +188,17 @@ You can also use:
 bash build.sh
 ```
 
-This creates a platform bundle `cr-cli-<platform>.tar.gz` with binary + usage/install scripts.
+This creates a platform bundle `pv-cli-<platform>.tar.gz` with binary + usage/install scripts.
 
 ## Docker
 
 Build the image:
 
 ```bash
-docker build -t cr-server .
+docker build -t pv-server .
 ```
 
-The image starts the unified server by default via `cr serve`.
+The image starts the unified server by default via `pv serve`.
 
 Run with Docker Compose:
 
@@ -206,36 +206,36 @@ Run with Docker Compose:
 docker compose up --build
 ```
 
-Compose defaults to HTTP on port `3000`. You can switch to HTTPS by setting `CR_WEBHOOK_TLS_MODE=https` and mounting certs under `./docker/certs`.
+Compose defaults to HTTP on port `3000`. You can switch to HTTPS by setting `PV_WEBHOOK_TLS_MODE=https` and mounting certs under `./docker/certs`.
 
 Run over HTTP:
 
 ```bash
 docker run --rm -p 3000:3000 \
-  -e CR_WEBHOOK_TLS_MODE=http \
+  -e PV_WEBHOOK_TLS_MODE=http \
   -e GITLAB_URL=https://gitlab.example.com \
   -e GITLAB_KEY=your-token \
-  cr-server
+  pv-server
 ```
 
 Run over HTTPS:
 
 ```bash
 docker run --rm -p 3443:3000 \
-  -e CR_WEBHOOK_TLS_MODE=https \
+  -e PV_WEBHOOK_TLS_MODE=https \
   -e SSL_CERT_PATH=/certs/tls.crt \
   -e SSL_KEY_PATH=/certs/tls.key \
   -e GITLAB_URL=https://gitlab.example.com \
   -e GITLAB_KEY=your-token \
   -v "$PWD/certs:/certs:ro" \
-  cr-server
+  pv-server
 ```
 
 Supported container env vars:
 
-- `CR_WEBHOOK_TLS_MODE=http|https|auto` chooses plain HTTP, strict HTTPS, or HTTPS when certs are present.
-- `CR_WEBHOOK_PORT` sets the internal listen port. Default is `3000`.
-- `CR_WEBHOOK_CONCURRENCY`, `CR_WEBHOOK_QUEUE_LIMIT`, `CR_WEBHOOK_TIMEOUT_MS` map to the server queue flags.
+- `PV_WEBHOOK_TLS_MODE=http|https|auto` chooses plain HTTP, strict HTTPS, or HTTPS when certs are present.
+- `PV_WEBHOOK_PORT` sets the internal listen port. Default is `3000`.
+- `PV_WEBHOOK_CONCURRENCY`, `PV_WEBHOOK_QUEUE_LIMIT`, `PV_WEBHOOK_TIMEOUT_MS` map to the server queue flags.
 - `SSL_CERT_PATH`, `SSL_KEY_PATH`, `SSL_CA_PATH` control TLS certificate loading.
 - `GITLAB_URL`, `GITLAB_KEY` for GitLab integration.
 - `GITHUB_TOKEN` for GitHub integration.
@@ -246,7 +246,7 @@ Supported container env vars:
 Example Compose `.env` for HTTP:
 
 ```dotenv
-CR_WEBHOOK_TLS_MODE=http
+PV_WEBHOOK_TLS_MODE=http
 WEBHOOK_HOST_PORT=3000
 GITLAB_URL=https://gitlab.example.com
 GITLAB_KEY=your-token
@@ -257,9 +257,9 @@ OPENAI_API_KEY=your-openai-key
 Example Compose `.env` for HTTPS:
 
 ```dotenv
-CR_WEBHOOK_TLS_MODE=https
+PV_WEBHOOK_TLS_MODE=https
 WEBHOOK_HOST_PORT=3443
-CR_WEBHOOK_PORT=3000
+PV_WEBHOOK_PORT=3000
 SSL_CERT_PATH=/certs/tls.crt
 SSL_KEY_PATH=/certs/tls.key
 GITLAB_URL=https://gitlab.example.com
@@ -268,7 +268,7 @@ GITHUB_TOKEN=your-github-token
 OPENAI_API_KEY=your-openai-key
 ```
 
-The container runs `cr serve`, exposing:
+The container runs `pv serve`, exposing:
 
 - `GET /` and `GET /web` for the Lit web app shell
 - `GET /api/dashboard` for the web app dashboard API

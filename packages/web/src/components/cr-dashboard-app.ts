@@ -1332,7 +1332,7 @@ export class CrDashboardApp extends LitElement {
 
   private readStoredTheme(): UITheme {
     try {
-      return window.localStorage.getItem("cr:web-theme") === "light"
+      return window.localStorage.getItem("pv:web-theme") === "light"
         ? "light"
         : "dark";
     } catch {
@@ -1342,7 +1342,7 @@ export class CrDashboardApp extends LitElement {
 
   private persistTheme(theme: UITheme) {
     try {
-      window.localStorage.setItem("cr:web-theme", theme);
+      window.localStorage.setItem("pv:web-theme", theme);
     } catch {
       // Ignore storage errors in restricted environments.
     }
@@ -1350,7 +1350,7 @@ export class CrDashboardApp extends LitElement {
 
   private readStoredSidebarCollapsed() {
     try {
-      return window.localStorage.getItem("cr:web-sidebar-collapsed") !== "false";
+      return window.localStorage.getItem("pv:web-sidebar-collapsed") !== "false";
     } catch {
       return true;
     }
@@ -1359,7 +1359,7 @@ export class CrDashboardApp extends LitElement {
   private persistSidebarCollapsed(collapsed: boolean) {
     try {
       window.localStorage.setItem(
-        "cr:web-sidebar-collapsed",
+        "pv:web-sidebar-collapsed",
         String(collapsed)
       );
     } catch {
@@ -1418,7 +1418,7 @@ export class CrDashboardApp extends LitElement {
               <cr-icon .icon=${Menu} .size=${18}></cr-icon>
             </label>
             <span class="font-bold tracking-tight flex-1"
-              >Code Review Platform</span
+              >PeerView</span
             >
             <cr-theme-toggle
               .theme=${this.uiTheme}

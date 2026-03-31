@@ -1,4 +1,4 @@
-USAGE: CR CLI EXECUTABLE
+USAGE: PEERVIEW CLI EXECUTABLE
 ======================================
 
 0. INSTALLATION
@@ -10,12 +10,12 @@ Windows:
 Unix/macOS/Linux:
   ./install.sh
 
-This installs `cr` (or `cr.exe`) to your user PATH location.
+This installs `pv` (or `pv.exe`) to your user PATH location.
 
 1. FIRST-TIME SETUP
 ------------------------------------------------------------
 
-  cr init
+  pv init
 
 You will be prompted for:
 - API URL
@@ -24,25 +24,25 @@ You will be prompted for:
 - GitLab URL
 - GitLab token (`api` scope)
 
-Config path: `~/.cr.conf`
+Config path: `~/.pv.conf`
 
 2. REVIEW WORKFLOWS
 ------------------------------------------------------------
 
 Default MR review:
-  cr review --path <repo-path>
+  pv review --path <repo-path>
 
 Summarize MR:
-  cr review --workflow summarize --path <repo-path>
+  pv review --workflow summarize --path <repo-path>
 
 Chat about MR:
-  cr review --workflow chat --path <repo-path>
+  pv review --workflow chat --path <repo-path>
 
 Local diff review:
-  git diff | cr review --local
+  git diff | pv review --local
 
 Local diff summarize:
-  git diff | cr review --workflow summarize --local
+  git diff | pv review --workflow summarize --local
 
 Options:
 - `--path, -p`
@@ -57,16 +57,16 @@ Options:
 3. CREATE MERGE REQUEST
 ------------------------------------------------------------
 
-  cr review --workflow create --path <repo-path> [--target-branch <branch>] [--mode <interactive|ci>]
+  pv review --workflow create --path <repo-path> [--target-branch <branch>] [--mode <interactive|ci>]
 
 4. HELP
 ------------------------------------------------------------
 
-  cr help
+  pv help
 
 5. NOTES
 ------------------------------------------------------------
 
 - Chat mode does not support `--local`.
-- Prompt overrides are loaded from `~/.cr/prompts`.
+- Prompt overrides are loaded from `~/.pv/prompts`.
 - Resources are bundled from `resources/`.
