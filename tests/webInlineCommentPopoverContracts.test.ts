@@ -1,9 +1,5 @@
 import { describe, expect, it } from "bun:test";
-
-const popoverPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-inline-comment-popover.ts";
-const stylesPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/styles.css";
+import { popoverPath, stylesPath } from "./webContractPaths";
 
 describe("web inline comment popover contracts", () => {
   it("positions the popover using the selected line anchor coordinates", async () => {

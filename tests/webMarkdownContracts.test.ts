@@ -1,17 +1,12 @@
 import { describe, expect, it } from "bun:test";
-
-const reviewPanelPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-review-panel.ts";
-const summaryPanelPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-summary-panel.ts";
-const workspacePanelPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-workspace-panel.ts";
-const chatPanelPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-chat-panel.ts";
-const discussionThreadPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-discussion-thread.ts";
-const stylesPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/styles.css";
+import {
+  chatPanelPath,
+  discussionThreadPath,
+  reviewPanelPath,
+  stylesPath,
+  summaryPanelPath,
+  workspacePanelPath,
+} from "./webContractPaths";
 
 describe("web markdown contracts", () => {
   it("uses shared markdown utility classes across app surfaces", async () => {

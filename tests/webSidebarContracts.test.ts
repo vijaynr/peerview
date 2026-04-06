@@ -1,13 +1,5 @@
 import { describe, expect, it } from "bun:test";
-
-const sidebarPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-sidebar-nav.ts";
-const dashboardAppPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-dashboard-app.ts";
-const stylesPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/styles.css";
-const indexPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/index.ts";
+import { dashboardAppPath, indexPath, sidebarPath, stylesPath } from "./webContractPaths";
 
 describe("web sidebar contracts", () => {
   it("supports a collapsible icon-first sidebar component", async () => {
@@ -16,8 +8,8 @@ describe("web sidebar contracts", () => {
     expect(source).toContain("@property({ type: Boolean }) collapsed = false;");
     expect(source).toContain('new CustomEvent("toggle-sidebar"');
     expect(source).toContain('class="cr-app-sidebar ${this.collapsed ? "cr-app-sidebar--collapsed" : ""}"');
-    expect(source).toContain('class="cr-app-sidebar__edge"');
-    expect(source).toContain('class="cr-app-sidebar__edge-indicator"');
+    expect(source).toContain('class="cr-app-sidebar__toggle"');
+    expect(source).toContain('class="cr-app-sidebar__toggle-bar"');
     expect(source).toContain("<cr-theme-toggle");
     expect(source).toContain(".theme=${this.uiTheme}");
     expect(source).toContain('this.collapsed\n          ? ""');
@@ -44,8 +36,8 @@ describe("web sidebar contracts", () => {
     expect(stylesSource).toContain("backdrop-filter: blur(22px) saturate(165%);");
     expect(stylesSource).toContain(".cr-app-sidebar--collapsed .cr-app-sidebar__label");
     expect(stylesSource).toContain(".cr-theme-btn {");
-    expect(stylesSource).toContain(".cr-app-sidebar__edge {");
-    expect(stylesSource).toContain(".cr-app-sidebar__edge-indicator {");
+    expect(stylesSource).toContain(".cr-app-sidebar__toggle {");
+    expect(stylesSource).toContain(".cr-app-sidebar__toggle-bar {");
     expect(indexSource).toContain("width: var(--cr-sidebar-shell-width, 16rem);");
   });
 });

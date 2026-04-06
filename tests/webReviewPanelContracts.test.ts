@@ -1,9 +1,5 @@
 import { describe, expect, it } from "bun:test";
-
-const reviewPanelPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-review-panel.ts";
-const stylesPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/styles.css";
+import { reviewPanelPath, stylesPath } from "./webContractPaths";
 
 describe("web review panel contracts", () => {
   it("renders review output as flowing sections with a sticky action bar", async () => {

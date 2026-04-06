@@ -1,13 +1,10 @@
 import { describe, expect, it } from "bun:test";
-
-const workspacePanelPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-workspace-panel.ts";
-const providerPagePath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-provider-page.ts";
-const analysisRailPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-analysis-rail.ts";
-const stylesPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/styles.css";
+import {
+  analysisRailPath,
+  providerPagePath,
+  stylesPath,
+  workspacePanelPath,
+} from "./webContractPaths";
 
 describe("web assistant overlay contracts", () => {
   it("opens the AI Assistant from the selected review header instead of a fixed rail", async () => {

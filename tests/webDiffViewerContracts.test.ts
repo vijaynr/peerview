@@ -1,11 +1,5 @@
 import { describe, expect, it } from "bun:test";
-
-const diffViewerPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-diff-viewer.ts";
-const workspacePanelPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-workspace-panel.ts";
-const stylesPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/styles.css";
+import { diffViewerPath, stylesPath, workspacePanelPath } from "./webContractPaths";
 
 describe("web diff viewer contracts", () => {
   it("keeps multiple diff files expanded instead of collapsing to a single file", async () => {

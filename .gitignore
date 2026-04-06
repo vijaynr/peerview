@@ -18,6 +18,8 @@ wheels/
 # This file should not be committed to version control
 .env
 **/.env
+.DS_Store
+**/.DS_Store
 
 # Virtual environments
 .venv

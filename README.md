@@ -279,7 +279,7 @@ The container runs `pv serve`, exposing:
 
 ### Local Review Board Test Stack
 
-For local Review Board testing, there is a dedicated Compose stack under [`docker/reviewboard/docker-compose.yml`](/Users/vijay/Documents/code/gh/vijaynr/cr/docker/reviewboard/docker-compose.yml).
+For local Review Board testing, there is a dedicated Compose stack under [`docker/reviewboard/docker-compose.yml`](docker/reviewboard/docker-compose.yml).
 
 It starts:
 
@@ -301,7 +301,7 @@ Then open [http://localhost:8081](http://localhost:8081).
 For a local SVN repository to pair with Review Board, the same stack also starts `elleflorio/svn-server:latest`, following the approach in this gist:
 [Set up SVN server on docker](https://gist.github.com/dpmex4527/1d702357697162384d31d033a7d505eb?permalink_comment_id=4151706)
 
-On startup, a one-shot bootstrap service creates the default repository automatically using [`docker/reviewboard/bootstrap-svn.sh`](/Users/vijay/Documents/code/gh/vijaynr/cr/docker/reviewboard/bootstrap-svn.sh).
+On startup, a one-shot bootstrap service creates the default repository automatically using [`docker/reviewboard/bootstrap-svn.sh`](docker/reviewboard/bootstrap-svn.sh).
 
 The defaults are:
 

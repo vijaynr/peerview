@@ -365,8 +365,10 @@ export async function runReviewCommand(args: string[]): Promise<void> {
     return;
   }
 
+  const explicitMode = getFlag(args, "mode", "", "-m");
+  const stdinIsPiped = !process.stdin.isTTY;
   const mode: WorkflowMode =
-    getFlag(args, "mode", "interactive", "-m") === "ci" ? "ci" : "interactive";
+    explicitMode === "ci" || (!explicitMode && stdinIsPiped) ? "ci" : "interactive";
   const repoPath = path.resolve(getFlag(args, "path", ".", "-p"));
   const url = getFlag(args, "url", "", "-u") || undefined;
   const workflowRaw = getFlag(args, "workflow", "default", "-w");

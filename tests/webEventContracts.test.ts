@@ -1,9 +1,5 @@
 import { describe, expect, it } from "bun:test";
-
-const dashboardAppPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-dashboard-app.ts";
-const discussionThreadPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-discussion-thread.ts";
+import { dashboardAppPath, discussionThreadPath } from "./webContractPaths";
 
 describe("web event contracts", () => {
   it("listens for the custom events emitted by interactive review components", async () => {

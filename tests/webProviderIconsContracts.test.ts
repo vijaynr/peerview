@@ -1,11 +1,5 @@
 import { describe, expect, it } from "bun:test";
-
-const providerIconPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-provider-icon.ts";
-const sidebarPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-sidebar-nav.ts";
-const providerSummaryPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-provider-summary-card.ts";
+import { providerIconPath, providerSummaryPath, sidebarPath } from "./webContractPaths";
 
 describe("web provider icon contracts", () => {
   it("defines brand-aware provider icons for GitLab, GitHub, and Review Board", async () => {

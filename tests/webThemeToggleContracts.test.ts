@@ -1,9 +1,5 @@
 import { describe, expect, it } from "bun:test";
-
-const themeTogglePath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/components/cr-theme-toggle.ts";
-const stylesPath =
-  "/Users/vijay/Documents/code/gh/vijaynr/cr/packages/web/src/styles.css";
+import { stylesPath, themeTogglePath } from "./webContractPaths";
 
 describe("web theme toggle contracts", () => {
   it("renders the theme toggle as an icon button", async () => {
