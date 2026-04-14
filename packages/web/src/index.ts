@@ -52,8 +52,11 @@ function isBundledRuntime(): boolean {
 
 export function getWebAppHtml(styles: string, options?: { desktop?: boolean }): string {
   const desktopAttr = options?.desktop ? ' data-desktop="true"' : "";
+  const desktopPlatformAttr = options?.desktop
+    ? ` data-desktop-platform="${process.platform}"`
+    : "";
   return `<!doctype html>
-<html lang="en" data-theme="cr-black"${desktopAttr}>
+<html lang="en" data-theme="cr-black"${desktopAttr}${desktopPlatformAttr}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

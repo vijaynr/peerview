@@ -9,11 +9,11 @@
   "scripts": {
     "start": "electrobun run",
     "icons": "bun ../../scripts/generate-desktop-icons.ts",
-    "build:dev": "bun install && bun run icons && electrobun build",
-    "build:canary": "bun install && bun run icons && electrobun build --env=canary",
-    "build:stable": "bun install && bun run icons && electrobun build --env=stable",
-    "dev": "bun run build:dev && electrobun dev",
-    "dev:watch": "bun run icons && electrobun dev --watch"
+    "build:dev": "TAR_OPTIONS=--force-local bun install && TAR_OPTIONS=--force-local bun run icons && TAR_OPTIONS=--force-local electrobun build && bun ../../scripts/stamp-desktop-windows-icons.ts",
+    "build:canary": "TAR_OPTIONS=--force-local bun install && TAR_OPTIONS=--force-local bun run icons && TAR_OPTIONS=--force-local electrobun build --env=canary && bun ../../scripts/stamp-desktop-windows-icons.ts",
+    "build:stable": "TAR_OPTIONS=--force-local bun install && TAR_OPTIONS=--force-local bun run icons && TAR_OPTIONS=--force-local electrobun build --env=stable && bun ../../scripts/stamp-desktop-windows-icons.ts",
+    "dev": "TAR_OPTIONS=--force-local bun run build:dev && TAR_OPTIONS=--force-local electrobun dev",
+    "dev:watch": "TAR_OPTIONS=--force-local bun ../../scripts/run-desktop-dev-watch.ts"
   },
   "dependencies": {
     "@pv/core": "workspace:*",

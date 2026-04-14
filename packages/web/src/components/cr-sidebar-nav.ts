@@ -2,10 +2,10 @@ import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import {
   BrainCircuit,
-  ChevronLeft,
-  ChevronRight,
   GitBranch,
   LayoutDashboard,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings2,
   type IconNode,
 } from "lucide";
@@ -117,16 +117,14 @@ export class CrSidebarNav extends LitElement {
       >
         ${isCollapsed
           ? html`
-              <span class="cr-app-sidebar__toggle-bar" aria-hidden="true"></span>
               <span class="cr-app-sidebar__toggle-icon" aria-hidden="true">
-                <cr-icon .icon=${ChevronRight} .size=${14}></cr-icon>
+                <cr-icon .icon=${PanelLeftOpen} .size=${14}></cr-icon>
               </span>
             `
           : html`
               <span class="cr-app-sidebar__toggle-icon" aria-hidden="true">
-                <cr-icon .icon=${ChevronLeft} .size=${14}></cr-icon>
+                <cr-icon .icon=${PanelLeftClose} .size=${14}></cr-icon>
               </span>
-              <span class="cr-app-sidebar__toggle-bar" aria-hidden="true"></span>
             `}
       </button>
     `;
@@ -143,13 +141,15 @@ export class CrSidebarNav extends LitElement {
       >
         <div class="cr-app-sidebar__header electrobun-webkit-app-region-drag">
           <div class="cr-app-sidebar__brand electrobun-webkit-app-region-no-drag">
-            <img
-              src=${WEB_APP_ICON_ROUTE}
-              alt="PeerView"
-              width="40"
-              height="40"
-              class="cr-app-sidebar__brand-mark"
-            />
+            ${this.collapsed
+              ? ""
+              : html`<img
+                  src=${WEB_APP_ICON_ROUTE}
+                  alt="PeerView"
+                  width="40"
+                  height="40"
+                  class="cr-app-sidebar__brand-mark"
+                />`}
             <div class="cr-app-sidebar__brand-copy">
               <div class="cr-app-sidebar__brand-title">
                 PeerView
@@ -157,11 +157,6 @@ export class CrSidebarNav extends LitElement {
             </div>
           </div>
           <div class="cr-app-sidebar__header-actions electrobun-webkit-app-region-no-drag">
-            ${this.isLoading
-              ? html`<span
-                  class="loading loading-spinner loading-xs text-primary"
-                ></span>`
-              : ""}
             ${this.renderSidebarToggle()}
           </div>
         </div>

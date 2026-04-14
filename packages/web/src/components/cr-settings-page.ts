@@ -238,7 +238,7 @@ export class CrSettingsPage extends LitElement {
   render() {
     if (this.loadingConfig && !this.dashboard) {
       return html`
-        <div class="cr-fade-in flex flex-col gap-10 pb-28">
+        <div class="cr-fade-in flex flex-col gap-10 pb-32 md:pb-28">
           <div>
             <h1 class="text-2xl font-bold tracking-tight">Settings</h1>
             <p class="mt-1 text-sm text-base-content/50">
@@ -261,7 +261,7 @@ export class CrSettingsPage extends LitElement {
       this.dashboard?.config?.reviewboard?.configured;
 
     return html`
-      <div class="cr-fade-in flex flex-col gap-10 pb-28">
+      <div class="cr-fade-in flex flex-col gap-10 pb-32 md:pb-28">
         <!-- Page header -->
         <div>
           <h1 class="text-2xl font-bold tracking-tight">Settings</h1>
@@ -683,20 +683,17 @@ export class CrSettingsPage extends LitElement {
 
       <!-- Sticky footer -->
       <div
-        class="fixed bottom-0 left-0 right-0 bg-base-200/95 backdrop-blur-sm border-t border-base-300 z-20"
-        style="left: var(--cr-sidebar-shell-width, 16rem)"
+        class="cr-settings-footer fixed bottom-0 bg-base-200/95 backdrop-blur-sm border-t border-base-300 z-20"
       >
-        <div
-          class="max-w-screen-2xl mx-auto px-4 lg:px-6 xl:px-8 py-5 flex items-center justify-between gap-4"
-        >
-          <div class="text-xs text-base-content/50">
+        <div class="cr-settings-footer__inner">
+          <div class="cr-settings-footer__status text-xs text-base-content/50">
             ${this.configDirty
               ? html`<span class="text-warning font-semibold"
                   >● Unsaved changes</span
                 >`
               : ""}
           </div>
-          <div class="flex gap-2">
+          <div class="cr-settings-footer__actions">
             <button
               class="btn btn-ghost btn-sm"
               type="button"

@@ -1398,6 +1398,7 @@ export class CrDashboardApp extends LitElement {
       <div
         class="drawer lg:drawer-open min-h-screen"
         data-theme=${this.themeName}
+        style=${`--cr-sidebar-shell-width:${this.sidebarCollapsed ? "5.5rem" : "16rem"};`}
         @section-change=${(e: CustomEvent) =>
           void this.handleSectionChange(e.detail)}
         @theme-toggle=${() => this.toggleUiTheme()}
@@ -1452,7 +1453,6 @@ export class CrDashboardApp extends LitElement {
             .isLoading=${isLoading}
             .uiTheme=${this.uiTheme}
             .collapsed=${this.sidebarCollapsed}
-            style=${`--cr-sidebar-shell-width:${this.sidebarCollapsed ? "5.5rem" : "16rem"};`}
           ></cr-sidebar-nav>
         </div>
 

@@ -7,7 +7,6 @@ import {
   savePreference,
   saveWindowGeometry,
 } from "./app-state.js"
-import { createApplicationMenu } from "./menus.js"
 
 const APP_VERSION = "0.1.0"
 
@@ -58,8 +57,7 @@ function createRpc() {
 async function main() {
   const geometry = loadWindowGeometry()
   const rpc = createRpc()
-
-  createApplicationMenu()
+  const titleBarStyle = process.platform === "darwin" ? "hiddenInset" : "default"
 
   const server = await startEmbeddedServer()
   serverFetch = server.fetch
@@ -68,7 +66,7 @@ async function main() {
   const win = new BrowserWindow({
     title: "PeerView",
     url: server.url,
-    titleBarStyle: "hiddenInset",
+    titleBarStyle,
     frame: {
       width: geometry.width,
       height: geometry.height,

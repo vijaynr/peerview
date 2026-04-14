@@ -25,9 +25,9 @@
     "build:bin": "bun run build:web-bundle && bun build --compile --minify packages/cli/src/cli.ts --outfile dist/pv",
     "build:bin-compress": "bun run build:web-bundle && bun build --compile --minify packages/cli/src/cli.ts --outfile dist/pv && (upx dist/pv.exe || echo 'upx not found, skipping compression')",
     "build": "bun run typecheck && bun run build:bin",
-    "desktop:dev": "bun run build:web-bundle && bun run desktop:icons && cd packages/desktop && bun run dev",
-    "desktop:dev:watch": "bun run build:web-bundle && bun run desktop:icons && cd packages/desktop && bun run dev:watch",
-    "desktop:build": "bun run build:web-bundle && bun run desktop:icons && cd packages/desktop && bun run build:stable",
+    "desktop:dev": "TAR_OPTIONS=--force-local bun run build:web-bundle && TAR_OPTIONS=--force-local bun run desktop:icons && cd packages/desktop && TAR_OPTIONS=--force-local bun run dev",
+    "desktop:dev:watch": "TAR_OPTIONS=--force-local bun run build:web-bundle && TAR_OPTIONS=--force-local bun run desktop:icons && cd packages/desktop && TAR_OPTIONS=--force-local bun run dev:watch",
+    "desktop:build": "TAR_OPTIONS=--force-local bun run build:web-bundle && TAR_OPTIONS=--force-local bun run desktop:icons && cd packages/desktop && TAR_OPTIONS=--force-local bun run build:stable",
     "desktop:icons": "bun scripts/generate-desktop-icons.ts"
   },
   "devDependencies": {
@@ -37,6 +37,7 @@
     "@types/node": "^24.6.0",
     "esbuild": "^0.27.0",
     "png-to-ico": "^2.1.8",
+    "rcedit": "^5.0.2",
     "typescript": "^5.9.3",
     "vite": "^8.0.0"
   }

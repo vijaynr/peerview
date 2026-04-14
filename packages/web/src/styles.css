@@ -198,6 +198,35 @@ html[data-theme="cr-light"] ::selection {
   min-height: calc(100dvh - 2rem);
 }
 
+.cr-settings-footer {
+  left: var(--cr-sidebar-shell-width, 16rem);
+  right: 0;
+  transition: left 220ms ease;
+}
+
+.cr-settings-footer__inner {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 0 auto;
+  max-width: min(100%, 140rem);
+  padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+.cr-settings-footer__status {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cr-settings-footer__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
 .cr-toast {
   animation: cr-toast-in 0.22s ease-out;
   max-width: min(22rem, calc(100vw - 2rem));
@@ -493,7 +522,7 @@ cr-chat-panel {
   cursor: pointer;
   display: inline-flex;
   flex: 0 0 auto;
-  gap: 0.36rem;
+  gap: 0;
   height: 2rem;
   justify-content: center;
   min-width: 2.55rem;
@@ -527,14 +556,6 @@ cr-chat-panel {
   align-items: center;
   display: inline-flex;
   justify-content: center;
-}
-
-.cr-app-sidebar__toggle-bar {
-  background: rgb(148 163 184 / 0.46);
-  border-radius: 999px;
-  display: block;
-  height: 1rem;
-  width: 1.5px;
 }
 
 .cr-app-sidebar__nav {
@@ -845,6 +866,43 @@ cr-chat-panel {
 .cr-review-section__body {
   font-size: 0.875rem;
   line-height: 1.65;
+}
+
+.cr-review-section--agent {
+  background:
+    linear-gradient(180deg, rgb(59 130 246 / 0.08), transparent 55%),
+    rgb(255 255 255 / 0.01);
+  border: 1px solid rgb(114 152 255 / 0.18);
+  border-radius: 0.9rem;
+  margin: 0.7rem 0.6rem 0;
+  padding: 0.7rem 0.7rem 0.5rem;
+}
+
+.cr-review-section__label--agent {
+  background: linear-gradient(180deg, rgb(15 23 42 / 0.7), rgb(15 23 42 / 0.46));
+  border: 1px solid rgb(148 163 184 / 0.28);
+  border-radius: 0.68rem;
+  color: rgb(219 234 254 / 0.88);
+  display: inline-flex;
+  font-family: "IBM Plex Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  gap: 0.36rem;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.7rem;
+  padding: 0.28rem 0.52rem;
+  text-decoration: underline dotted rgb(125 211 252 / 0.46) 1px;
+  text-underline-offset: 0.26em;
+  text-transform: uppercase;
+}
+
+.cr-review-section__agent-decor {
+  color: rgb(56 189 248 / 0.82);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.cr-review-section__agent-name {
+  color: rgb(239 246 255 / 0.96);
+  font-weight: 700;
 }
 
 /* ── Chat panel ──────────────────────────────────── */
@@ -2267,6 +2325,15 @@ cr-chat-panel {
 }
 
 @media (max-width: 1023px) {
+  .cr-settings-footer {
+    left: 0;
+  }
+
+  .cr-settings-footer__inner {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
   .cr-app-sidebar {
     gap: 0.85rem;
     padding-left: 1rem;
@@ -2341,6 +2408,20 @@ cr-chat-panel {
 }
 
 @media (max-width: 767px) {
+  .cr-settings-footer__inner {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .cr-settings-footer__actions {
+    width: 100%;
+  }
+
+  .cr-settings-footer__actions > .btn {
+    flex: 1 1 calc(50% - 0.25rem);
+  }
+
   .cr-review-control-card__footer {
     align-items: stretch;
   }
@@ -2500,10 +2581,6 @@ html[data-theme="cr-light"] .cr-app-sidebar__toggle:hover {
   color: rgb(15 23 42 / 0.92);
 }
 
-html[data-theme="cr-light"] .cr-app-sidebar__toggle-bar {
-  background: rgb(148 163 184 / 0.72);
-}
-
 html[data-theme="cr-light"] .cr-app-sidebar__nav-link {
   color: rgb(51 65 85 / 0.88);
 }
@@ -2598,6 +2675,28 @@ html[data-theme="cr-light"] .cr-review-info-banner__sep {
 
 html[data-theme="cr-light"] .cr-review-hint {
   color: rgb(71 85 105 / 0.42);
+}
+
+html[data-theme="cr-light"] .cr-review-section--agent {
+  background:
+    linear-gradient(180deg, rgb(59 130 246 / 0.08), transparent 55%),
+    rgb(255 255 255 / 0.78);
+  border-color: rgb(59 130 246 / 0.24);
+}
+
+html[data-theme="cr-light"] .cr-review-section__label--agent {
+  background: linear-gradient(180deg, rgb(248 250 252 / 0.96), rgb(241 245 249 / 0.96));
+  border-color: rgb(148 163 184 / 0.36);
+  color: rgb(30 41 59 / 0.9);
+  text-decoration-color: rgb(14 165 233 / 0.54);
+}
+
+html[data-theme="cr-light"] .cr-review-section__agent-decor {
+  color: rgb(2 132 199 / 0.86);
+}
+
+html[data-theme="cr-light"] .cr-review-section__agent-name {
+  color: rgb(15 23 42 / 0.95);
 }
 
 html[data-theme="cr-light"] .cr-review-actions {
@@ -3070,7 +3169,11 @@ html[data-theme="cr-light"] .cr-overview-card {
 
 /* ─── Desktop app (custom titlebar) ──────────── */
 html[data-desktop] .cr-app-sidebar {
-  padding-top: 2.8rem;
+  padding-top: 1.9rem;
+}
+
+html[data-desktop][data-desktop-platform="win32"] .cr-app-sidebar {
+  padding-top: 1.2rem;
 }
 
 html[data-desktop] .cr-app-sidebar__header {

@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Bot } from "lucide";
+import { Bot, BotMessageSquare } from "lucide";
 import type { ReviewAgentOption, ReviewWorkflowResult } from "../types.js";
 import "./cr-icon.js";
 import { renderMarkdown } from "./render-markdown.js";
@@ -198,9 +198,13 @@ export class CrReviewPanel extends LitElement {
 
       ${result.agentResults?.map(
         (agent) => html`
-          <div class="cr-review-section">
-            <div class="cr-review-section__label">
-              ${agent.name}
+          <div class="cr-review-section cr-review-section--agent">
+            <div class="cr-review-section__label cr-review-section__label--agent">
+              <span class="cr-review-section__agent-decor" aria-hidden="true"
+                >//</span
+              >
+              <cr-icon .icon=${BotMessageSquare} .size=${13}></cr-icon>
+              <span class="cr-review-section__agent-name">${agent.name}</span>
               ${agent.failed
                 ? html`<span class="badge badge-error badge-xs ml-1.5"
                     >Failed</span
