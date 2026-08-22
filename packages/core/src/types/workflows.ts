@@ -11,6 +11,8 @@ export type ReviewPhase =
   | "chat_context_summary"
   | "answering_question";
 export type CreateReviewPhase =
+  | "check_repository"
+  | "push_source_branch"
   | "load_remote_branches"
   | "get_branch_diff"
   | "generate_mr_draft"
@@ -198,6 +200,7 @@ export type CreateReviewWorkflowInput = {
   mode: WorkflowMode;
   repoRoot: string;
   userFeedback?: string;
+  verbose?: boolean;
   shouldProceed?: boolean;
   status?: StatusReporter;
   events?: WorkflowEventReporter;

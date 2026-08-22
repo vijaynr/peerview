@@ -14,6 +14,8 @@ import {
   type GitLabClient,
   getCurrentBranch,
   getOriginRemoteUrl,
+  hasUncommittedChanges,
+  pushCurrentBranch,
   getSvnDiff,
   getSvnRepoRootUrl,
   getSvnWorkingCopyUrl,
@@ -170,38 +172,56 @@ async function resolveGitLabRepositoryContext(input: CreateReviewWorkflowInput):
   sourceBranch: string;
   projectPath: string;
 }> {
+  const phaseReporter = createWorkflowPhaseReporter(WORKFLOW_NAME, input.events);
+  phaseReporter.started("check_repository", "Checking repository, branch, and origin...");
   const sourceBranch = await getCurrentBranch(input.repoPath);
   const remoteUrl = await getOriginRemoteUrl(input.repoPath);
+  if (await hasUncommittedChanges(input.repoPath)) {
+    reportStatus(
+      input,
+      "warning",
+      "Uncommitted changes detected. Commit them before rerunning; only committed changes are included in the merge request."
+    );
+  }
   const projectPath = remoteToProjectPath(remoteUrl);
   logger.debug("create-review", "gitlab repo context resolved", {
     sourceBranch,
     remoteUrl,
     projectPath,
   });
+  if (input.verbose) {
+    reportStatus(input, "info", `Repository: ${projectPath} (${remoteUrl})`);
+  }
+  phaseReporter.completed("check_repository", `Using branch '${sourceBranch}' on origin.`);
   return { sourceBranch, projectPath };
 }
 
 async function validateBranches(args: {
+  input: CreateReviewWorkflowInput;
   gitlab: GitLabClient;
   projectPath: string;
   sourceBranch: string;
   inputTargetBranch?: string;
 }): Promise<void> {
-  const [sourceExists, targetExists] = await Promise.all([
-    args.gitlab.branchExists(args.projectPath, args.sourceBranch),
-    args.inputTargetBranch
-      ? args.gitlab.branchExists(args.projectPath, args.inputTargetBranch)
-      : Promise.resolve(true),
-  ]);
+  const sourceExists = await args.gitlab.branchExists(args.projectPath, args.sourceBranch);
   if (!sourceExists) {
-    throw new Error(
-      `Source branch '${args.sourceBranch}' does not exist in remote repository. Push the branch before creating a merge request.`
+    const phaseReporter = createWorkflowPhaseReporter(WORKFLOW_NAME, args.input.events);
+    reportStatus(
+      args.input,
+      "info",
+      `Remote branch '${args.sourceBranch}' is missing; pushing the current branch to origin...`
     );
+    phaseReporter.started("push_source_branch", `Pushing '${args.sourceBranch}' to origin...`);
+    await pushCurrentBranch(args.input.repoPath, args.sourceBranch);
+    phaseReporter.completed("push_source_branch", `Pushed '${args.sourceBranch}' to origin.`);
   }
-  if (args.inputTargetBranch && !targetExists) {
-    throw new Error(
-      `Target branch '${args.inputTargetBranch}' does not exist in remote repository.`
-    );
+  if (args.inputTargetBranch) {
+    const targetExists = await args.gitlab.branchExists(args.projectPath, args.inputTargetBranch);
+    if (!targetExists) {
+      throw new Error(
+        `Target branch '${args.inputTargetBranch}' does not exist in remote repository.`
+      );
+    }
   }
 }
 
@@ -593,17 +613,19 @@ async function* runGitLabCreateReviewWorkflow(
   const runtime = assertRuntime(await initializeRuntime());
   const { gitlab, llm } = await initializeGitLabClients(runtime);
   const { sourceBranch, projectPath } = await resolveGitLabRepositoryContext(input);
-  await validateBranches({
-    gitlab,
-    projectPath,
-    sourceBranch,
-    inputTargetBranch: input.targetBranch,
-  });
-
+  // Resolve the project first so a 404 for a missing repository is not
+  // mistaken for a missing source branch by branchExists().
   const { branches, defaultBranch } = await loadRemoteBranches({
     input,
     gitlab: assertGitLab(gitlab),
     projectPath,
+  });
+  await validateBranches({
+    input,
+    gitlab,
+    projectPath,
+    sourceBranch,
+    inputTargetBranch: input.targetBranch,
   });
 
   const targetBranchResponse =

@@ -38,6 +38,7 @@ export async function runCreateReviewCommand(args: string[]): Promise<void> {
           "--path, -p <path>           Path to repository (default: current directory)",
           "--target-branch, -t <name>  Target branch for the GitLab merge request",
           "--mode, -m <mode>           Mode: interactive or ci (default: interactive)",
+          "--verbose, -v               Show resolved repository and remote details",
           "--gl                        Use GitLab merge request creation (default)",
           "--reviewboard               Use Review Board review request creation (SVN only)",
         ],
@@ -60,6 +61,7 @@ export async function runCreateReviewCommand(args: string[]): Promise<void> {
   const repoPath = path.resolve(getFlag(args, "path", ".", "-p"));
   const targetBranch = getFlag(args, "target-branch", "", "-t") || undefined;
   const provider = resolveProvider(args);
+  const verbose = hasFlag(args, "verbose") || args.includes("-v");
   const repoRoot = repoRootFromModule(import.meta.url);
   const entityLabel = provider === "reviewboard" ? "Review Request" : "Merge Request";
   const description =
@@ -77,6 +79,7 @@ export async function runCreateReviewCommand(args: string[]): Promise<void> {
           targetBranch,
           repoRoot,
           mode,
+          verbose,
           ui,
           status,
           runWorkflow: (input) =>

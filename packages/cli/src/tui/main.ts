@@ -20,6 +20,7 @@ function buildCreateReviewResultBody(result: {
   targetLabel?: string;
   title: string;
   url?: string;
+  action: "created" | "updated" | "cancelled";
 }): string {
   const lines = [`Source: ${result.sourceLabel}`, `Title: ${result.title}`];
   if (result.targetLabel) {
@@ -27,6 +28,9 @@ function buildCreateReviewResultBody(result: {
   }
   if (result.url) {
     lines.push(`URL: ${result.url}`);
+    if (result.action !== "cancelled") {
+      lines.push("Next: Open the URL to view the merge request.");
+    }
   }
   return lines.join("\n");
 }
@@ -368,6 +372,7 @@ export async function runLiveCreateReviewTask(args: {
   targetBranch?: string;
   repoRoot: string;
   mode: WorkflowMode;
+  verbose?: boolean;
   ui: LiveController;
   status: WorkflowStatusController;
   runWorkflow: (
@@ -378,13 +383,14 @@ export async function runLiveCreateReviewTask(args: {
     CreateReviewWorkflowResponse | undefined
   >;
 }): Promise<void> {
-  const { repoPath, targetBranch, repoRoot, mode, ui, status, runWorkflow } = args;
+  const { repoPath, targetBranch, repoRoot, mode, verbose, ui, status, runWorkflow } = args;
 
   const workflow = runWorkflow({
     repoPath,
     targetBranch,
     mode,
     repoRoot,
+    verbose,
     status: status.status,
     events: status.events,
   });

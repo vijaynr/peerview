@@ -6,6 +6,10 @@ import { logger } from "./logger.js";
 
 const execFileAsync = promisify(execFile);
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 async function git(args: string[], repoPath: string): Promise<string> {
   const cwd = path.resolve(repoPath);
   logger.debug("git", `run: git ${args.join(" ")}`, { cwd });
@@ -25,21 +29,60 @@ async function git(args: string[], repoPath: string): Promise<string> {
 }
 
 export async function getCurrentBranch(repoPath: string): Promise<string> {
-  const branch = await git(["rev-parse", "--abbrev-ref", "HEAD"], repoPath);
+  let branch: string;
+  try {
+    branch = await git(["rev-parse", "--abbrev-ref", "HEAD"], repoPath);
+  } catch (error) {
+    const detail = errorMessage(error);
+    if (detail.toLowerCase().includes("not a git repository")) {
+      throw new Error(
+        "Not a Git repository. Run this command from a Git working tree or pass --path <repository-path>."
+      );
+    }
+    throw new Error(`Could not determine the current branch. ${detail}`);
+  }
   if (!branch || branch === "HEAD") {
-    throw new Error("Could not determine current branch from repository.");
+    throw new Error(
+      "Detached HEAD detected. Check out a named local branch before creating a merge request."
+    );
   }
   logger.debug("git", `current branch: ${branch}`);
   return branch;
 }
 
 export async function getOriginRemoteUrl(repoPath: string): Promise<string> {
-  const url = await git(["remote", "get-url", "origin"], repoPath);
+  let url: string;
+  try {
+    url = await git(["remote", "get-url", "origin"], repoPath);
+  } catch (error) {
+    const detail = errorMessage(error);
+    if (detail.toLowerCase().includes("no such remote")) {
+      throw new Error(
+        "Remote 'origin' not found. Add an origin remote before creating a merge request."
+      );
+    }
+    throw new Error(`Could not read the 'origin' remote. ${detail}`);
+  }
   if (!url) {
     throw new Error("Remote 'origin' not found.");
   }
   logger.debug("git", `origin remote url: ${url}`);
   return url;
+}
+
+/** Pushes the current local branch to origin and configures its upstream. */
+export async function pushCurrentBranch(repoPath: string, branchName: string): Promise<void> {
+  try {
+    await git(["push", "--set-upstream", "origin", branchName], repoPath);
+  } catch (error) {
+    throw new Error(
+      `Could not push '${branchName}' to origin. Check your remote permissions, branch protection rules, and network connection. ${errorMessage(error)}`
+    );
+  }
+}
+
+export async function hasUncommittedChanges(repoPath: string): Promise<boolean> {
+  return Boolean(await git(["status", "--porcelain"], repoPath));
 }
 
 export type GitProvider = "github" | "gitlab" | "unknown";

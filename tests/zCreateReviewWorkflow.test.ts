@@ -6,6 +6,9 @@ const isSvnWorkingCopyMock = mock(async () => true);
 const getSvnDiffMock = mock(async () => "Index: src/file.ts\n+change");
 const getSvnRepoRootUrlMock = mock(async () => "https://svn.example.com/repos/project");
 const getSvnWorkingCopyUrlMock = mock(async () => "https://svn.example.com/repos/project/trunk");
+const sourceBranchExistsMock = mock(async () => true);
+const pushCurrentBranchMock = mock(async () => {});
+const hasUncommittedChangesMock = mock(async () => false);
 const createRuntimeLlmClientMock = mock(() => ({
   generate: async (prompt: string) =>
     prompt.startsWith("Generate a concise") ? "Title" : "Description",
@@ -81,6 +84,8 @@ mock.module("@pv/core", () =>
     remoteToProjectPath: (remoteUrl: string) => remoteUrl,
     getCurrentBranch: mock(async () => "feature/test"),
     getOriginRemoteUrl: mock(async () => "https://gitlab.example.com/group/project.git"),
+    hasUncommittedChanges: hasUncommittedChangesMock,
+    pushCurrentBranch: pushCurrentBranchMock,
     logger: {
       debug: () => {},
       trace: () => {},
@@ -89,13 +94,14 @@ mock.module("@pv/core", () =>
     },
     loadPrompt: mock(async () => "{mr_changes}"),
     createRuntimeGitLabClient: mock(() => ({
-      branchExists: async () => true,
+      branchExists: async (_projectPath: string, branchName: string) =>
+        branchName === "feature/test" ? sourceBranchExistsMock() : true,
       listBranches: async () => ["main", "feature/test"],
       getDefaultBranch: async () => "main",
       compareBranches: async () => "diff",
       findExistingMergeRequest: async () => null,
-      createMergeRequest: async () => "https://gitlab.example.com/mr/1",
-      updateMergeRequest: async () => "https://gitlab.example.com/mr/1",
+      createMergeRequest: async () => ({ web_url: "https://gitlab.example.com/mr/1" }),
+      updateMergeRequest: async () => ({ web_url: "https://gitlab.example.com/mr/1" }),
     })),
     createRuntimeLlmClient: createRuntimeLlmClientMock,
     createRuntimeReviewBoardClient: createRuntimeReviewBoardClientMock,
@@ -137,6 +143,8 @@ describe("createReview workflow", () => {
     isSvnWorkingCopyMock.mockImplementation(async () => true);
     getSvnDiffMock.mockReset();
     getSvnDiffMock.mockImplementation(async () => "Index: src/file.ts\n+change");
+    hasUncommittedChangesMock.mockReset();
+    hasUncommittedChangesMock.mockImplementation(async () => false);
     rbClient.listRepositories.mockClear();
     rbClient.createReviewRequest.mockClear();
     rbClient.uploadReviewRequestDiff.mockClear();
@@ -194,5 +202,58 @@ describe("createReview workflow", () => {
       "Index: src/file.ts\n+change",
       "/trunk"
     );
+  });
+
+  it("pushes a missing source branch before creating a GitLab merge request", async () => {
+    sourceBranchExistsMock.mockImplementationOnce(async () => false);
+    const events: Array<{ phase: string; type: string }> = [];
+
+    const workflow = runCreateReviewWorkflow({
+      repoPath: "/repo",
+      repoRoot: "/root",
+      mode: "ci",
+      provider: "gitlab",
+      targetBranch: "main",
+      shouldProceed: true,
+      events: { emit: (event) => events.push(event) },
+    });
+
+    await workflow.next();
+    const finalStep = await workflow.next();
+
+    expect(finalStep.done).toBe(true);
+    expect(finalStep.value).toMatchObject({
+      provider: "gitlab",
+      entityType: "merge_request",
+      action: "created",
+      url: "https://gitlab.example.com/mr/1",
+    });
+    expect(pushCurrentBranchMock).toHaveBeenCalledWith("/repo", "feature/test");
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ phase: "check_repository", type: "phase_started" }),
+        expect.objectContaining({ phase: "push_source_branch", type: "phase_completed" }),
+      ])
+    );
+  });
+
+  it("warns when uncommitted changes will not be included in a GitLab merge request", async () => {
+    hasUncommittedChangesMock.mockImplementationOnce(async () => true);
+    const warnings: string[] = [];
+    const workflow = runCreateReviewWorkflow({
+      repoPath: "/repo",
+      repoRoot: "/root",
+      mode: "ci",
+      provider: "gitlab",
+      targetBranch: "main",
+      shouldProceed: true,
+      status: { info: () => {}, success: () => {}, warning: (message) => warnings.push(message), error: () => {} },
+    });
+
+    await workflow.next();
+
+    expect(warnings).toEqual([
+      "Uncommitted changes detected. Commit them before rerunning; only committed changes are included in the merge request.",
+    ]);
   });
 });

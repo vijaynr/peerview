@@ -8,6 +8,7 @@ type RunLiveCreateReviewArgs = {
   targetBranch?: string;
   mode: string;
   repoRoot: string;
+  verbose?: boolean;
 };
 
 const printCommandHelpMock = mock(() => {});
@@ -33,6 +34,7 @@ const runLiveCreateReviewTaskMock = mock(async (args: RunLiveCreateReviewArgs) =
     targetBranch: args.targetBranch,
     mode: args.mode,
     repoRoot: args.repoRoot,
+    verbose: args.verbose,
   });
   await workflow.next();
 });
@@ -92,6 +94,7 @@ describe("create review command", () => {
 
     expect(options).toContain("--gl");
     expect(options).toContain("--reviewboard");
+    expect(options).toContain("--verbose");
     expect(examples).toContain("pv create-review --reviewboard");
   });
 
@@ -113,6 +116,18 @@ describe("create review command", () => {
     expect(runCreateReviewWorkflowMock.mock.calls[0]?.[0]).toMatchObject({
       provider: "reviewboard",
     });
+  });
+
+  it("passes --verbose and -v through to the create-review workflow", async () => {
+    runCreateReviewWorkflowMock.mockClear();
+
+    await runCreateReviewCommand(["--verbose"]);
+
+    expect(runCreateReviewWorkflowMock.mock.calls[0]?.[0]).toMatchObject({ verbose: true });
+
+    runCreateReviewWorkflowMock.mockClear();
+    await runCreateReviewCommand(["-v"]);
+    expect(runCreateReviewWorkflowMock.mock.calls[0]?.[0]).toMatchObject({ verbose: true });
   });
 
   it("keeps create-mr as a GitLab alias", async () => {

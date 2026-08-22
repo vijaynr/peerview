@@ -18,6 +18,8 @@ export {
   type GitProvider,
   getCurrentBranch,
   getOriginRemoteUrl,
+  hasUncommittedChanges,
+  pushCurrentBranch,
 } from "./git.js";
 // GitHub exports
 export {

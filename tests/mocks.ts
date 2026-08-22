@@ -160,6 +160,8 @@ export function makeCoreMock(overrides: Record<string, unknown> = {}): Record<st
     },
     // git helpers
     getOriginRemoteUrl: mock(async () => ""),
+    hasUncommittedChanges: mock(async () => false),
+    pushCurrentBranch: mock(async () => {}),
     getCurrentBranch: mock(async () => "main"),
     detectGitProvider: mock(async () => "gitlab"),
     // prompts / agents
