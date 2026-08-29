@@ -18,10 +18,10 @@ export class CrToastNotification extends LitElement {
 
     const toneClass =
       this.tone === "error"
-        ? "border-destructive/40 bg-destructive/10 text-destructive-foreground"
+        ? "border-destructive/40 bg-[var(--card)] text-destructive-foreground"
         : this.tone === "warning"
-          ? "border-[var(--cr-warning)]/40 bg-[var(--cr-warning)]/10 text-foreground"
-          : "border-[var(--cr-success)]/40 bg-[var(--cr-success)]/10 text-foreground";
+          ? "border-[var(--cr-warning)]/40 bg-[var(--card)] text-foreground"
+          : "border-[var(--cr-success)]/40 bg-[var(--card)] text-foreground";
 
     return html`
       <div class="cr-toast flex items-center gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg ${toneClass}">

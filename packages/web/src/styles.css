@@ -72,10 +72,12 @@ body {
 /* ── Toast ─────────────────────────────────────────────────────────── */
 .cr-toast {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
+  top: 1.5rem;
+  left: 50%;
+  right: auto;
   z-index: 50;
-  max-width: 28rem;
+  width: min(28rem, calc(100vw - 2rem));
+  transform: translateX(-50%);
 }
 
 /* ── Spinner ──────────────────────────────────────────────────────── */
