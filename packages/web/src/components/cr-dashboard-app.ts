@@ -238,14 +238,12 @@ export class CrDashboardApp extends LitElement {
 
   @state() providerRepositories: Record<ProviderId, ProviderRepositoryOption[]> =
     createProviderRecord(() => []);
-  @state() selectedRepositories: Record<
-    ProviderId,
-    ProviderRepositoryOption | null
-  > = createProviderRecord(() => null);
-  @state() loadingProviderRepositories: Record<ProviderId, boolean> =
-    createProviderRecord(() => false);
-  @state() providerRepositoriesError: Record<ProviderId, string> =
-    createProviderRecord(() => "");
+  @state() selectedRepositories: Record<ProviderId, ProviderRepositoryOption | null> =
+    createProviderRecord(() => null);
+  @state() loadingProviderRepositories: Record<ProviderId, boolean> = createProviderRecord(
+    () => false
+  );
+  @state() providerRepositoriesError: Record<ProviderId, string> = createProviderRecord(() => "");
 
   // ── Theme ───────────────────────────────────────────
 
@@ -257,6 +255,7 @@ export class CrDashboardApp extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.uiTheme = this.readStoredTheme();
+    this.sidebarCollapsed = this.readStoredSidebarState();
     this.syncTheme();
     void this.loadInitialData();
   }
@@ -289,9 +288,7 @@ export class CrDashboardApp extends LitElement {
         } else {
           this.provider =
             providerOrder.find((p) => this.providerIsReady(p, dashboard)) ??
-            providerOrder.find(
-              (p) => dashboard.providers?.[p]?.configured
-            ) ??
+            providerOrder.find((p) => dashboard.providers?.[p]?.configured) ??
             this.provider;
         }
       }
@@ -343,7 +340,7 @@ export class CrDashboardApp extends LitElement {
 
       const selected = this.selectedRepositories[provider];
       const nextSelected = selected
-        ? repositories.find((r) => r.id === selected.id) ?? null
+        ? (repositories.find((r) => r.id === selected.id) ?? null)
         : null;
 
       this.selectedRepositories = {
@@ -373,9 +370,7 @@ export class CrDashboardApp extends LitElement {
 
     const providerError = this.providerAvailabilityError;
     if (providerError) {
-      this.targetsError = this.selectedRepositories[this.provider]
-        ? providerError
-        : "";
+      this.targetsError = this.selectedRepositories[this.provider] ? providerError : "";
       this.loadingTargets = false;
       return;
     }
@@ -417,21 +412,9 @@ export class CrDashboardApp extends LitElement {
 
     try {
       const [detail, diffFiles, commits] = await Promise.all([
-        loadReviewDetail(
-          target.provider,
-          target.id,
-          this.activeRepositoryContext
-        ),
-        loadReviewDiffs(
-          target.provider,
-          target.id,
-          this.activeRepositoryContext
-        ),
-        loadReviewCommits(
-          target.provider,
-          target.id,
-          this.activeRepositoryContext
-        ),
+        loadReviewDetail(target.provider, target.id, this.activeRepositoryContext),
+        loadReviewDiffs(target.provider, target.id, this.activeRepositoryContext),
+        loadReviewCommits(target.provider, target.id, this.activeRepositoryContext),
       ]);
       this.detailTarget = { ...target, ...detail };
       this.diffFiles = diffFiles;
@@ -583,10 +566,7 @@ export class CrDashboardApp extends LitElement {
       this.reviewResult = response.result;
       this.reviewWarnings = response.warnings;
       this.feedbackDraft = "";
-      this.setNotice(
-        "AI review is ready. Inspect it before posting anything.",
-        "success"
-      );
+      this.setNotice("AI review is ready. Inspect it before posting anything.", "success");
     } catch (error) {
       this.setNotice(this.toMessage(error), "error");
     } finally {
@@ -609,10 +589,7 @@ export class CrDashboardApp extends LitElement {
         url: this.activeRepositoryContext?.remoteUrl || undefined,
       });
       this.summaryResult = response.result;
-      this.setNotice(
-        "Summary generated for the active review target.",
-        "success"
-      );
+      this.setNotice("Summary generated for the active review target.", "success");
     } catch (error) {
       this.setNotice(this.toMessage(error), "error");
     } finally {
@@ -621,11 +598,7 @@ export class CrDashboardApp extends LitElement {
   }
 
   private async ensureChatContext() {
-    if (
-      !this.selectedTarget ||
-      this.chatContext ||
-      !this.canRunRepositoryWorkflows
-    ) {
+    if (!this.selectedTarget || this.chatContext || !this.canRunRepositoryWorkflows) {
       return;
     }
 
@@ -645,11 +618,7 @@ export class CrDashboardApp extends LitElement {
   }
 
   private async handleAskQuestion() {
-    if (
-      !this.chatContext ||
-      !this.chatQuestion.trim() ||
-      !this.canRunRepositoryWorkflows
-    ) {
+    if (!this.chatContext || !this.chatQuestion.trim() || !this.canRunRepositoryWorkflows) {
       return;
     }
 
@@ -717,11 +686,7 @@ export class CrDashboardApp extends LitElement {
   }
 
   private async handlePostInlineComment() {
-    if (
-      !this.selectedTarget ||
-      !this.selectedLine ||
-      !this.inlineDraft.trim()
-    ) {
+    if (!this.selectedTarget || !this.selectedLine || !this.inlineDraft.trim()) {
       return;
     }
 
@@ -835,17 +800,12 @@ export class CrDashboardApp extends LitElement {
     }
   }
 
-  private async handleDeleteDiscussionMessage(detail: {
-    threadId: string;
-    messageId: string;
-  }) {
+  private async handleDeleteDiscussionMessage(detail: { threadId: string; messageId: string }) {
     if (!this.selectedTarget) {
       return;
     }
 
-    const confirmed = window.confirm(
-      "Delete this comment permanently? This cannot be undone."
-    );
+    const confirmed = window.confirm("Delete this comment permanently? This cannot be undone.");
     if (!confirmed) {
       return;
     }
@@ -873,9 +833,7 @@ export class CrDashboardApp extends LitElement {
 
   // ── Repository Handlers ─────────────────────────────
 
-  private async handleProviderRepositorySelected(
-    event: CustomEvent<ProviderRepositoryOption>
-  ) {
+  private async handleProviderRepositorySelected(event: CustomEvent<ProviderRepositoryOption>) {
     const repository = event.detail;
     this.selectedRepositories = {
       ...this.selectedRepositories,
@@ -889,9 +847,7 @@ export class CrDashboardApp extends LitElement {
     await this.loadTargets();
   }
 
-  private async refreshProviderRepositories(
-    provider: ProviderId = this.provider
-  ) {
+  private async refreshProviderRepositories(provider: ProviderId = this.provider) {
     await this.ensureProviderRepositoriesLoaded(provider, { force: true });
 
     if (this.canLoadProviderQueue(provider)) {
@@ -921,10 +877,7 @@ export class CrDashboardApp extends LitElement {
 
   // ── Config Handlers ─────────────────────────────────
 
-  private handleConfigField<K extends keyof ConfigDraft>(
-    key: K,
-    value: ConfigDraft[K]
-  ) {
+  private handleConfigField<K extends keyof ConfigDraft>(key: K, value: ConfigDraft[K]) {
     this.configDraft = {
       ...this.configDraft,
       [key]: value,
@@ -941,9 +894,7 @@ export class CrDashboardApp extends LitElement {
     this.handleConfigField("defaultReviewAgents", Array.from(next));
   }
 
-  private async handleTestConnection(
-    provider: "gitlab" | "github" | "reviewboard" | "openai"
-  ) {
+  private async handleTestConnection(provider: "gitlab" | "github" | "reviewboard" | "openai") {
     this.testResults = {
       ...this.testResults,
       [provider]: { testing: true, ok: false, message: "Testing…" },
@@ -970,8 +921,7 @@ export class CrDashboardApp extends LitElement {
         ...this.testResults,
         [provider]: {
           ok: false,
-          message:
-            error instanceof Error ? error.message : String(error),
+          message: error instanceof Error ? error.message : String(error),
         },
       };
     }
@@ -998,15 +948,9 @@ export class CrDashboardApp extends LitElement {
         githubToken: this.optionalString(this.configDraft.githubToken),
         rbUrl: this.optionalString(this.configDraft.rbUrl),
         rbToken: this.optionalString(this.configDraft.rbToken),
-        gitlabWebhookSecret: this.optionalString(
-          this.configDraft.gitlabWebhookSecret
-        ),
-        githubWebhookSecret: this.optionalString(
-          this.configDraft.githubWebhookSecret
-        ),
-        rbWebhookSecret: this.optionalString(
-          this.configDraft.rbWebhookSecret
-        ),
+        gitlabWebhookSecret: this.optionalString(this.configDraft.gitlabWebhookSecret),
+        githubWebhookSecret: this.optionalString(this.configDraft.githubWebhookSecret),
+        rbWebhookSecret: this.optionalString(this.configDraft.rbWebhookSecret),
         sslCertPath: this.optionalString(this.configDraft.sslCertPath),
         sslKeyPath: this.optionalString(this.configDraft.sslKeyPath),
         sslCaPath: this.optionalString(this.configDraft.sslCaPath),
@@ -1142,11 +1086,7 @@ export class CrDashboardApp extends LitElement {
     dashboard: DashboardData | null = this.dashboard,
     agentOptions: ReviewAgentOption[] = this.agentOptions
   ) {
-    const normalized = this.normalizeConfigDraft(
-      config,
-      dashboard,
-      agentOptions
-    );
+    const normalized = this.normalizeConfigDraft(config, dashboard, agentOptions);
     this.configDraft = normalized;
     this.configBaseline = this.cloneDraft(normalized);
   }
@@ -1161,23 +1101,16 @@ export class CrDashboardApp extends LitElement {
         ? config.defaultReviewAgents
         : dashboard?.config?.defaultReviewAgents?.length
           ? dashboard.config.defaultReviewAgents
-          : agentOptions
-              .filter((option) => option.selected)
-              .map((option) => option.value);
+          : agentOptions.filter((option) => option.selected).map((option) => option.value);
 
     return {
-      openaiApiUrl:
-        config.openaiApiUrl ?? dashboard?.config?.openai?.apiUrl ?? "",
+      openaiApiUrl: config.openaiApiUrl ?? dashboard?.config?.openai?.apiUrl ?? "",
       openaiApiKey: config.openaiApiKey ?? "",
-      openaiModel:
-        config.openaiModel ?? dashboard?.config?.openai?.model ?? "",
-      defaultReviewAgents:
-        defaultAgents.length > 0 ? defaultAgents : ["general"],
-      gitlabUrl:
-        config.gitlabUrl ?? dashboard?.config?.gitlab?.url ?? "",
+      openaiModel: config.openaiModel ?? dashboard?.config?.openai?.model ?? "",
+      defaultReviewAgents: defaultAgents.length > 0 ? defaultAgents : ["general"],
+      gitlabUrl: config.gitlabUrl ?? dashboard?.config?.gitlab?.url ?? "",
       gitlabKey: config.gitlabKey ?? "",
-      githubUrl:
-        config.githubUrl ?? dashboard?.config?.github?.url ?? "",
+      githubUrl: config.githubUrl ?? dashboard?.config?.github?.url ?? "",
       githubToken: config.githubToken ?? "",
       rbUrl: config.rbUrl ?? dashboard?.config?.reviewboard?.url ?? "",
       rbToken: config.rbToken ?? "",
@@ -1188,19 +1121,13 @@ export class CrDashboardApp extends LitElement {
       sslKeyPath: config.sslKeyPath ?? "",
       sslCaPath: config.sslCaPath ?? "",
       webhookConcurrency: String(
-        config.webhookConcurrency ??
-          dashboard?.config?.webhook?.concurrency ??
-          3
+        config.webhookConcurrency ?? dashboard?.config?.webhook?.concurrency ?? 3
       ),
       webhookQueueLimit: String(
-        config.webhookQueueLimit ??
-          dashboard?.config?.webhook?.queueLimit ??
-          50
+        config.webhookQueueLimit ?? dashboard?.config?.webhook?.queueLimit ?? 50
       ),
       webhookJobTimeoutMs: String(
-        config.webhookJobTimeoutMs ??
-          dashboard?.config?.webhook?.jobTimeoutMs ??
-          600000
+        config.webhookJobTimeoutMs ?? dashboard?.config?.webhook?.jobTimeoutMs ?? 600000
       ),
       terminalTheme: config.terminalTheme ?? "",
       gitlabEnabled: config.gitlabEnabled !== false,
@@ -1224,9 +1151,7 @@ export class CrDashboardApp extends LitElement {
   // ── Computed Getters ────────────────────────────────
 
   private get configured() {
-    return (
-      this.dashboard?.providers?.[this.provider]?.configured ?? false
-    );
+    return this.dashboard?.providers?.[this.provider]?.configured ?? false;
   }
 
   private get providerAvailabilityError() {
@@ -1297,10 +1222,7 @@ export class CrDashboardApp extends LitElement {
     return "";
   }
 
-  private providerIsReady(
-    provider: ProviderId,
-    dashboard: DashboardData | null = this.dashboard
-  ) {
+  private providerIsReady(provider: ProviderId, dashboard: DashboardData | null = this.dashboard) {
     return !this.providerAvailabilityErrorFor(provider, dashboard);
   }
 
@@ -1322,9 +1244,7 @@ export class CrDashboardApp extends LitElement {
 
   private readStoredTheme(): UITheme {
     try {
-      return window.localStorage.getItem("pv:web-theme") === "light"
-        ? "light"
-        : "dark";
+      return window.localStorage.getItem("pv:web-theme") === "light" ? "light" : "dark";
     } catch {
       return "dark";
     }
@@ -1338,6 +1258,26 @@ export class CrDashboardApp extends LitElement {
     }
   }
 
+  private readStoredSidebarState() {
+    try {
+      return window.localStorage.getItem("pv:web-sidebar") === "collapsed";
+    } catch {
+      return false;
+    }
+  }
+
+  private toggleSidebar() {
+    this.sidebarCollapsed = !this.sidebarCollapsed;
+    try {
+      window.localStorage.setItem(
+        "pv:web-sidebar",
+        this.sidebarCollapsed ? "collapsed" : "expanded"
+      );
+    } catch {
+      // Ignore storage errors in restricted environments.
+    }
+  }
+
   private syncTheme() {
     if (this.uiTheme === "dark") {
       document.documentElement.classList.add("dark");
@@ -1345,9 +1285,7 @@ export class CrDashboardApp extends LitElement {
       document.documentElement.classList.remove("dark");
     }
     const themeColor = this.uiTheme === "light" ? "#f3f7fc" : "#050608";
-    document
-      .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", themeColor);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColor);
   }
 
   private toggleUiTheme() {
@@ -1363,19 +1301,24 @@ export class CrDashboardApp extends LitElement {
 
     return html`
       <div
-        @section-change=${(e: CustomEvent) =>
-          void this.handleSectionChange(e.detail)}
+        class=${this.sidebarCollapsed ? "cr-layout--sidebar-collapsed" : ""}
+        @section-change=${(e: CustomEvent) => void this.handleSectionChange(e.detail)}
         @theme-toggle=${() => this.toggleUiTheme()}
+        @sidebar-toggle=${() => this.toggleSidebar()}
       >
-        <div class="lg:ml-72 min-h-dvh flex flex-col">
+        <div
+          class="${this.sidebarCollapsed ? "lg:ml-[4.5rem]" : "lg:ml-72"} min-h-dvh flex flex-col transition-[margin] duration-200 ease-out"
+        >
           <main
-            class="flex-1 flex flex-col min-w-0 w-full max-w-[min(100%,140rem)] mx-auto px-4 py-5 sm:px-5 lg:px-7 xl:px-10 2xl:px-14"
+            class="flex-1 flex flex-col min-w-0 w-full max-w-[min(100%,140rem)] mx-auto px-4 pb-5 pt-16 sm:px-5 lg:px-7 lg:py-5 xl:px-10 2xl:px-14"
           >
-            ${section === "overview"
-              ? this.renderOverviewPage()
-              : section === "settings"
-                ? this.renderSettingsPage()
-                : this.renderProviderPage()}
+            ${
+              section === "overview"
+                ? this.renderOverviewPage()
+                : section === "settings"
+                  ? this.renderSettingsPage()
+                  : this.renderProviderPage()
+            }
           </main>
         </div>
 
@@ -1383,10 +1326,10 @@ export class CrDashboardApp extends LitElement {
           .activeSection=${section}
           .dashboard=${this.dashboard}
           .selectedAgentCount=${this.selectedAgents.length}
-          .repositoryLabel=${this.selectedRepositories[this.provider]
-            ?.label ?? ""}
+          .repositoryLabel=${this.selectedRepositories[this.provider]?.label ?? ""}
           .isLoading=${this.loadingDashboard || this.loadingTargets || this.loadingConfig}
           .uiTheme=${this.uiTheme}
+          .collapsed=${this.sidebarCollapsed}
         ></cr-sidebar-nav>
 
         <cr-toast-notification
@@ -1424,13 +1367,9 @@ export class CrDashboardApp extends LitElement {
           this.handleConfigField(e.detail.key, e.detail.value)}
         @config-save=${() => void this.handleConfigSave()}
         @config-reset=${() => this.handleConfigReset()}
-        @test-connection=${(e: CustomEvent) =>
-          void this.handleTestConnection(e.detail)}
+        @test-connection=${(e: CustomEvent) => void this.handleTestConnection(e.detail)}
         @agent-default-toggle=${(e: CustomEvent) =>
-          this.handleAgentDefaultToggle(
-            e.detail.value,
-            e.detail.checked
-          )}
+          this.handleAgentDefaultToggle(e.detail.value, e.detail.checked)}
       ></cr-settings-page>
     `;
   }
@@ -1491,14 +1430,10 @@ export class CrDashboardApp extends LitElement {
         .providerRepositoryError=${this.providerRepositoryError}
         .canRunRepositoryWorkflows=${this.canRunRepositoryWorkflows}
         .searchTerm=${this.searchTerm}
-        @target-selected=${(e: CustomEvent) =>
-          void this.loadTargetDetail(e.detail)}
-        @state-filter-change=${(e: CustomEvent) =>
-          void this.handleStateChange(e.detail)}
-        @file-selected=${(e: CustomEvent) =>
-          void this.selectFile(e.detail)}
-        @workspace-tab-change=${(e: CustomEvent) =>
-          void this.handleWorkspaceTabChange(e.detail)}
+        @target-selected=${(e: CustomEvent) => void this.loadTargetDetail(e.detail)}
+        @state-filter-change=${(e: CustomEvent) => void this.handleStateChange(e.detail)}
+        @file-selected=${(e: CustomEvent) => void this.selectFile(e.detail)}
+        @workspace-tab-change=${(e: CustomEvent) => void this.handleWorkspaceTabChange(e.detail)}
         @line-selected=${(e: CustomEvent) => {
           this.selectedLine = e.detail;
         }}
@@ -1517,8 +1452,7 @@ export class CrDashboardApp extends LitElement {
         }}
         @start-edit-discussion-message=${(e: CustomEvent) =>
           this.startEditingDiscussionMessage(e.detail)}
-        @cancel-edit-discussion-message=${() =>
-          this.cancelEditingDiscussionMessage()}
+        @cancel-edit-discussion-message=${() => this.cancelEditingDiscussionMessage()}
         @discussion-edit-draft-change=${(e: CustomEvent) => {
           this.editingDiscussionDraft = e.detail;
         }}
@@ -1531,8 +1465,7 @@ export class CrDashboardApp extends LitElement {
         @analysis-tab-change=${(e: CustomEvent) => {
           this.analysisTab = e.detail;
         }}
-        @agent-toggle=${(e: CustomEvent) =>
-          this.toggleAgent(e.detail.value, e.detail.checked)}
+        @agent-toggle=${(e: CustomEvent) => this.toggleAgent(e.detail.value, e.detail.checked)}
         @inline-toggle=${(e: CustomEvent) => {
           this.inlineCommentsEnabled = e.detail;
         }}
@@ -1543,28 +1476,21 @@ export class CrDashboardApp extends LitElement {
         @ask-question=${() => void this.handleAskQuestion()}
         @post-summary-comment=${() => void this.handlePostSummaryComment()}
         @post-inline-comment=${() => void this.handlePostInlineComment()}
-        @start-reply=${(e: CustomEvent) =>
-          this.startReplyToThread(e.detail)}
+        @start-reply=${(e: CustomEvent) => this.startReplyToThread(e.detail)}
         @cancel-reply=${() => this.cancelReplyToThread()}
-        @post-discussion-reply=${(e: CustomEvent) =>
-          void this.handlePostDiscussionReply(e.detail)}
+        @post-discussion-reply=${(e: CustomEvent) => void this.handlePostDiscussionReply(e.detail)}
         @save-discussion-message-edit=${(e: CustomEvent) =>
           void this.handleSaveDiscussionMessageEdit(e.detail)}
         @delete-discussion-message=${(e: CustomEvent) =>
           void this.handleDeleteDiscussionMessage(e.detail)}
         @insert-review=${() => {
-          this.summaryDraft =
-            this.reviewResult?.overallSummary ||
-            this.reviewResult?.output ||
-            "";
+          this.summaryDraft = this.reviewResult?.overallSummary || this.reviewResult?.output || "";
         }}
         @insert-summary=${() => {
           this.summaryDraft = this.summaryResult?.output || "";
         }}
-        @repository-selected=${(e: CustomEvent) =>
-          void this.handleProviderRepositorySelected(e)}
-        @repository-refresh=${() =>
-          void this.refreshProviderRepositories()}
+        @repository-selected=${(e: CustomEvent) => void this.handleProviderRepositorySelected(e)}
+        @repository-refresh=${() => void this.refreshProviderRepositories()}
         @repository-clear=${() => this.clearSelectedRepository()}
         @search-change=${(e: CustomEvent) => {
           this.searchTerm = e.detail;

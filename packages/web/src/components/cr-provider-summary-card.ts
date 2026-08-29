@@ -52,7 +52,8 @@ export class CrProviderSummaryCard extends LitElement {
 
     return html`
       <div
-        class="rounded-lg border border-border bg-card p-4 flex flex-col gap-2.5 shadow-sm transition-colors hover:shadow-md"
+        class="cr-surface-card rounded-lg border p-4 flex flex-col gap-2.5"
+        data-interactive="true"
         role="button"
         tabindex="0"
         @click=${this.emitSectionChange}
@@ -69,26 +70,28 @@ export class CrProviderSummaryCard extends LitElement {
               ></cr-provider-icon>
             </span>
             <span
-              class="text-[0.7rem] font-semibold tracking-[0.06em] uppercase text-foreground/45"
+              class="text-xs font-medium text-muted-foreground"
               >${label}</span
             >
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             <span class="cr-status-dot ${statusDotClass}"></span>
-            <span class="text-[0.65rem] font-medium text-foreground/40"
+            <span class="text-xs font-medium text-muted-foreground"
               >${statusLabel}</span
             >
           </div>
         </div>
-        ${repoLabel
-          ? html`<div
+        ${
+          repoLabel
+            ? html`<div
               class="text-sm font-semibold text-foreground/80 font-mono truncate"
             >
               ${repoLabel}
             </div>`
-          : html`<div class="text-xs text-foreground/35">
+            : html`<div class="text-xs text-foreground/35">
               ${data?.error || "Select a repository to begin"}
-            </div>`}
+            </div>`
+        }
         <div
           class="flex items-center gap-1 mt-auto text-[0.7rem] text-primary/70 font-medium"
         >

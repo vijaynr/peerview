@@ -13,7 +13,9 @@ export class CrStatCard extends LitElement {
     icon: { attribute: false },
   };
 
-  override createRenderRoot() { return this; }
+  override createRenderRoot() {
+    return this;
+  }
 
   declare eyebrow: string;
   declare value: string;
@@ -38,15 +40,17 @@ export class CrStatCard extends LitElement {
 
   render() {
     return html`
-      <div class="rounded-lg border border-border bg-card p-4 flex flex-col gap-2.5 shadow-sm transition-colors hover:shadow-md ${this.toneClass}">
+      <div class="cr-surface-card rounded-lg border p-4 flex flex-col gap-2.5 ${this.toneClass}">
         <div class="flex items-center justify-between gap-2">
-          <span class="text-[0.7rem] font-semibold tracking-widest uppercase text-muted-foreground">${this.eyebrow}</span>
+          <span class="text-xs font-medium text-muted-foreground">${this.eyebrow}</span>
           ${this.icon ? html`<cr-icon .icon=${this.icon} .size=${15} class="text-muted-foreground/50"></cr-icon>` : ""}
         </div>
         <div class="text-2xl font-bold tracking-tight text-foreground truncate">${this.value}</div>
-        ${this.note
-          ? html`<div class="text-xs text-muted-foreground leading-relaxed">${this.note}</div>`
-          : ""}
+        ${
+          this.note
+            ? html`<div class="text-xs text-muted-foreground leading-relaxed">${this.note}</div>`
+            : ""
+        }
       </div>
     `;
   }
