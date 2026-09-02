@@ -425,7 +425,7 @@ export class GitLabClient {
         if (note.system || note.resolved) continue;
 
         const pos = note.position;
-        if (!pos || pos.position_type !== "text") continue;
+        if (pos?.position_type !== "text") continue;
 
         // Skip notes that belong to an outdated diff
         if (currentHead && pos.head_sha && pos.head_sha !== currentHead) continue;

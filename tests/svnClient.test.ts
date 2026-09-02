@@ -14,7 +14,8 @@ describe("svn client", () => {
       expect(content).toBe("guidelines");
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toBe("https://svn.example.com/repos/project/GUIDELINES.md");
-      expect((init?.headers as Record<string, string>).Authorization).toBe(
+      expect(init).toBeDefined();
+      expect((init as { headers: Record<string, string> }).headers.Authorization).toBe(
         "Basic YWxpY2U6c2VjcmV0"
       );
     } finally {

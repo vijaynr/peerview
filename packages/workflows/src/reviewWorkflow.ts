@@ -107,7 +107,7 @@ function reportInlineCommentLimitation(input: Pick<ReviewWorkflowInput, "status"
 }
 
 function assertResponseType(response: ReviewWorkflowResponseInput): ReviewWorkflowResponse {
-  if (!response || response.type !== "review_feedback") {
+  if (response?.type !== "review_feedback") {
     const actual = response?.type ?? "none";
     throw new Error(`Expected review workflow response "review_feedback", received "${actual}".`);
   }
