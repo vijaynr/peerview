@@ -18,6 +18,7 @@ import {
   getGitHubPullRequest,
   getGitHubPullRequestCommits,
   getGitHubPullRequestFiles,
+  getCurrentUser,
   listGitHubIssueComments,
   listGitHubRepositories,
   listGitHubReviewComments,
@@ -655,17 +656,8 @@ export function createApiRoutes(context: ServerContext): Hono {
       if (!baseUrl || !token) {
         return c.json({ ok: false, message: "Review Board URL and token are required." });
       }
-      const res = await fetch(`${baseUrl}/api/users/me/`, {
-        headers: { Authorization: `token ${token}`, Accept: "application/json" },
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (!res.ok) {
-        const text = await res.text().catch(() => res.statusText);
-        return c.json({ ok: false, message: `Review Board responded with ${res.status}: ${text}` });
-      }
-      const data = (await res.json()) as { user?: { username?: string } };
-      const username = data.user?.username ?? "unknown";
-      return c.json({ ok: true, message: `Connected as ${username}` });
+      const user = await getCurrentUser(baseUrl, token);
+      return c.json({ ok: true, message: `Connected as ${user.username}` });
     } catch (error) {
       return c.json({ ok: false, message: error instanceof Error ? error.message : String(error) });
     }

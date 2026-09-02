@@ -43,6 +43,11 @@ const updateGitHubReviewCommentMock = mock(
   async () => "https://github.com/org/repo/pull/12#discussion_r2"
 );
 const deleteGitHubReviewCommentMock = mock(async () => {});
+const getCurrentUserMock = mock(async () => ({
+  id: 1,
+  username: "alice",
+  fullname: "Alice Example",
+}));
 const listRepositoriesMock = mock(async () => [{ id: 9, name: "demo-repo" }]);
 const listReviewRequestsMock = mock(async () => [{ id: 42, summary: "RR 42" }]);
 const getReviewRequestMock = mock(async () => ({ id: 42, summary: "RR 42" }));
@@ -139,6 +144,7 @@ mock.module("@pv/core", () =>
     deleteGitHubPullRequestComment: deleteGitHubPullRequestCommentMock,
     updateGitHubReviewComment: updateGitHubReviewCommentMock,
     deleteGitHubReviewComment: deleteGitHubReviewCommentMock,
+    getCurrentUser: getCurrentUserMock,
     listRepositories: listRepositoriesMock,
     listReviewRequests: listReviewRequestsMock,
     getReviewRequest: getReviewRequestMock,
@@ -179,6 +185,7 @@ afterEach(() => {
   deleteGitHubPullRequestCommentMock.mockClear();
   updateGitHubReviewCommentMock.mockClear();
   deleteGitHubReviewCommentMock.mockClear();
+  getCurrentUserMock.mockClear();
   listRepositoriesMock.mockClear();
   listReviewRequestsMock.mockClear();
   getReviewRequestMock.mockClear();
@@ -279,6 +286,20 @@ describe("API routes", () => {
       gitlabUrl: "https://gitlab.example.com",
       githubWebhookEnabled: true,
     });
+  });
+
+  it("verifies Review Board credentials through the supported session API", async () => {
+    const port = await startApiServer();
+
+    const response = await fetch(`http://localhost:${port}/api/test/reviewboard`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: "https://reviews.example.com", token: "rb-token" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, message: "Connected as alice" });
+    expect(getCurrentUserMock).toHaveBeenCalledWith("https://reviews.example.com", "rb-token");
   });
 
   it("serves GitLab merge request APIs", async () => {
