@@ -10,9 +10,9 @@
     "@pv/core": "workspace:*",
     "@pv/workflows": "workspace:*",
     "@pv/server": "workspace:*",
-    "ora": "^8.2.0",
+    "ora": "^9.4.1",
     "prompts": "^2.4.2",
-    "marked": "^16.4.1",
+    "marked": "^18.0.14",
     "marked-terminal": "^7.3.0"
   },
   "devDependencies": {

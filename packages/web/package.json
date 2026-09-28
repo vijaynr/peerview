@@ -6,17 +6,23 @@
   "dependencies": {
     "@mariozechner/mini-lit": "^0.2.1",
     "diff2html": "^3.4.56",
-    "hono": "^4.9.8",
-    "lit": "^3.3.1",
-    "lucide": "^0.577.0"
+    "hono": "^4.13.8",
+    "lit": "^3.3.3",
+    "lucide": "^1.47.0",
+    "simple-icons": "^16.33.0"
   },
   "exports": {
     ".": "./src/index.ts"
   },
   "devDependencies": {
-    "@fontsource/ibm-plex-mono": "^5.2.7",
-    "@fontsource/manrope": "^5.2.5",
-    "@tailwindcss/vite": "^4.2.2",
-    "tailwindcss": "^4.2.2"
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/devtools": "^0.7.1",
+    "@vitejs/devtools-oxc": "0.7.5",
+    "@vitejs/devtools-rolldown": "0.7.5",
+    "@vitejs/devtools-vite": "0.7.5",
+    "@vitejs/devtools-vitest": "0.7.5",
+    "tailwindcss": "^4.3.3"
   }
 }

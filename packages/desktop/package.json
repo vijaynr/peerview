@@ -18,6 +18,6 @@
   "dependencies": {
     "@pv/core": "workspace:*",
     "@pv/server": "workspace:*",
-    "electrobun": "^1.16.0"
+    "electrobun": "^1.18.1"
   }
 }

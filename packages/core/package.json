@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@pv/vcs": "workspace:*",
-    "openai": "^6.6.0",
-    "zod": "^4.1.12"
+    "openai": "^7.22.0",
+    "zod": "^4.6.5"
   }
 }

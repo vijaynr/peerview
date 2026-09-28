@@ -10,6 +10,6 @@
     "@pv/core": "workspace:*",
     "@pv/web": "workspace:*",
     "@pv/workflows": "workspace:*",
-    "hono": "^4.9.8"
+    "hono": "^4.13.8"
   }
 }
