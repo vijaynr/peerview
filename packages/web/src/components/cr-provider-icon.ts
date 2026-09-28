@@ -1,8 +1,16 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Diff, Github, Gitlab } from "lucide";
+import { Diff, type IconNode } from "lucide";
+import { siGithub, siGitlab } from "simple-icons";
 import type { ProviderId } from "../types.js";
 import "./cr-icon.js";
+
+const brandIcon = (path: string): IconNode => [
+  ["path", { d: path, fill: "currentColor", stroke: "none" }],
+];
+
+const gitlabIcon = brandIcon(siGitlab.path);
+const githubIcon = brandIcon(siGithub.path);
 
 @customElement("cr-provider-icon")
 export class CrProviderIcon extends LitElement {
@@ -15,11 +23,11 @@ export class CrProviderIcon extends LitElement {
 
   render() {
     if (this.provider === "gitlab") {
-      return html`<cr-icon .icon=${Gitlab} .size=${this.size}></cr-icon>`;
+      return html`<cr-icon .icon=${gitlabIcon} .size=${this.size}></cr-icon>`;
     }
 
     if (this.provider === "github") {
-      return html`<cr-icon .icon=${Github} .size=${this.size}></cr-icon>`;
+      return html`<cr-icon .icon=${githubIcon} .size=${this.size}></cr-icon>`;
     }
 
     return html`<cr-icon .icon=${Diff} .size=${this.size}></cr-icon>`;

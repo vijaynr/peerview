@@ -17,7 +17,6 @@ import {
   type DashboardSection,
   type UITheme,
 } from "../types.js";
-import { WEB_APP_ICON_ROUTE } from "../asset-routes.js";
 import "./cr-icon.js";
 import "./cr-provider-icon.js";
 import "./cr-theme-toggle.js";
@@ -100,14 +99,7 @@ export class CrSidebarNav extends LitElement {
     const logo = html`
       <div class="flex items-center justify-between w-full gap-2">
         <div class="flex items-center gap-2.5 min-w-0">
-          <img
-            src=${WEB_APP_ICON_ROUTE}
-            alt="PeerView"
-            width="28"
-            height="28"
-            class="rounded-lg flex-none"
-          />
-          <span class="cr-sidebar-label font-semibold text-sm tracking-tight text-sidebar-foreground">PeerView</span>
+          <span class="px-2 cr-sidebar-label font-semibold text-lg tracking-tight text-sidebar-foreground">PeerView</span>
         </div>
         <button
           type="button"

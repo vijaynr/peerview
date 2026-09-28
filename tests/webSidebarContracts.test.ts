@@ -2,13 +2,14 @@ import { describe, expect, it } from "bun:test";
 import { dashboardAppPath, sidebarPath, stylesPath } from "./webContractPaths";
 
 describe("web sidebar contracts", () => {
-  it("renders the responsive custom sidebar navigation", async () => {
+  it("uses the custom sidebar navigation component", async () => {
     const source = await Bun.file(sidebarPath).text();
 
-    expect(source).toContain('<aside');
+    expect(source).toContain('class="cr-app-sidebar');
+    expect(source).toContain('class="cr-mobile-menu-button');
     expect(source).toContain('aria-label="PeerView navigation"');
-    expect(source).toContain("cr-mobile-menu-button");
-    expect(source).toContain("cr-mobile-menu-backdrop");
+    expect(source).not.toContain("WEB_APP_ICON_ROUTE");
+    expect(source).not.toContain("<img");
     expect(source).toContain("<cr-theme-toggle");
     expect(source).toContain(".theme=${this.uiTheme}");
     expect(source).toContain("PeerView");
