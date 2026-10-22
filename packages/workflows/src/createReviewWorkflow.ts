@@ -102,7 +102,16 @@ function fallbackTitle(
   if (provider === "reviewboard") {
     return `Review changes from ${sourceLabel}`.slice(0, 100);
   }
-  return `Merge ${sourceLabel} into ${targetLabel ?? "target"}`.slice(0, 100);
+  return `chore: merge ${sourceLabel} into ${targetLabel ?? "target"}`.slice(0, 100);
+}
+
+function normalizeMergeRequestTitle(title: string): string {
+  const normalized = title.replaceAll("\n", " ").trim().replace(/^['"`]|['"`]$/g, "");
+  if (/^[a-z]+(?:\([^)]+\))?!?: .+/.test(normalized)) {
+    return normalized.slice(0, 100);
+  }
+  const subject = normalized.replace(/^[a-z]+:\s*/i, "").trim();
+  return `chore: ${subject || "update project"}`.slice(0, 100);
 }
 
 function buildDraft(args: {
@@ -346,11 +355,25 @@ async function generateDraft(args: {
 
     const titlePrompt = [
       `Generate a concise ${entityLabel} title (max 100 chars).`,
+      ...(args.provider === "reviewboard"
+        ? []
+        : [
+            "The title MUST follow Conventional Commits: <type>(optional-scope): <imperative summary>.",
+            "Use a conventional type such as feat, fix, docs, refactor, test, build, ci, or chore; choose the type that best matches the diff.",
+            "Use lowercase type and imperative summary. Do not add a period, markdown, quotes, or a breaking-change marker unless the diff clearly introduces a breaking change.",
+          ]),
       "Only return the title text.",
       "",
+      "Diff:",
+      args.diff,
+      "",
+      "Draft description for context:",
       description,
     ].join("\n");
-    title = (await args.llm.generate(titlePrompt)).replaceAll("\n", " ").trim().slice(0, 100);
+    const generatedTitle = await args.llm.generate(titlePrompt);
+    title = args.provider === "reviewboard"
+      ? generatedTitle.replaceAll("\n", " ").trim().slice(0, 100)
+      : normalizeMergeRequestTitle(generatedTitle);
   } catch {
     reportStatus(
       args.input,
